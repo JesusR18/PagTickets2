@@ -1,0 +1,77 @@
+<!DOCTYPE html> <!-- Declara que este es un documento HTML5 -->
+<html lang="es"> <!-- Inicia el documento HTML en español -->
+<head> <!-- Sección que contiene información sobre la página (no visible para el usuario) -->
+    <meta charset="UTF-8"> <!-- Configura la codificación de caracteres para mostrar acentos y ñ -->
+    <title>Lector de Código QR</title> <!-- Título que aparece en la pestaña del navegador -->
+    <!-- Carga una librería externa que permite leer códigos QR desde la cámara -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <style> 
+        #reader { width: 300px; margin: auto; } /* Hace que el lector QR tenga 300px de ancho y esté centrado */
+        #result { margin-top: 20px; font-size: 1.2em; } /* Espacio arriba del resultado y texto más grande */
+    </style> <!-- Fin de los estilos CSS -->
+</head> <!-- Fin de la sección head -->
+<body> <!-- Comienza la parte visible de la página web -->
+    <h1>Lector de Código QR</h1> <!-- Título principal de la página -->
+    <div id="reader"></div> <!-- Contenedor donde aparecerá la cámara para leer códigos QR -->
+    <div id="result"></div> <!-- Contenedor donde se mostrará el resultado del escaneo -->
+    <h2>Últimos códigos registrados</h2> <!-- Subtítulo para la lista de códigos -->
+    <ul id="lista-registros"> <!-- Lista donde aparecerán los códigos registrados -->
+        {% for r in registros %} <!-- Django: recorre cada registro que viene del servidor -->
+            <li><b>{{ r.codigo }}</b> - {{ r.fecha|date:'Y-m-d H:i:s' }}</li> <!-- Django: muestra el código en negrita y la fecha -->
+        {% empty %} <!-- Django: si no hay registros, muestra esto -->
+            <li>No hay registros aún.</li> <!-- Mensaje cuando la lista está vacía -->
+        {% endfor %} <!-- Django: termina el bucle for -->
+    </ul> <!-- Cierra la lista -->
+    <script> <!-- Comienza el código JavaScript -->
+        // Función que envía el código QR al servidor para guardarlo
+        function registrarCodigo(codigo) {
+            fetch('/registrar_qr/', { // Hace una petición HTTP POST al servidor
+                method: 'POST', // Especifica que es una petición de tipo POST (para enviar datos)
+                headers: { 'Content-Type': 'application/json' }, // Le dice al servidor que enviamos datos en formato JSON
+                body: JSON.stringify({ codigo_qr: codigo }) // Convierte el código QR a formato JSON para enviarlo
+            })
+            .then(response => response.json()) // Cuando el servidor responde, convierte la respuesta a JSON
+            .then(data => { // Cuando la conversión a JSON termina, ejecuta este código
+                document.getElementById('result').innerText = 'Código registrado: ' + data.codigo_qr; // Muestra en pantalla que el código se registró
+                actualizarRegistros(); // Llama a la función para actualizar la lista de códigos
+            })
+            .catch(err => { // Si hay algún error en el proceso anterior
+                document.getElementById('result').innerText = 'Error al registrar: ' + err; // Muestra el error en pantalla
+            });
+        }
+
+        // Función que actualiza la lista de códigos QR registrados
+        function actualizarRegistros() {
+            fetch('/ultimos_registros/') // Hace una petición al servidor para obtener los últimos registros
+                .then(response => response.json()) // Convierte la respuesta del servidor a formato JSON
+                .then(data => { // Cuando recibe los datos, ejecuta este código
+                    const lista = document.getElementById('lista-registros'); // Busca el elemento HTML con id "lista-registros"
+                    lista.innerHTML = ''; // Borra todo el contenido actual de la lista
+                    if (data.registros.length === 0) { // Si no hay registros en la respuesta
+                        lista.innerHTML = '<li>No hay registros aún.</li>'; // Muestra este mensaje
+                    } else { // Si sí hay registros
+                        data.registros.forEach(r => { // Recorre cada registro
+                            const li = document.createElement('li'); // Crea un nuevo elemento de lista
+                            li.innerHTML = `<b>${r.codigo}</b> - ${r.fecha}`; // Le pone el contenido: código en negrita y fecha
+                            lista.appendChild(li); // Agrega este elemento a la lista
+                        });
+                    }
+                });
+        }
+
+        // Función que se ejecuta cuando el escáner QR lee correctamente un código
+        function onScanSuccess(decodedText, decodedResult) {
+            registrarCodigo(decodedText); // Llama a la función para registrar el código leído
+            html5QrcodeScanner.clear(); // Limpia/detiene el escáner después de leer
+        }
+
+        // Crea un nuevo escáner de códigos QR usando la librería Html5Qrcode
+        var html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", { fps: 10, qrbox: 250 } // Configura: contenedor "reader", 10 fotos por segundo, cuadro de 250px
+        );
+        html5QrcodeScanner.render(onScanSuccess); // Inicia el escáner y le dice qué función ejecutar cuando lea un código
+        setInterval(actualizarRegistros, 5000); // Ejecuta "actualizarRegistros" cada 5000 milisegundos (5 segundos)
+    </script> <!-- Fin del código JavaScript -->
+</body> <!-- Fin de la parte visible de la página -->
+</html> <!-- Fin del documento HTML -->
+</html>

@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lector de Códigos QR</title>
+    
+    <!-- Script externo para leer códigos QR usando la cámara -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <style>
+        /* CSS básico para hacer que la página se vea bien */
+        
+        /* Estilos para todo el cuerpo de la página */
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #74b9ff 0%, #0984e3 50%, #6c5ce7 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        
+        /* Estilos para el encabezado principal */
+        .header {
+            text-align: center;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 30px 40px;
+            border-radius: 20px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            margin-bottom: 30px;
+            width: 100%;
+            max-width: 600px;
+        }
+        
+        .header h1 {
+            color: white;
+            margin: 0;
+            font-size: 2.5rem;
+            font-weight: 700;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        .header p {
+            color: rgba(255, 255, 255, 0.9);
+            margin: 10px 0 0 0;
+            font-size: 1.1rem;
+            font-weight: 300;
+        }
+        
+        /* Contenedor principal del contenido */
+        .content {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            width: 100%;
+            max-width: 600px;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Contenedor del escáner QR */
+        #reader {
+            width: 100%;
+            max-width: 400px;
+            margin: 20px auto;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        /* Estilos para los botones */
+        button {
+            background: linear-gradient(45deg, #00b894, #00cec9);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin: 10px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 184, 148, 0.4);
+        }
+        
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 184, 148, 0.6);
+            background: linear-gradient(45deg, #00a085, #00b7b8);
+        }
+        
+        button:active {
+            transform: translateY(-1px);
+        }
+        
+        /* Sección de registros */
+        .records-section {
+            margin-top: 40px;
+        }
+        
+        .records-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .records-section h2 {
+            font-size: 1.8rem;
+            color: #333;
+            margin-bottom: 0;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .export-btn {
+            background: linear-gradient(45deg, #28a745, #20c997);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        }
+
+        .export-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(40, 167, 69, 0.4);
+            background: linear-gradient(45deg, #218838, #1ea579);
+        }
+
+        .export-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 10px rgba(40, 167, 69, 0.3);
+        }
+        
+        /* Lista de registros */
+        #lista-registros {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        #lista-registros li {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px 20px;
+            margin: 10px 0;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            font-weight: 500;
+            transition: transform 0.2s ease;
+        }
+        
+        #lista-registros li:hover {
+            transform: translateX(5px);
+        }
+        
+        /* Área donde aparecen los mensajes de resultado */
+        #result {
+            margin: 20px 0;
+            padding: 20px;
+            background-color: #e7f3ff;
+            border: 2px solid #4facfe;
+            border-radius: 10px;
+            color: #2c5aa0;
+            font-weight: 500;
+            display: none;
+            box-shadow: 0 4px 15px rgba(79, 172, 254, 0.2);
+        }
+        
+        /* Estilos responsivos para diferentes tamaños de pantalla */
+        
+        /* Tablets (768px hacia abajo) */
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .content {
+                padding: 30px 15px;
+            }
+            
+            #reader {
+                max-width: 350px;
+            }
+
+            .records-header {
+                flex-direction: column;
+                align-items: center;
+                text-align: center;
+            }
+
+            .export-btn {
+                font-size: 14px;
+                padding: 10px 20px;
+            }
+        }
+        
+        /* Móviles (480px hacia abajo) */
+        @media (max-width: 480px) {
+            body {
+                padding: 5px;
+            }
+            
+            .header {
+                padding: 20px 15px;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .content {
+                padding: 20px 10px;
+            }
+            
+            #reader {
+                max-width: 100%;
+                margin: 15px auto;
+            }
+            
+            #result {
+                font-size: 1rem;
+                padding: 12px;
+            }
+            
+            .records-section h2 {
+                font-size: 1.5rem;
+            }
+
+            .export-btn {
+                font-size: 12px;
+                padding: 8px 16px;
+                width: 100%;
+                max-width: 200px;
+            }
+            
+            #lista-registros li {
+                padding: 12px 15px;
+                font-size: 0.9rem;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    
+    <!-- Encabezado principal -->
+    <div class="header">
+        <h1>🔍 Lector de Códigos QR</h1>
+        <p>Escanea códigos QR con tu cámara de forma rápida y segura</p>
+    </div>
+    
+    <!-- Contenido principal -->
+    <div class="content">
+        
+        <!-- Div donde aparecerá el lector de QR (se crea con JavaScript) -->
+        <div id="reader"></div>
+        
+        <!-- Botones de control -->
+        <button onclick="iniciarEscaner()">📸 Iniciar Escáner</button>
+        <button onclick="detenerEscaner()">⏹️ Detener Escáner</button>
+        
+        <!-- Div donde aparecen los mensajes de resultado -->
+        <div id="result"></div>
+        
+        <!-- Sección de registros -->
+        <div class="records-section">
+            <div class="records-header">
+                <h2>📋 Últimos códigos registrados</h2>
+                <button id="btn-exportar" class="export-btn" onclick="exportarExcel()">
+                    📊 Exportar a Excel
+                </button>
+            </div>
+            <ul id="lista-registros">
+                <!-- Los elementos se agregan aquí automáticamente con JavaScript -->
+            </ul>
+        </div>
+        
+    </div>
+    
+    <!-- JavaScript que controla toda la funcionalidad -->
+    <script>
+        // Variables globales para controlar el escáner
+        let html5QrcodeScanner;
+        let isScanning = false;
+        
+        // Función que se ejecuta cuando se detecta un código QR
+        function onScanSuccess(decodedText, decodedResult) {
+            // Mostrar el código detectado en el div de resultado
+            document.getElementById('result').innerHTML = `✅ Código detectado: <strong>${decodedText}</strong>`;
+            document.getElementById('result').style.display = 'block';
+            
+            // Enviar el código al servidor Django para guardarlo
+            fetch('/registrar_qr/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({codigo: decodedText})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if(data.success) {
+                    console.log('Código guardado exitosamente');
+                    actualizarRegistros();
+                }
+            })
+            .catch(error => console.error('Error:', error));
+        }
+        
+        // Función que se ejecuta si hay error al escanear
+        function onScanFailure(error) {
+            // No hacer nada, esto es normal cuando no hay código QR visible
+        }
+        
+        // Función para obtener cookies (necesario para el token CSRF de Django)
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        // Función para inicializar el escáner
+        function inicializarEscaner() {
+            if (!isScanning) {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader",
+                    { 
+                        fps: 10,
+                        qrbox: {width: 250, height: 250},
+                        aspectRatio: 1.0
+                    },
+                    false
+                );
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                isScanning = true;
+                console.log('Escáner iniciado');
+            }
+        }
+        
+        // Función para iniciar el escáner (llamada por el botón)
+        function iniciarEscaner() {
+            if (!isScanning) {
+                inicializarEscaner();
+            } else {
+                alert('El escáner ya está funcionando');
+            }
+        }
+        
+        // Función para detener el escáner
+        function detenerEscaner() {
+            if (isScanning && html5QrcodeScanner) {
+                html5QrcodeScanner.clear().then(() => {
+                    isScanning = false;
+                    console.log('Escáner detenido');
+                    document.getElementById('result').style.display = 'none';
+                }).catch(err => {
+                    console.error('Error al detener escáner:', err);
+                });
+            }
+        }
+        
+        // Función para obtener y mostrar los últimos códigos registrados
+        function actualizarRegistros() {
+            fetch('/ultimos_registros/')
+                .then(response => response.json())
+                .then(data => {
+                    const lista = document.getElementById('lista-registros');
+                    lista.innerHTML = '';
+                    
+                    data.registros.forEach(registro => {
+                        const li = document.createElement('li');
+                        li.textContent = `${registro.codigo} - ${registro.fecha}`;
+                        lista.appendChild(li);
+                    });
+                })
+                .catch(error => console.error('Error al obtener registros:', error));
+        }
+
+        // Función para exportar datos a Excel
+        function exportarExcel() {
+            // Mostrar mensaje de carga
+            const btnExportar = document.getElementById('btn-exportar');
+            const textoOriginal = btnExportar.innerHTML;
+            btnExportar.innerHTML = '⏳ Generando Excel...';
+            btnExportar.disabled = true;
+
+            // Realizar petición al servidor para generar el archivo Excel
+            fetch('/exportar_excel/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                }
+                throw new Error('Error al generar el archivo Excel');
+            })
+            .then(blob => {
+                // Crear un enlace temporal para descargar el archivo
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.style.display = 'none';
+                a.href = url;
+                
+                // Generar nombre de archivo con fecha y hora actual
+                const fecha = new Date();
+                const fechaFormateada = fecha.toISOString().slice(0, 19).replace(/:/g, '-');
+                a.download = `registros_qr_${fechaFormateada}.xlsx`;
+                
+                // Agregar al DOM, hacer click y remover
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Mostrar mensaje de éxito
+                mostrarMensaje('✅ Archivo Excel descargado exitosamente', 'success');
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                mostrarMensaje('❌ Error al exportar a Excel: ' + error.message, 'error');
+            })
+            .finally(() => {
+                // Restaurar botón
+                btnExportar.innerHTML = textoOriginal;
+                btnExportar.disabled = false;
+            });
+        }
+
+        // Función auxiliar para mostrar mensajes temporales
+        function mostrarMensaje(mensaje, tipo) {
+            const resultDiv = document.getElementById('result');
+            const mensajeOriginal = resultDiv.innerHTML;
+            
+            resultDiv.innerHTML = mensaje;
+            resultDiv.style.display = 'block';
+            
+            if (tipo === 'success') {
+                resultDiv.style.backgroundColor = '#d4edda';
+                resultDiv.style.color = '#155724';
+                resultDiv.style.borderColor = '#28a745';
+            } else if (tipo === 'error') {
+                resultDiv.style.backgroundColor = '#f8d7da';
+                resultDiv.style.color = '#721c24';
+                resultDiv.style.borderColor = '#dc3545';
+            }
+            
+            // Restaurar mensaje original después de 3 segundos
+            setTimeout(() => {
+                resultDiv.innerHTML = mensajeOriginal;
+                resultDiv.style.backgroundColor = '#e7f3ff';
+                resultDiv.style.color = '#2c5aa0';
+                resultDiv.style.borderColor = '#4facfe';
+                if (mensajeOriginal.trim() === '') {
+                    resultDiv.style.display = 'none';
+                }
+            }, 3000);
+        }
+        
+        // Código que se ejecuta cuando la página termina de cargar
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Página cargada completamente');
+            
+            // Actualizar la lista de registros al cargar la página
+            actualizarRegistros();
+            
+            // Configurar el div de resultado
+            const resultDiv = document.getElementById('result');
+            resultDiv.style.backgroundColor = '#e7f3ff';
+            resultDiv.style.color = '#2c5aa0';
+            resultDiv.style.borderColor = '#4facfe';
+            
+            // Inicializar el escáner después de un pequeño retraso
+            setTimeout(() => {
+                inicializarEscaner();
+            }, 500);
+            
+            // Actualizar la lista cada 10 segundos automáticamente
+            setInterval(actualizarRegistros, 10000);
+        });
+
+        // Detectar cambios de orientación en móviles y ajustar el escáner
+        window.addEventListener('orientationchange', function() {
+            setTimeout(() => {
+                if (html5QrcodeScanner) {
+                    html5QrcodeScanner.clear().then(() => {
+                        setTimeout(() => {
+                            inicializarEscaner();
+                        }, 500);
+                    });
+                }
+            }, 1000);
+        });
+
+    </script>
+    
+</body>
+</html>

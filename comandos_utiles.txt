@@ -1,0 +1,60 @@
+# ====================================
+# COMANDOS ÚTILES PARA DESARROLLO
+# ====================================
+# Copia y pega estos comandos en PowerShell/Terminal
+
+# 🚀 SETUP INICIAL (ejecutar una sola vez)
+# -------------------------------------------------------
+pip install -r requirements.txt
+python manage.py makemigrations
+python manage.py migrate
+python manage.py createsuperuser  # Opcional: para acceso al admin
+
+# 🌐 EJECUTAR EL SERVIDOR
+# -------------------------------------------------------
+python manage.py runserver          # http://localhost:8000
+python manage.py runserver 8080     # Puerto personalizado
+
+# 🗃️ BASE DE DATOS
+# -------------------------------------------------------
+python manage.py makemigrations     # Crear migraciones
+python manage.py migrate            # Aplicar migraciones
+python manage.py showmigrations     # Ver estado de migraciones
+python manage.py dbshell            # Acceder a la consola de SQLite
+
+# 👤 USUARIOS Y ADMIN
+# -------------------------------------------------------
+python manage.py createsuperuser    # Crear superusuario
+python manage.py changepassword [usuario]  # Cambiar contraseña
+
+# 🧹 COMANDOS DE LIMPIEZA
+# -------------------------------------------------------
+python manage.py collectstatic      # Recopilar archivos estáticos
+python manage.py check              # Verificar configuración
+python manage.py shell              # Consola interactiva de Python/Django
+
+# 🔍 COMANDOS DE INFORMACIÓN
+# -------------------------------------------------------
+python manage.py showmigrations     # Estado de migraciones
+python manage.py diffsettings       # Comparar settings con defaults
+python manage.py inspectdb          # Generar modelos desde BD existente
+
+# 🧪 TESTING
+# -------------------------------------------------------
+python manage.py test               # Ejecutar todas las pruebas
+python manage.py test qrweb         # Ejecutar pruebas de una app específica
+
+# 📊 DATOS DE EJEMPLO (si quieres crear datos de prueba)
+# -------------------------------------------------------
+python manage.py shell
+# Luego en la consola Python:
+# from pagTickets.models import RegistroQR
+# RegistroQR.objects.create(codigo="TEST123")
+# exit()
+
+# ⚙️ URLS IMPORTANTES
+# -------------------------------------------------------
+# http://localhost:8000/              # Página principal (lector QR)
+# http://localhost:8000/admin/        # Panel de administración
+# http://localhost:8000/registrar_qr/ # API para registrar QR (POST)
+# http://localhost:8000/ultimos_registros/ # API últimos registros (GET)
