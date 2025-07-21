@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 # Importa Path para trabajar con rutas de archivos
 from pathlib import Path
+import os
 
 # Construye rutas dentro del proyecto como: BASE_DIR / 'subdir'.
 # Esta es la ruta base del proyecto (carpeta principal)
@@ -23,11 +24,11 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ADVERTENCIA DE SEGURIDAD: mantén la clave secreta utilizada en producción en secreto!
 # Esta clave se usa para encriptación y seguridad en Django
-SECRET_KEY = 'django-insecure-gk+8sdz)ym-hjp91rcj-dgdyqh=s6w7m%+ypnm4p4m&!gi@ccm'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-gk+8sdz)ym-hjp91rcj-dgdyqh=s6w7m%+ypnm4p4m&!gi@ccm')
 
 # ADVERTENCIA DE SEGURIDAD: no ejecutes con debug activado en producción!
 # DEBUG=True muestra errores detallados, útil para desarrollo pero peligroso en producción
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
 # Lista de hosts/dominios permitidos para servir la aplicación
 # Permitir conexiones desde cualquier IP en la red local (para desarrollo)
@@ -51,6 +52,7 @@ INSTALLED_APPS = [
 # Lista de middleware (software que procesa peticiones antes de llegar a las vistas)
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',           # Seguridad
+    'whitenoise.middleware.WhiteNoiseMiddleware',              # Para servir archivos estáticos
     'django.contrib.sessions.middleware.SessionMiddleware',    # Sesiones
     'django.middleware.common.CommonMiddleware',               # Funcionalidad común
     'django.middleware.csrf.CsrfViewMiddleware',              # Protección CSRF
@@ -135,7 +137,13 @@ USE_TZ = True
 STATIC_URL = 'static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
+# Configuración para servir archivos estáticos en producción
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Puerto para Railway
+PORT = os.environ.get('PORT', 8000)
