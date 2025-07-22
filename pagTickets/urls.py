@@ -32,6 +32,11 @@ urlpatterns = [
     path('ultimos_registros/', views.ultimos_registros, name='ultimos_registros'),
     # Ruta para exportar códigos QR a Excel
     path('exportar_excel/', views.exportar_excel, name='exportar_excel'),
+    # Rutas de autenticación
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+    # Dashboard con estadísticas (requiere login)
+    path('dashboard/', views.dashboard, name='dashboard'),
     # Ruta para acceder al panel de administración de Django
     path('admin/', admin.site.urls),
 ]
