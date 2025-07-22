@@ -30,12 +30,28 @@ SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-gk+8sdz)ym-hjp91rcj-d
 # DEBUG=True muestra errores detallados, útil para desarrollo pero peligroso en producción
 DEBUG = os.environ.get('DEBUG', 'True') == 'True'
 
+# En Railway, usar DEBUG=False automáticamente
+if 'RAILWAY_ENVIRONMENT' in os.environ:
+    DEBUG = False
+
 # Lista de hosts/dominios permitidos para servir la aplicación
 # Permitir conexiones desde cualquier IP en la red local (para desarrollo)
 ALLOWED_HOSTS = ['*']  # ⚠️ Solo para desarrollo, no usar en producción
 
 # En producción, agregar dominio específico:
 # ALLOWED_HOSTS = ['tu-app.railway.app', 'localhost', '127.0.0.1']
+
+# Configuración para Railway y HTTPS
+CSRF_TRUSTED_ORIGINS = [
+    'https://*.railway.app',
+    'https://*.up.railway.app', 
+    'http://localhost:8000',
+    'http://127.0.0.1:8000'
+]
+
+# Configuración adicional para Railway
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+SECURE_SSL_REDIRECT = False  # Railway maneja esto automáticamente
 
 
 # Definición de aplicaciones
@@ -55,7 +71,7 @@ INSTALLED_APPS = [
 # Lista de middleware (software que procesa peticiones antes de llegar a las vistas)
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',           # Seguridad
-    # 'whitenoise.middleware.WhiteNoiseMiddleware',              # Para servir archivos estáticos
+    'whitenoise.middleware.WhiteNoiseMiddleware',              # Para servir archivos estáticos
     'django.contrib.sessions.middleware.SessionMiddleware',    # Sesiones
     'django.middleware.common.CommonMiddleware',               # Funcionalidad común
     'django.middleware.csrf.CsrfViewMiddleware',              # Protección CSRF

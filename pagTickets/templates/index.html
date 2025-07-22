@@ -6,6 +6,9 @@
     <title>SISEG - Escáner QR</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     
+    <!-- Token CSRF para JavaScript -->
+    <meta name="csrf-token" content="{{ csrf_token }}">
+    
     <style>
         :root {
             --color-primary: #dc2626;
@@ -457,6 +460,13 @@
 
         // Función para obtener el token CSRF de Django
         function getCookie(name) {
+            // Primero intentar obtener del meta tag
+            const token = document.querySelector('meta[name="csrf-token"]');
+            if (token) {
+                return token.getAttribute('content');
+            }
+            
+            // Si no, obtener de las cookies
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
