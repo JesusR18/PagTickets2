@@ -356,3 +356,102 @@ def dashboard(request):
     }
     
     return render(request, 'dashboard.html', context)
+
+# Vista para obtener los últimos registros (API JSON)
+def ultimos_registros(request):
+    """Vista que devuelve los últimos registros QR en formato JSON"""
+    try:
+        registros = RegistroQR.objects.order_by('-fecha_registro')[:10]
+        datos = []
+        
+        for registro in registros:
+            try:
+                # Intentar parsear como JSON
+                qr_data = json.loads(registro.codigo)
+                datos.append({
+                    'id': registro.id,
+                    'codigo': qr_data.get('codigo', registro.codigo),
+                    'nombre': qr_data.get('nombre', 'Sin nombre'),
+                    'ubicacion': qr_data.get('ubicacion', 'Sin ubicación'),
+                    'marca': qr_data.get('marca', 'Sin marca'),
+                    'modelo': qr_data.get('modelo', 'Sin modelo'),
+                    'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
+                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                })
+            except (json.JSONDecodeError, AttributeError):
+                # Si no es JSON, usar el código tal como está
+                datos.append({
+                    'id': registro.id,
+                    'codigo': registro.codigo,
+                    'nombre': registro.codigo,
+                    'ubicacion': 'Sin ubicación',
+                    'marca': 'Sin marca',
+                    'modelo': 'Sin modelo',
+                    'no_serie': 'Sin número de serie',
+                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                })
+        
+        return JsonResponse({'registros': datos})
+    
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+# Vista para exportar registros QR a Excel
+def exportar_excel(request):
+    """Vista para exportar todos los registros QR a un archivo Excel"""
+    try:
+        # Crear un nuevo libro de trabajo
+        wb = Workbook()
+        ws = wb.active
+        ws.title = "Registros QR"
+        
+        # Configurar encabezados
+        headers = ['ID', 'Código', 'Fecha de Registro']
+        ws.append(headers)
+        
+        # Estilo para encabezados
+        header_font = Font(bold=True, color="FFFFFF")
+        header_fill = PatternFill(start_color="366092", end_color="366092", fill_type="solid")
+        
+        for col_num, header in enumerate(headers, 1):
+            cell = ws.cell(row=1, column=col_num)
+            cell.font = header_font
+            cell.fill = header_fill
+            cell.alignment = Alignment(horizontal="center")
+        
+        # Obtener todos los registros
+        registros = RegistroQR.objects.order_by('-fecha_registro')
+        
+        # Agregar datos
+        for registro in registros:
+            ws.append([
+                registro.id,
+                registro.codigo,
+                registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+            ])
+        
+        # Ajustar ancho de columnas
+        for column in ws.columns:
+            max_length = 0
+            column_letter = get_column_letter(column[0].column)
+            for cell in column:
+                try:
+                    if len(str(cell.value)) > max_length:
+                        max_length = len(str(cell.value))
+                except:
+                    pass
+            adjusted_width = min(max_length + 2, 50)
+            ws.column_dimensions[column_letter].width = adjusted_width
+        
+        # Crear respuesta HTTP
+        response = HttpResponse(
+            content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        response['Content-Disposition'] = f'attachment; filename="registros_qr_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+        
+        # Guardar el archivo en la respuesta
+        wb.save(response)
+        return response
+        
+    except Exception as e:
+        return JsonResponse({'error': f'Error al exportar: {str(e)}'}, status=500)
