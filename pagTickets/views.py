@@ -92,87 +92,105 @@ def registrar_qr(request):
             ubicacion_scan = data.get('ubicacion', 'Escáner Web')
             
             # Intenta parsear el QR como JSON para extraer información del activo
-            try:
-                qr_data = json.loads(codigo_qr)
-                nombre = qr_data.get('nombre', 'Activo sin nombre')
-                ubicacion = qr_data.get('ubicacion', 'Sin ubicación')
-                marca = qr_data.get('marca', 'Sin marca')
-                modelo = qr_data.get('modelo', 'Sin modelo')
-                no_serie = qr_data.get('no_serie', 'Sin número de serie')
-                codigo = qr_data.get('codigo', codigo_qr)
-            except (json.JSONDecodeError, AttributeError):
-                # Si no es JSON válido, usar el código QR como está
-                nombre = codigo_qr
-                ubicacion = 'Sin ubicación'
-                marca = 'Sin marca'
-                modelo = 'Sin modelo'
-                no_serie = 'Sin número de serie'
-                codigo = codigo_qr
+            activo_info = extraer_informacion_qr(codigo_qr)
             
-            # Verificar si el código ya existe
+            # Verificar si el código ya existe (usando código original)
             registro_existente = RegistroQR.objects.filter(codigo=codigo_qr).first()
             
             if registro_existente:
                 # Si ya existe, devolver información de que está registrado
-                try:
-                    qr_data = json.loads(registro_existente.codigo)
-                    activo_info = {
-                        'codigo': qr_data.get('codigo', registro_existente.codigo),
-                        'nombre': qr_data.get('nombre', 'Activo sin nombre'),
-                        'ubicacion': qr_data.get('ubicacion', 'Sin ubicación'),
-                        'marca': qr_data.get('marca', 'Sin marca'),
-                        'modelo': qr_data.get('modelo', 'Sin modelo'),
-                        'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
-                        'fecha_registro': registro_existente.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
-                    }
-                except (json.JSONDecodeError, AttributeError):
-                    activo_info = {
-                        'codigo': registro_existente.codigo,
-                        'nombre': registro_existente.codigo,
-                        'ubicacion': registro_existente.ubicacion or 'Sin ubicación',
-                        'marca': 'Sin marca',
-                        'modelo': 'Sin modelo',
-                        'no_serie': 'Sin número de serie',
-                        'fecha_registro': registro_existente.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
-                    }
-                
+                activo_existente = extraer_informacion_qr(registro_existente.codigo)
                 return JsonResponse({
                     'success': True,
                     'already_registered': True,
-                    'activo': activo_info
+                    'activo': activo_existente,
+                    'mensaje': f'El activo "{activo_existente["nombre"]}" ya fue registrado anteriormente'
                 })
-            else:
-                # Crear un nuevo registro
-                registro = RegistroQR.objects.create(
-                    codigo=codigo_qr,
-                    usuario=usuario,
-                    ubicacion=ubicacion_scan,
-                    notas=f"Activo registrado: {nombre}"
-                )
-                
-                # Devuelve una respuesta JSON exitosa con el activo registrado
-                activo_info = {
-                    'codigo': codigo,
-                    'nombre': nombre,
-                    'ubicacion': ubicacion,
-                    'marca': marca,
-                    'modelo': modelo,
-                    'no_serie': no_serie,
-                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
-                }
-                
-                return JsonResponse({
-                    'success': True,
-                    'already_registered': False,
-                    'activo': activo_info
-                })
-                
+            
+            # Si no existe, crear nuevo registro
+            nuevo_registro = RegistroQR.objects.create(
+                codigo=codigo_qr,
+                usuario=usuario,
+                ubicacion=ubicacion_scan,
+                notas=f"Activo registrado: {activo_info['nombre']}"
+            )
+            
+            return JsonResponse({
+                'success': True,
+                'already_registered': False,
+                'activo': activo_info,
+                'mensaje': f'Activo "{activo_info["nombre"]}" registrado correctamente'
+            })
+            
         except Exception as e:
-            # Si hay algún error, devuelve una respuesta JSON con el error
             return JsonResponse({'success': False, 'error': str(e)})
     
-    # Si no es una petición POST, devuelve un error
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+# Función auxiliar para extraer información del QR
+def extraer_informacion_qr(codigo_qr):
+    """
+    Extrae información del código QR soportando múltiples formatos:
+    - JSON: {"codigo": "ACT001", "nombre": "Laptop", ...}
+    - Texto simple separado por |: ACT001|Laptop Dell|Oficina 1|Dell|Latitude|SN123456
+    - Texto simple: cualquier código
+    """
+    try:
+        # Intento 1: Parsear como JSON
+        if codigo_qr.strip().startswith('{') and codigo_qr.strip().endswith('}'):
+            qr_data = json.loads(codigo_qr)
+            return {
+                'codigo': qr_data.get('codigo', codigo_qr),
+                'nombre': qr_data.get('nombre', qr_data.get('activo', 'Activo sin nombre')),
+                'ubicacion': qr_data.get('ubicacion', qr_data.get('location', 'Sin ubicación')),
+                'marca': qr_data.get('marca', qr_data.get('brand', 'Sin marca')),
+                'modelo': qr_data.get('modelo', qr_data.get('model', 'Sin modelo')),
+                'no_serie': qr_data.get('no_serie', qr_data.get('serial', qr_data.get('serie', 'Sin número de serie')))
+            }
+        
+        # Intento 2: Parsear como texto separado por |
+        elif '|' in codigo_qr:
+            partes = codigo_qr.split('|')
+            return {
+                'codigo': partes[0] if len(partes) > 0 else codigo_qr,
+                'nombre': partes[1] if len(partes) > 1 else 'Activo sin nombre',
+                'ubicacion': partes[2] if len(partes) > 2 else 'Sin ubicación',
+                'marca': partes[3] if len(partes) > 3 else 'Sin marca',
+                'modelo': partes[4] if len(partes) > 4 else 'Sin modelo',
+                'no_serie': partes[5] if len(partes) > 5 else 'Sin número de serie'
+            }
+        
+        # Intento 3: Buscar patrones conocidos en el texto
+        else:
+            # Buscar patrones como "ACT001 - Laptop Dell" o similares
+            nombre_detectado = codigo_qr
+            codigo_detectado = codigo_qr
+            
+            # Si contiene guión, probablemente sea código - nombre
+            if ' - ' in codigo_qr:
+                partes_guion = codigo_qr.split(' - ', 1)
+                codigo_detectado = partes_guion[0].strip()
+                nombre_detectado = partes_guion[1].strip()
+            
+            return {
+                'codigo': codigo_detectado,
+                'nombre': nombre_detectado,
+                'ubicacion': 'Sin ubicación',
+                'marca': 'Sin marca',
+                'modelo': 'Sin modelo',
+                'no_serie': 'Sin número de serie'
+            }
+            
+    except Exception:
+        # Si todo falla, usar el código QR tal como está
+        return {
+            'codigo': codigo_qr,
+            'nombre': codigo_qr,
+            'ubicacion': 'Sin ubicación',
+            'marca': 'Sin marca',
+            'modelo': 'Sin modelo',
+            'no_serie': 'Sin número de serie'
+        }
 
 # Función para obtener los activos escaneados (para actualizar la tabla en tiempo real)
 def obtener_activos_escaneados(request):
@@ -180,37 +198,18 @@ def obtener_activos_escaneados(request):
         # Obtiene todos los registros QR
         registros = RegistroQR.objects.order_by('-fecha_registro')
         
-        # Convierte los registros a formato de activos
+        # Convierte los registros a formato de activos usando la función de extracción mejorada
         activos_data = []
         for registro in registros:
-            try:
-                # Intentar parsear el código QR como JSON
-                qr_data = json.loads(registro.codigo)
-                activo_info = {
-                    'codigo': qr_data.get('codigo', registro.codigo),
-                    'nombre': qr_data.get('nombre', 'Activo sin nombre'),
-                    'ubicacion': qr_data.get('ubicacion', 'Sin ubicación'),
-                    'marca': qr_data.get('marca', 'Sin marca'),
-                    'modelo': qr_data.get('modelo', 'Sin modelo'),
-                    'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
-                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
-                }
-            except (json.JSONDecodeError, AttributeError):
-                # Si no es JSON válido, usar información básica
-                activo_info = {
-                    'codigo': registro.codigo,
-                    'nombre': registro.codigo,
-                    'ubicacion': registro.ubicacion or 'Sin ubicación',
-                    'marca': 'Sin marca',
-                    'modelo': 'Sin modelo',
-                    'no_serie': 'Sin número de serie',
-                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
-                }
+            activo_info = extraer_informacion_qr(registro.codigo)
+            # Agregar fecha de registro
+            activo_info['fecha_registro'] = registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
             activos_data.append(activo_info)
         
-        return JsonResponse({'success': True, 'activos': activos_data})
+        return JsonResponse({'activos': activos_data})
+        
     except Exception as e:
-        return JsonResponse({'success': False, 'error': str(e)})
+        return JsonResponse({'error': str(e)}, status=500)
 
 # Función para exportar activos escaneados a Excel
 def exportar_activos_excel(request):
@@ -242,30 +241,15 @@ def exportar_activos_excel(request):
         # Agregar datos
         row = 2
         for registro in registros:
-            try:
-                # Intentar parsear el código QR como JSON
-                qr_data = json.loads(registro.codigo)
-                codigo = qr_data.get('codigo', registro.codigo)
-                nombre = qr_data.get('nombre', 'Activo sin nombre')
-                ubicacion = qr_data.get('ubicacion', 'Sin ubicación')
-                marca = qr_data.get('marca', 'Sin marca')
-                modelo = qr_data.get('modelo', 'Sin modelo')
-                no_serie = qr_data.get('no_serie', 'Sin número de serie')
-            except (json.JSONDecodeError, AttributeError):
-                # Si no es JSON válido, usar información básica
-                codigo = registro.codigo
-                nombre = registro.codigo
-                ubicacion = registro.ubicacion or 'Sin ubicación'
-                marca = 'Sin marca'
-                modelo = 'Sin modelo'
-                no_serie = 'Sin número de serie'
+            # Usar la función de extracción mejorada
+            activo_info = extraer_informacion_qr(registro.codigo)
             
-            ws.cell(row=row, column=1, value=codigo).border = border
-            ws.cell(row=row, column=2, value=nombre).border = border
-            ws.cell(row=row, column=3, value=ubicacion).border = border
-            ws.cell(row=row, column=4, value=marca).border = border
-            ws.cell(row=row, column=5, value=modelo).border = border
-            ws.cell(row=row, column=6, value=no_serie).border = border
+            ws.cell(row=row, column=1, value=activo_info['codigo']).border = border
+            ws.cell(row=row, column=2, value=activo_info['nombre']).border = border
+            ws.cell(row=row, column=3, value=activo_info['ubicacion']).border = border
+            ws.cell(row=row, column=4, value=activo_info['marca']).border = border
+            ws.cell(row=row, column=5, value=activo_info['modelo']).border = border
+            ws.cell(row=row, column=6, value=activo_info['no_serie']).border = border
             ws.cell(row=row, column=7, value=registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')).border = border
             row += 1
         
