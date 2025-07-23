@@ -79,6 +79,47 @@ def index(request):
     # Renderiza la página HTML y le pasa los activos como contexto
     return render(request, 'index.html', {'activos_escaneados': activos_escaneados})
 
+# Función para verificar si un activo ya existe con las mismas características
+def verificar_activo_existente(activo_info):
+    """
+    Verifica si ya existe un activo registrado con las mismas características principales.
+    Compara: nombre, ubicación, marca, modelo y número de serie.
+    """
+    try:
+        # Obtener todos los registros para comparar
+        registros = RegistroQR.objects.all()
+        
+        for registro in registros:
+            try:
+                # Extraer información del registro existente
+                info_existente = extraer_informacion_qr(registro.codigo)
+                
+                # Comparar características principales
+                nombre_match = activo_info.get('nombre', '').strip().lower() == info_existente.get('nombre', '').strip().lower()
+                ubicacion_match = activo_info.get('ubicacion', '').strip().lower() == info_existente.get('ubicacion', '').strip().lower()
+                marca_match = activo_info.get('marca', '').strip().lower() == info_existente.get('marca', '').strip().lower()
+                modelo_match = activo_info.get('modelo', '').strip().lower() == info_existente.get('modelo', '').strip().lower()
+                
+                # Si el número de serie existe y no está vacío, también compararlo
+                no_serie_nuevo = activo_info.get('no_serie', '').strip()
+                no_serie_existente = info_existente.get('no_serie', '').strip()
+                no_serie_match = True  # Por defecto asumimos que coincide
+                
+                if no_serie_nuevo and no_serie_existente and no_serie_nuevo.lower() != 'sin número de serie':
+                    no_serie_match = no_serie_nuevo.lower() == no_serie_existente.lower()
+                
+                # Si todas las características principales coinciden, es el mismo activo
+                if nombre_match and ubicacion_match and marca_match and modelo_match and no_serie_match:
+                    return registro
+                    
+            except Exception:
+                continue  # Si hay error parseando un registro, continuar con el siguiente
+                
+        return None  # No se encontró ningún activo duplicado
+        
+    except Exception:
+        return None  # En caso de error, no bloquear el registro
+
 # Función que guarda un nuevo código QR en la base de datos
 @csrf_exempt
 def registrar_qr(request):
@@ -94,8 +135,8 @@ def registrar_qr(request):
             # Intenta parsear el QR como JSON para extraer información del activo
             activo_info = extraer_informacion_qr(codigo_qr)
             
-            # Verificar si el código ya existe (usando código original)
-            registro_existente = RegistroQR.objects.filter(codigo=codigo_qr).first()
+            # Verificar si ya existe un activo con las mismas características
+            registro_existente = verificar_activo_existente(activo_info)
             
             if registro_existente:
                 # Si ya existe, devolver información de que está registrado
@@ -106,7 +147,7 @@ def registrar_qr(request):
                     'success': True,
                     'already_registered': True,
                     'activo': activo_existente,
-                    'mensaje': f'El activo "{activo_existente["nombre"]}" ya fue registrado anteriormente'
+                    'mensaje': f'El activo "{activo_existente["nombre"]}" ya está registrado con estas características'
                 })
             
             # Si no existe, crear nuevo registro
