@@ -4,6 +4,7 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.models import User
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.db.models import Count
@@ -16,6 +17,18 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import datetime
+
+# Crear usuario admin automáticamente si no existe
+def create_admin_if_not_exists():
+    try:
+        if not User.objects.filter(username='admin').exists():
+            User.objects.create_superuser(
+                username='admin',
+                email='admin@siseg.com',
+                password='admin'
+            )
+    except Exception:
+        pass  # Ignorar errores si ya existe
 
 # Función principal que muestra la página de inicio con el escáner QR
 def index(request):
@@ -262,6 +275,9 @@ def exportar_activos_excel(request):
 
 # Vista de login personalizada
 def login_view(request):
+    # Crear admin automáticamente si no existe
+    create_admin_if_not_exists()
+    
     if request.method == 'POST':
         username = request.POST.get('username')
         password = request.POST.get('password')
