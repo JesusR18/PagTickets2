@@ -26,6 +26,8 @@ from . import views
 urlpatterns = [
     # Ruta principal ('') que muestra la página de inicio con el lector QR
     path('', views.index, name='index'),
+    # Ruta de healthcheck para Railway
+    path('health/', views.health_check, name='health_check'),
     # Ruta para registrar un código QR nuevo (recibe datos POST desde JavaScript)
     path('registrar_qr/', views.registrar_qr, name='registrar_qr'),
     # Ruta para obtener los últimos códigos registrados (devuelve JSON)

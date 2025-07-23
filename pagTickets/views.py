@@ -30,6 +30,19 @@ def create_admin_if_not_exists():
     except Exception:
         pass  # Ignorar errores si ya existe
 
+# Vista de healthcheck para Railway
+def health_check(request):
+    """Vista simple para verificación de salud de Railway"""
+    try:
+        # Verificación básica de base de datos
+        from django.db import connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT 1")
+        
+        return HttpResponse("OK", content_type="text/plain", status=200)
+    except Exception as e:
+        return HttpResponse(f"ERROR: {str(e)}", content_type="text/plain", status=500)
+
 # Función principal que muestra la página de inicio con el escáner QR
 def index(request):
     # Obtiene los últimos activos escaneados desde RegistroQR

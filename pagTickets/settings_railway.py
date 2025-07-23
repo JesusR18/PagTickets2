@@ -3,7 +3,7 @@ import os
 from .settings import *
 
 # Configuración de producción
-DEBUG = False
+DEBUG = True  # Temporal para diagnosticar
 
 # Hosts permitidos específicos para Railway
 ALLOWED_HOSTS = ['*']  # Railway maneja esto a través de su proxy
@@ -12,13 +12,29 @@ ALLOWED_HOSTS = ['*']  # Railway maneja esto a través de su proxy
 CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',
     'https://*.up.railway.app',
-    'https://web-production-22b8.up.railway.app',  # Tu dominio específico
 ]
+
+# Deshabilitar CSRF temporalmente para healthcheck
+CSRF_COOKIE_SECURE = False
+CSRF_COOKIE_HTTPONLY = False
 
 # Configuración de seguridad para HTTPS
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 SECURE_SSL_REDIRECT = False
 USE_TZ = True
+
+# Agregar middleware personalizado para Railway
+MIDDLEWARE = [
+    'pagTickets.middleware.RailwayMiddleware',
+    'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
+]
 
 # Configuración de archivos estáticos para producción
 STATIC_ROOT = BASE_DIR / 'staticfiles'
