@@ -100,6 +100,8 @@ def registrar_qr(request):
             if registro_existente:
                 # Si ya existe, devolver información de que está registrado
                 activo_existente = extraer_informacion_qr(registro_existente.codigo)
+                activo_existente['id'] = registro_existente.id
+                activo_existente['fecha_registro'] = registro_existente.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
                 return JsonResponse({
                     'success': True,
                     'already_registered': True,
@@ -115,6 +117,10 @@ def registrar_qr(request):
                 notas=f"Activo registrado: {activo_info['nombre']}"
             )
             
+            # Agregar ID y fecha al activo_info
+            activo_info['id'] = nuevo_registro.id
+            activo_info['fecha_registro'] = nuevo_registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+            
             return JsonResponse({
                 'success': True,
                 'already_registered': False,
@@ -122,6 +128,36 @@ def registrar_qr(request):
                 'mensaje': f'Activo "{activo_info["nombre"]}" registrado correctamente'
             })
             
+        except Exception as e:
+            return JsonResponse({'success': False, 'error': str(e)})
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'})
+
+# Función para eliminar un activo
+@csrf_exempt
+def eliminar_activo(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            activo_id = data.get('id')
+            
+            if not activo_id:
+                return JsonResponse({'success': False, 'error': 'ID de activo requerido'})
+            
+            # Buscar y eliminar el registro
+            registro = RegistroQR.objects.get(id=activo_id)
+            activo_info = extraer_informacion_qr(registro.codigo)
+            nombre_activo = activo_info['nombre']
+            
+            registro.delete()
+            
+            return JsonResponse({
+                'success': True,
+                'mensaje': f'Activo "{nombre_activo}" eliminado correctamente'
+            })
+            
+        except RegistroQR.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Activo no encontrado'})
         except Exception as e:
             return JsonResponse({'success': False, 'error': str(e)})
     
@@ -290,7 +326,8 @@ def obtener_activos_escaneados(request):
         activos_data = []
         for registro in registros:
             activo_info = extraer_informacion_qr(registro.codigo)
-            # Agregar fecha de registro
+            # Agregar ID del registro y fecha de registro
+            activo_info['id'] = registro.id
             activo_info['fecha_registro'] = registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
             activos_data.append(activo_info)
         

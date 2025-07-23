@@ -30,6 +30,8 @@ urlpatterns = [
     path('health/', views.health_check, name='health_check'),
     # Ruta para registrar un código QR nuevo (recibe datos POST desde JavaScript)
     path('registrar_qr/', views.registrar_qr, name='registrar_qr'),
+    # Ruta para eliminar un activo
+    path('eliminar_activo/', views.eliminar_activo, name='eliminar_activo'),
     # Ruta para obtener los últimos códigos registrados (devuelve JSON)
     path('ultimos_registros/', views.ultimos_registros, name='ultimos_registros'),
     # Ruta para obtener los activos escaneados (nueva funcionalidad)

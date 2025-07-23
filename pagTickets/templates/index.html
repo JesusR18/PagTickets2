@@ -311,6 +311,35 @@
             text-transform: uppercase;
         }
         
+        .btn-eliminar {
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            color: white;
+            border: none;
+            padding: 0.375rem 0.75rem;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
+            text-transform: uppercase;
+        }
+        
+        .btn-eliminar:hover {
+            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
+        }
+        
+        .btn-eliminar:active {
+            transform: translateY(0);
+        }
+        
+        .acciones-celda {
+            text-align: center;
+            padding: 0.5rem;
+        }
+        
         .sin-activos {
             text-align: center;
             padding: 2rem;
@@ -477,8 +506,17 @@
                 padding: 1.5rem;
                 font-size: 0.875rem;
             }
+            
+            .btn-eliminar {
+                padding: 0.25rem 0.5rem;
+                font-size: 0.7rem;
+                min-height: 32px;
+            }
+            
+            .acciones-celda {
+                padding: 0.25rem;
+            }
         }
-        
         /* Estilos para pantallas muy pequeñas */
         @media (max-width: 480px) {
             .header h1 {
@@ -495,7 +533,7 @@
             
             .tabla-activos {
                 font-size: 0.7rem;
-                min-width: 450px;
+                min-width: 500px;
             }
             
             .tabla-activos th,
@@ -506,6 +544,12 @@
             .btn {
                 padding: 0.75rem;
                 font-size: 0.85rem;
+            }
+            
+            .btn-eliminar {
+                padding: 0.2rem 0.4rem;
+                font-size: 0.65rem;
+                min-height: 28px;
             }
         }
         
@@ -596,11 +640,12 @@
                             <th>Modelo</th>
                             <th>No. de Serie</th>
                             <th>Fecha</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tabla-activos-body">
                         <tr>
-                            <td colspan="7" class="sin-activos">
+                            <td colspan="8" class="sin-activos">
                                 <div class="spinner"></div>
                                 Cargando activos...
                             </td>
@@ -801,6 +846,11 @@
                 <td>${activo.modelo}</td>
                 <td>${activo.no_serie}</td>
                 <td>${activo.fecha_registro}</td>
+                <td class="acciones-celda">
+                    <button class="btn-eliminar" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                        🗑️ Eliminar
+                    </button>
+                </td>
             `;
             
             // Agregar al inicio de la tabla
@@ -826,18 +876,62 @@
                                 <td>${activo.modelo}</td>
                                 <td>${activo.no_serie}</td>
                                 <td>${activo.fecha_registro}</td>
+                                <td class="acciones-celda">
+                                    <button class="btn-eliminar" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                                        🗑️ Eliminar
+                                    </button>
+                                </td>
                             </tr>
                         `;
                     });
                     tbody.innerHTML = html;
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="7" class="sin-activos">No hay activos escaneados aún</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">No hay activos escaneados aún</td></tr>';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
                 document.getElementById('tabla-activos-body').innerHTML = 
-                    '<tr><td colspan="7" class="sin-activos">Error al cargar activos</td></tr>';
+                    '<tr><td colspan="8" class="sin-activos">Error al cargar activos</td></tr>';
+            });
+        }
+
+        // Función para eliminar un activo
+        function eliminarActivo(id, nombre) {
+            // Confirmar eliminación
+            if (!confirm(`¿Estás seguro de que deseas eliminar el activo "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+                return;
+            }
+            
+            // Mostrar mensaje de carga
+            showMessage('Eliminando activo...', 'success');
+            
+            fetch('/eliminar_activo/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({
+                    id: id
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage('✅ ' + data.mensaje, 'success');
+                    // Recargar la tabla para reflejar los cambios
+                    cargarActivosEscaneados();
+                    addSuccessEffect();
+                } else {
+                    showMessage('❌ Error: ' + data.error, 'error');
+                    addErrorEffect();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('❌ Error de conexión al eliminar', 'error');
+                addErrorEffect();
             });
         }
 
