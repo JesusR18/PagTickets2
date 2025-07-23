@@ -132,6 +132,7 @@ def extraer_informacion_qr(codigo_qr):
     """
     Extrae información del código QR soportando múltiples formatos:
     - JSON: {"codigo": "ACT001", "nombre": "Laptop", ...}
+    - Formato de texto estructurado: "Activo: Escritorio en L Ubicación: 1er piso R.H. Marca: Techni mobili Modelo: Havano N. Serie: -."
     - Texto simple separado por |: ACT001|Laptop Dell|Oficina 1|Dell|Latitude|SN123456
     - Texto simple: cualquier código
     """
@@ -140,27 +141,31 @@ def extraer_informacion_qr(codigo_qr):
         if codigo_qr.strip().startswith('{') and codigo_qr.strip().endswith('}'):
             qr_data = json.loads(codigo_qr)
             return {
-                'codigo': qr_data.get('codigo', codigo_qr),
-                'nombre': qr_data.get('nombre', qr_data.get('activo', 'Activo sin nombre')),
+                'codigo': qr_data.get('codigo', qr_data.get('code', codigo_qr)),
+                'nombre': qr_data.get('nombre', qr_data.get('activo', qr_data.get('asset', 'Activo sin nombre'))),
                 'ubicacion': qr_data.get('ubicacion', qr_data.get('location', 'Sin ubicación')),
                 'marca': qr_data.get('marca', qr_data.get('brand', 'Sin marca')),
                 'modelo': qr_data.get('modelo', qr_data.get('model', 'Sin modelo')),
                 'no_serie': qr_data.get('no_serie', qr_data.get('serial', qr_data.get('serie', 'Sin número de serie')))
             }
         
-        # Intento 2: Parsear como texto separado por |
+        # Intento 2: Formato de texto estructurado (el formato que mencionas)
+        elif any(palabra in codigo_qr.lower() for palabra in ['activo:', 'ubicación:', 'marca:', 'modelo:', 'serie:']):
+            return parsear_texto_estructurado(codigo_qr)
+        
+        # Intento 3: Parsear como texto separado por |
         elif '|' in codigo_qr:
             partes = codigo_qr.split('|')
             return {
-                'codigo': partes[0] if len(partes) > 0 else codigo_qr,
-                'nombre': partes[1] if len(partes) > 1 else 'Activo sin nombre',
-                'ubicacion': partes[2] if len(partes) > 2 else 'Sin ubicación',
-                'marca': partes[3] if len(partes) > 3 else 'Sin marca',
-                'modelo': partes[4] if len(partes) > 4 else 'Sin modelo',
-                'no_serie': partes[5] if len(partes) > 5 else 'Sin número de serie'
+                'codigo': partes[0].strip() if len(partes) > 0 else codigo_qr,
+                'nombre': partes[1].strip() if len(partes) > 1 else 'Activo sin nombre',
+                'ubicacion': partes[2].strip() if len(partes) > 2 else 'Sin ubicación',
+                'marca': partes[3].strip() if len(partes) > 3 else 'Sin marca',
+                'modelo': partes[4].strip() if len(partes) > 4 else 'Sin modelo',
+                'no_serie': partes[5].strip() if len(partes) > 5 else 'Sin número de serie'
             }
         
-        # Intento 3: Buscar patrones conocidos en el texto
+        # Intento 4: Buscar patrones conocidos en el texto
         else:
             # Buscar patrones como "ACT001 - Laptop Dell" o similares
             nombre_detectado = codigo_qr
@@ -186,6 +191,89 @@ def extraer_informacion_qr(codigo_qr):
         return {
             'codigo': codigo_qr,
             'nombre': codigo_qr,
+            'ubicacion': 'Sin ubicación',
+            'marca': 'Sin marca',
+            'modelo': 'Sin modelo',
+            'no_serie': 'Sin número de serie'
+        }
+
+def parsear_texto_estructurado(texto_qr):
+    """
+    Parsea texto estructurado como:
+    "Activo: Escritorio en L Ubicación: 1er piso R.H. Marca: Techni mobili Modelo: Havano N. Serie: -."
+    """
+    # Inicializar valores por defecto
+    resultado = {
+        'codigo': texto_qr[:20] + '...' if len(texto_qr) > 20 else texto_qr,  # Usar parte del texto como código
+        'nombre': 'Activo sin nombre',
+        'ubicacion': 'Sin ubicación',
+        'marca': 'Sin marca',
+        'modelo': 'Sin modelo',
+        'no_serie': 'Sin número de serie'
+    }
+    
+    try:
+        # Convertir texto a minúsculas para búsqueda, pero mantener original para extraer valores
+        texto_busqueda = texto_qr.lower()
+        
+        # Patrones de búsqueda (en orden de prioridad)
+        patrones = {
+            'nombre': ['activo:', 'asset:', 'equipo:', 'item:'],
+            'ubicacion': ['ubicación:', 'ubicacion:', 'location:', 'lugar:'],
+            'marca': ['marca:', 'brand:', 'fabricante:'],
+            'modelo': ['modelo:', 'model:', 'tipo:'],
+            'no_serie': ['n. serie:', 'serie:', 'serial:', 'número de serie:', 'numero de serie:', 'sn:']
+        }
+        
+        for campo, palabras_clave in patrones.items():
+            for palabra_clave in palabras_clave:
+                if palabra_clave in texto_busqueda:
+                    # Encontrar la posición de la palabra clave
+                    inicio = texto_busqueda.find(palabra_clave)
+                    if inicio != -1:
+                        # Buscar el inicio del valor (después de la palabra clave)
+                        inicio_valor = inicio + len(palabra_clave)
+                        
+                        # Buscar el final del valor (hasta la siguiente palabra clave o final del texto)
+                        fin_valor = len(texto_qr)
+                        
+                        # Buscar la siguiente palabra clave para determinar el fin
+                        for otros_campos, otras_palabras in patrones.items():
+                            if otros_campos != campo:
+                                for otra_palabra in otras_palabras:
+                                    pos_siguiente = texto_busqueda.find(otra_palabra, inicio_valor)
+                                    if pos_siguiente != -1 and pos_siguiente < fin_valor:
+                                        fin_valor = pos_siguiente
+                        
+                        # Extraer el valor y limpiarlo
+                        valor = texto_qr[inicio_valor:fin_valor].strip()
+                        
+                        # Limpiar caracteres innecesarios al final
+                        valor = valor.rstrip('.,;:').strip()
+                        
+                        if valor:
+                            resultado[campo] = valor
+                        break
+        
+        # Si no se encontró nombre, usar la primera parte como nombre
+        if resultado['nombre'] == 'Activo sin nombre' and resultado['codigo']:
+            resultado['nombre'] = resultado['codigo']
+        
+        # Generar un código más limpio si es posible
+        if resultado['nombre'] != 'Activo sin nombre':
+            # Tomar las primeras palabras del nombre como código
+            palabras_nombre = resultado['nombre'].split()[:3]
+            codigo_generado = ''.join(palabra[:3].upper() for palabra in palabras_nombre if palabra.isalpha())
+            if len(codigo_generado) >= 3:
+                resultado['codigo'] = codigo_generado
+        
+        return resultado
+        
+    except Exception:
+        # Si hay error en el parsing, devolver el texto original como nombre
+        return {
+            'codigo': texto_qr[:20] + '...' if len(texto_qr) > 20 else texto_qr,
+            'nombre': texto_qr,
             'ubicacion': 'Sin ubicación',
             'marca': 'Sin marca',
             'modelo': 'Sin modelo',
