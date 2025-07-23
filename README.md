@@ -8,7 +8,6 @@ Aplicación web Django que permite escanear códigos QR usando la cámara del di
 - ✅ Almacenamiento de códigos QR en base de datos SQLite
 - ✅ Visualización de los últimos códigos registrados
 - ✅ Actualización automática de la lista cada 5 segundos
-- ✅ Panel de administración Django para gestionar registros
 
 ## 🛠️ Tecnologías utilizadas
 - **Backend**: Django 5.2.1 (Python)
@@ -40,13 +39,7 @@ python manage.py makemigrations
 python manage.py migrate
 ```
 
-### 4. Crear superusuario (opcional)
-```bash
-# Para acceder al panel de administración
-python manage.py createsuperuser
-```
-
-### 5. Ejecutar el servidor
+### 4. Ejecutar el servidor
 ```bash
 # Iniciar el servidor de desarrollo
 python manage.py runserver
@@ -58,11 +51,6 @@ python manage.py runserver
 2. **Permitir cámara**: Acepta los permisos de cámara cuando el navegador los solicite
 3. **Escanear códigos**: Apunta la cámara hacia un código QR
 4. **Ver registros**: Los códigos escaneados aparecerán automáticamente en la lista
-
-### Panel de Administración
-- Ve a `http://localhost:8000/admin`
-- Inicia sesión con tu superusuario
-- Gestiona los registros de códigos QR
 
 ## 📁 Estructura del proyecto
 ```

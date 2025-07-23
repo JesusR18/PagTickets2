@@ -55,6 +55,5 @@ python manage.py shell
 # ⚙️ URLS IMPORTANTES
 # -------------------------------------------------------
 # http://localhost:8000/              # Página principal (lector QR)
-# http://localhost:8000/admin/        # Panel de administración
 # http://localhost:8000/registrar_qr/ # API para registrar QR (POST)
 # http://localhost:8000/ultimos_registros/ # API últimos registros (GET)

@@ -22,12 +22,7 @@ Al escanear un código QR, el sistema ahora:
 - Muestra información detallada: nombre, ubicación, responsable
 - Panel desplegable con historial de registros
 
-#### 📊 **Panel de Administración**
-- Botón "Cargar Activos MicroSIP" para sincronizar catálogo
-- Información detallada al hacer clic en registros
-- Estados de exportación con iconos visuales
-
-#### 🔄 **Sincronización con MicroSIP**
+####  **Sincronización con MicroSIP**
 - Conexión directa a base de datos SQL Server
 - Exportación de imágenes a carpeta configurada
 - Actualización automática de rutas en BD
