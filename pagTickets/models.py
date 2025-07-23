@@ -1,5 +1,24 @@
 # Importa las funciones necesarias para crear modelos de base de datos en Django
 from django.db import models
+import json
+
+# Define una clase que representa un activo fijo
+class ActivoFijo(models.Model):
+    codigo = models.CharField(max_length=50, unique=True, verbose_name="Código QR")
+    nombre = models.CharField(max_length=200, verbose_name="Nombre del Activo")
+    ubicacion = models.CharField(max_length=200, verbose_name="Ubicación")
+    marca = models.CharField(max_length=100, verbose_name="Marca")
+    modelo = models.CharField(max_length=100, verbose_name="Modelo")
+    no_serie = models.CharField(max_length=100, verbose_name="Número de Serie")
+    fecha_registro = models.DateTimeField(auto_now_add=True, verbose_name="Fecha de Registro")
+    
+    class Meta:
+        verbose_name = "Activo Fijo"
+        verbose_name_plural = "Activos Fijos"
+        ordering = ['-fecha_registro']
+    
+    def __str__(self):
+        return f"{self.nombre} - {self.codigo}"
 
 # Define una clase que representa una tabla en la base de datos para registros QR
 class RegistroQR(models.Model):

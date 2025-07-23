@@ -148,6 +148,21 @@
             text-align: center;
         }
         
+        /* Estilos para la tabla de activos */
+        .activos-section {
+            background: var(--color-white);
+            padding: 2rem;
+            border-radius: 16px;
+            box-shadow: var(--shadow-medium);
+        }
+        
+        .activos-section h2 {
+            color: var(--color-gray-700);
+            font-size: 1.5rem;
+            margin-bottom: 1.5rem;
+            text-align: center;
+        }
+        
         .export-btn {
             background: #059669;
             margin-bottom: 1rem;
@@ -158,42 +173,54 @@
             background: #047857;
         }
         
-        .registros-list {
+        .tabla-activos {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1rem;
+            font-size: 0.9rem;
+        }
+        
+        .tabla-activos th,
+        .tabla-activos td {
+            padding: 0.75rem;
+            text-align: left;
+            border-bottom: 1px solid var(--color-gray-100);
+        }
+        
+        .tabla-activos th {
+            background: var(--color-gray-50);
+            font-weight: 600;
+            color: var(--color-gray-700);
+            position: sticky;
+            top: 0;
+        }
+        
+        .tabla-activos tbody tr:hover {
+            background-color: var(--color-gray-50);
+        }
+        
+        .tabla-container {
             max-height: 400px;
             overflow-y: auto;
             border: 1px solid var(--color-gray-100);
             border-radius: 8px;
         }
         
-        .registro-item {
-            padding: 1rem;
-            border-bottom: 1px solid var(--color-gray-100);
-            transition: background-color 0.2s ease;
-        }
-        
-        .registro-item:hover {
-            background-color: var(--color-gray-50);
-        }
-        
-        .registro-item:last-child {
-            border-bottom: none;
-        }
-        
-        .registro-codigo {
+        .btn-registrado {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 0.25rem 0.75rem;
+            border-radius: 20px;
+            font-size: 0.75rem;
             font-weight: 600;
-            color: var(--color-primary);
-            margin-bottom: 0.25rem;
+            cursor: default;
         }
         
-        .registro-fecha {
-            font-size: 0.875rem;
-            color: #6b7280;
-        }
-        
-        .registro-info {
-            font-size: 0.875rem;
+        .sin-activos {
+            text-align: center;
+            padding: 2rem;
             color: var(--color-gray-700);
-            margin-top: 0.25rem;
         }
         
         .alert {
@@ -278,13 +305,13 @@
             <div id="scanner-status"></div>
         </div>
 
-        <!-- Sección de historial -->
-        <div class="history-section">
-            <h2>📋 Últimos Registros</h2>
+        <!-- Sección de activos escaneados -->
+        <div class="activos-section">
+            <h2>📋 Activos Escaneados</h2>
             
             <!-- Botón para exportar a Excel -->
-            <button class="btn export-btn" onclick="exportarExcel()">
-                📊 Exportar a Excel
+            <button class="btn export-btn" onclick="exportarActivosExcel()">
+                📊 Exportar Activos a Excel
             </button>
             
             <!-- Botón para ir al dashboard -->
@@ -292,9 +319,29 @@
                 🔐 Panel de Administración
             </a>
             
-            <!-- Lista de registros -->
-            <div class="registros-list" id="registros-list">
-                <div class="spinner"></div>
+            <!-- Tabla de activos -->
+            <div class="tabla-container" id="tabla-container">
+                <table class="tabla-activos" id="tabla-activos">
+                    <thead>
+                        <tr>
+                            <th>Código QR</th>
+                            <th>Activo</th>
+                            <th>Ubicación</th>
+                            <th>Marca</th>
+                            <th>Modelo</th>
+                            <th>No. de Serie</th>
+                            <th>Fecha</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabla-activos-body">
+                        <tr>
+                            <td colspan="7" class="sin-activos">
+                                <div class="spinner"></div>
+                                Cargando activos...
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
     </div>
@@ -306,7 +353,7 @@
 
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
-            cargarUltimosRegistros();
+            cargarActivosEscaneados();
         });
 
         // Función para alternar el escáner (iniciar/detener)
@@ -397,8 +444,15 @@
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessage('✅ Código registrado: ' + codigo, 'success');
-                    cargarUltimosRegistros(); // Actualizar la lista
+                    if (data.already_registered) {
+                        // Si ya está registrado, mostrar botón "Registrado"
+                        showMessage('✅ Activo ya registrado: ' + data.activo.nombre, 'success');
+                        showRegisteredButton(data.activo);
+                    } else {
+                        // Si es nuevo, agregarlo a la tabla
+                        showMessage('✅ Nuevo activo registrado: ' + data.activo.nombre, 'success');
+                        agregarActivoATabla(data.activo);
+                    }
                 } else {
                     showMessage('❌ Error: ' + data.error, 'error');
                 }
@@ -408,41 +462,84 @@
                 showMessage('❌ Error de conexión', 'error');
             });
         }
+        
+        // Función para mostrar el botón "Registrado"
+        function showRegisteredButton(activo) {
+            const statusDiv = document.getElementById('scanner-status');
+            statusDiv.innerHTML = `
+                <div class="alert alert-success">
+                    <strong>Activo ya registrado:</strong><br>
+                    ${activo.nombre}<br>
+                    <button class="btn-registrado">✅ Registrado</button>
+                </div>
+            `;
+        }
+        
+        // Función para agregar un activo a la tabla
+        function agregarActivoATabla(activo) {
+            const tbody = document.getElementById('tabla-activos-body');
+            
+            // Si es la primera fila y está vacía, limpiar
+            if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
+                tbody.innerHTML = '';
+            }
+            
+            // Crear nueva fila
+            const fila = document.createElement('tr');
+            fila.innerHTML = `
+                <td>${activo.codigo}</td>
+                <td>${activo.nombre}</td>
+                <td>${activo.ubicacion}</td>
+                <td>${activo.marca}</td>
+                <td>${activo.modelo}</td>
+                <td>${activo.no_serie}</td>
+                <td>${activo.fecha_registro}</td>
+            `;
+            
+            // Agregar al inicio de la tabla
+            tbody.insertBefore(fila, tbody.firstChild);
+        }
 
-        // Función para cargar los últimos registros
-        function cargarUltimosRegistros() {
-            fetch('/ultimos_registros/')
+        // Función para cargar los activos escaneados
+        function cargarActivosEscaneados() {
+            fetch('/obtener_activos_escaneados/')
             .then(response => response.json())
             .then(data => {
-                const lista = document.getElementById('registros-list');
+                const tbody = document.getElementById('tabla-activos-body');
                 
-                if (data.registros && data.registros.length > 0) {
+                if (data.activos && data.activos.length > 0) {
                     let html = '';
-                    data.registros.forEach(registro => {
+                    data.activos.forEach(activo => {
                         html += `
-                            <div class="registro-item">
-                                <div class="registro-codigo">${registro.codigo}</div>
-                                <div class="registro-fecha">${registro.fecha_registro}</div>
-                                <div class="registro-info">
-                                    👤 ${registro.usuario} | 📍 ${registro.ubicacion}
-                                </div>
-                                ${registro.notas ? `<div class="registro-info">📝 ${registro.notas}</div>` : ''}
-                            </div>
+                            <tr>
+                                <td>${activo.codigo}</td>
+                                <td>${activo.nombre}</td>
+                                <td>${activo.ubicacion}</td>
+                                <td>${activo.marca}</td>
+                                <td>${activo.modelo}</td>
+                                <td>${activo.no_serie}</td>
+                                <td>${activo.fecha_registro}</td>
+                            </tr>
                         `;
                     });
-                    lista.innerHTML = html;
+                    tbody.innerHTML = html;
                 } else {
-                    lista.innerHTML = '<div class="registro-item">No hay registros aún</div>';
+                    tbody.innerHTML = '<tr><td colspan="7" class="sin-activos">No hay activos escaneados aún</td></tr>';
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                document.getElementById('registros-list').innerHTML = 
-                    '<div class="registro-item">Error al cargar registros</div>';
+                document.getElementById('tabla-activos-body').innerHTML = 
+                    '<tr><td colspan="7" class="sin-activos">Error al cargar activos</td></tr>';
             });
         }
 
-        // Función para exportar registros a Excel
+        // Función para exportar activos a Excel
+        function exportarActivosExcel() {
+            window.open('/exportar_activos_excel/', '_blank');
+        }
+        
+        // Función para exportar registros a Excel (mantener compatibilidad)
         function exportarExcel() {
             window.open('/exportar_excel/', '_blank');
         }
@@ -481,8 +578,8 @@
             return cookieValue;
         }
 
-        // Actualizar registros cada 30 segundos
-        setInterval(cargarUltimosRegistros, 30000);
+        // Actualizar activos cada 30 segundos
+        setInterval(cargarActivosEscaneados, 30000);
     </script>
 </body>
 </html>

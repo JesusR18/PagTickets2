@@ -19,10 +19,39 @@ import datetime
 
 # Función principal que muestra la página de inicio con el escáner QR
 def index(request):
-    # Obtiene los últimos 10 registros de la base de datos, ordenados por fecha (más reciente primero)
-    registros = RegistroQR.objects.order_by('-fecha_registro')[:10]
-    # Renderiza la página HTML y le pasa los registros como contexto
-    return render(request, 'index.html', {'registros': registros})
+    # Obtiene los últimos activos escaneados desde RegistroQR
+    registros_qr = RegistroQR.objects.order_by('-fecha_registro')[:50]
+    
+    # Extraer información de activos desde los códigos QR
+    activos_escaneados = []
+    for registro in registros_qr:
+        try:
+            # Intentar parsear el código QR como JSON
+            qr_data = json.loads(registro.codigo)
+            activo_info = {
+                'codigo': qr_data.get('codigo', registro.codigo),
+                'nombre': qr_data.get('nombre', 'Activo sin nombre'),
+                'ubicacion': qr_data.get('ubicacion', 'Sin ubicación'),
+                'marca': qr_data.get('marca', 'Sin marca'),
+                'modelo': qr_data.get('modelo', 'Sin modelo'),
+                'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
+                'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        except (json.JSONDecodeError, AttributeError):
+            # Si no es JSON válido, usar información básica
+            activo_info = {
+                'codigo': registro.codigo,
+                'nombre': registro.codigo,
+                'ubicacion': registro.ubicacion or 'Sin ubicación',
+                'marca': 'Sin marca',
+                'modelo': 'Sin modelo',
+                'no_serie': 'Sin número de serie',
+                'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+            }
+        activos_escaneados.append(activo_info)
+    
+    # Renderiza la página HTML y le pasa los activos como contexto
+    return render(request, 'index.html', {'activos_escaneados': activos_escaneados})
 
 # Función que guarda un nuevo código QR en la base de datos
 @csrf_exempt
@@ -32,25 +61,86 @@ def registrar_qr(request):
             # Convierte los datos JSON recibidos a un diccionario de Python
             data = json.loads(request.body)
             # Extrae el código QR de los datos recibidos
-            codigo = data.get('codigo')
+            codigo_qr = data.get('codigo')
             usuario = data.get('usuario', 'Usuario Web')
-            ubicacion = data.get('ubicacion', 'Escáner Web')
-            notas = data.get('notas', '')
+            ubicacion_scan = data.get('ubicacion', 'Escáner Web')
             
-            # Crea un nuevo registro en la base de datos con el código QR
-            registro = RegistroQR.objects.create(
-                codigo=codigo,
-                usuario=usuario,
-                ubicacion=ubicacion,
-                notas=notas
-            )
+            # Intenta parsear el QR como JSON para extraer información del activo
+            try:
+                qr_data = json.loads(codigo_qr)
+                nombre = qr_data.get('nombre', 'Activo sin nombre')
+                ubicacion = qr_data.get('ubicacion', 'Sin ubicación')
+                marca = qr_data.get('marca', 'Sin marca')
+                modelo = qr_data.get('modelo', 'Sin modelo')
+                no_serie = qr_data.get('no_serie', 'Sin número de serie')
+                codigo = qr_data.get('codigo', codigo_qr)
+            except (json.JSONDecodeError, AttributeError):
+                # Si no es JSON válido, usar el código QR como está
+                nombre = codigo_qr
+                ubicacion = 'Sin ubicación'
+                marca = 'Sin marca'
+                modelo = 'Sin modelo'
+                no_serie = 'Sin número de serie'
+                codigo = codigo_qr
             
-            # Devuelve una respuesta JSON exitosa con el código registrado
-            return JsonResponse({
-                'success': True, 
-                'codigo': registro.codigo,
-                'fecha': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
-            })
+            # Verificar si el código ya existe
+            registro_existente = RegistroQR.objects.filter(codigo=codigo_qr).first()
+            
+            if registro_existente:
+                # Si ya existe, devolver información de que está registrado
+                try:
+                    qr_data = json.loads(registro_existente.codigo)
+                    activo_info = {
+                        'codigo': qr_data.get('codigo', registro_existente.codigo),
+                        'nombre': qr_data.get('nombre', 'Activo sin nombre'),
+                        'ubicacion': qr_data.get('ubicacion', 'Sin ubicación'),
+                        'marca': qr_data.get('marca', 'Sin marca'),
+                        'modelo': qr_data.get('modelo', 'Sin modelo'),
+                        'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
+                        'fecha_registro': registro_existente.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                except (json.JSONDecodeError, AttributeError):
+                    activo_info = {
+                        'codigo': registro_existente.codigo,
+                        'nombre': registro_existente.codigo,
+                        'ubicacion': registro_existente.ubicacion or 'Sin ubicación',
+                        'marca': 'Sin marca',
+                        'modelo': 'Sin modelo',
+                        'no_serie': 'Sin número de serie',
+                        'fecha_registro': registro_existente.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                    }
+                
+                return JsonResponse({
+                    'success': True,
+                    'already_registered': True,
+                    'activo': activo_info
+                })
+            else:
+                # Crear un nuevo registro
+                registro = RegistroQR.objects.create(
+                    codigo=codigo_qr,
+                    usuario=usuario,
+                    ubicacion=ubicacion_scan,
+                    notas=f"Activo registrado: {nombre}"
+                )
+                
+                # Devuelve una respuesta JSON exitosa con el activo registrado
+                activo_info = {
+                    'codigo': codigo,
+                    'nombre': nombre,
+                    'ubicacion': ubicacion,
+                    'marca': marca,
+                    'modelo': modelo,
+                    'no_serie': no_serie,
+                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                }
+                
+                return JsonResponse({
+                    'success': True,
+                    'already_registered': False,
+                    'activo': activo_info
+                })
+                
         except Exception as e:
             # Si hay algún error, devuelve una respuesta JSON con el error
             return JsonResponse({'success': False, 'error': str(e)})
@@ -58,34 +148,51 @@ def registrar_qr(request):
     # Si no es una petición POST, devuelve un error
     return JsonResponse({'success': False, 'error': 'Método no permitido'})
 
-# Función para obtener los últimos registros (para actualizar la lista en tiempo real)
-def ultimos_registros(request):
+# Función para obtener los activos escaneados (para actualizar la tabla en tiempo real)
+def obtener_activos_escaneados(request):
     try:
-        # Obtiene los últimos 20 registros
-        registros = RegistroQR.objects.order_by('-fecha_registro')[:20]
+        # Obtiene todos los registros QR
+        registros = RegistroQR.objects.order_by('-fecha_registro')
         
-        # Convierte los registros a formato JSON
-        registros_data = []
+        # Convierte los registros a formato de activos
+        activos_data = []
         for registro in registros:
-            registros_data.append({
-                'codigo': registro.codigo,
-                'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S'),
-                'usuario': registro.usuario,
-                'ubicacion': registro.ubicacion,
-                'notas': registro.notas
-            })
+            try:
+                # Intentar parsear el código QR como JSON
+                qr_data = json.loads(registro.codigo)
+                activo_info = {
+                    'codigo': qr_data.get('codigo', registro.codigo),
+                    'nombre': qr_data.get('nombre', 'Activo sin nombre'),
+                    'ubicacion': qr_data.get('ubicacion', 'Sin ubicación'),
+                    'marca': qr_data.get('marca', 'Sin marca'),
+                    'modelo': qr_data.get('modelo', 'Sin modelo'),
+                    'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
+                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                }
+            except (json.JSONDecodeError, AttributeError):
+                # Si no es JSON válido, usar información básica
+                activo_info = {
+                    'codigo': registro.codigo,
+                    'nombre': registro.codigo,
+                    'ubicacion': registro.ubicacion or 'Sin ubicación',
+                    'marca': 'Sin marca',
+                    'modelo': 'Sin modelo',
+                    'no_serie': 'Sin número de serie',
+                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                }
+            activos_data.append(activo_info)
         
-        return JsonResponse({'success': True, 'registros': registros_data})
+        return JsonResponse({'success': True, 'activos': activos_data})
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
-# Función para exportar registros a Excel
-def exportar_excel(request):
+# Función para exportar activos escaneados a Excel
+def exportar_activos_excel(request):
     try:
         # Crear un nuevo libro de Excel
         wb = Workbook()
         ws = wb.active
-        ws.title = "Registros QR"
+        ws.title = "Activos Escaneados"
         
         # Configurar estilos
         header_font = Font(bold=True, color="FFFFFF")
@@ -95,7 +202,7 @@ def exportar_excel(request):
                        top=Side(style='thin'), bottom=Side(style='thin'))
         
         # Encabezados
-        headers = ['Código QR', 'Fecha y Hora', 'Usuario', 'Ubicación', 'Notas']
+        headers = ['Código QR', 'Activo', 'Ubicación', 'Marca', 'Modelo', 'No. de Serie', 'Fecha de Registro']
         for col, header in enumerate(headers, 1):
             cell = ws.cell(row=1, column=col, value=header)
             cell.font = header_font
@@ -103,16 +210,38 @@ def exportar_excel(request):
             cell.alignment = header_alignment
             cell.border = border
         
-        # Obtener todos los registros
+        # Obtener todos los registros y convertirlos a activos
         registros = RegistroQR.objects.order_by('-fecha_registro')
         
         # Agregar datos
-        for row, registro in enumerate(registros, 2):
-            ws.cell(row=row, column=1, value=registro.codigo).border = border
-            ws.cell(row=row, column=2, value=registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')).border = border
-            ws.cell(row=row, column=3, value=registro.usuario).border = border
-            ws.cell(row=row, column=4, value=registro.ubicacion).border = border
-            ws.cell(row=row, column=5, value=registro.notas).border = border
+        row = 2
+        for registro in registros:
+            try:
+                # Intentar parsear el código QR como JSON
+                qr_data = json.loads(registro.codigo)
+                codigo = qr_data.get('codigo', registro.codigo)
+                nombre = qr_data.get('nombre', 'Activo sin nombre')
+                ubicacion = qr_data.get('ubicacion', 'Sin ubicación')
+                marca = qr_data.get('marca', 'Sin marca')
+                modelo = qr_data.get('modelo', 'Sin modelo')
+                no_serie = qr_data.get('no_serie', 'Sin número de serie')
+            except (json.JSONDecodeError, AttributeError):
+                # Si no es JSON válido, usar información básica
+                codigo = registro.codigo
+                nombre = registro.codigo
+                ubicacion = registro.ubicacion or 'Sin ubicación'
+                marca = 'Sin marca'
+                modelo = 'Sin modelo'
+                no_serie = 'Sin número de serie'
+            
+            ws.cell(row=row, column=1, value=codigo).border = border
+            ws.cell(row=row, column=2, value=nombre).border = border
+            ws.cell(row=row, column=3, value=ubicacion).border = border
+            ws.cell(row=row, column=4, value=marca).border = border
+            ws.cell(row=row, column=5, value=modelo).border = border
+            ws.cell(row=row, column=6, value=no_serie).border = border
+            ws.cell(row=row, column=7, value=registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')).border = border
+            row += 1
         
         # Ajustar ancho de columnas
         for col in range(1, len(headers) + 1):
@@ -122,7 +251,7 @@ def exportar_excel(request):
         response = HttpResponse(
             content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
         )
-        response['Content-Disposition'] = f'attachment; filename="registros_qr_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
+        response['Content-Disposition'] = f'attachment; filename="activos_escaneados_{datetime.datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx"'
         
         # Guardar el archivo en la respuesta
         wb.save(response)

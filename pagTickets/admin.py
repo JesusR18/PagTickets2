@@ -1,6 +1,6 @@
 # Importa el sistema de administración de Django
 from django.contrib import admin
-# Importa el modelo RegistroQR para registrarlo en el admin
+# Importa los modelos para registrarlos en el admin
 from .models import RegistroQR
 
 # Clase que personaliza cómo se muestra RegistroQR en el panel de administración
