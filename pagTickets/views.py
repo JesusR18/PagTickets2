@@ -2,12 +2,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-from django.contrib.auth.decorators import login_required
-from django.contrib.auth import authenticate, login, logout
-from django.contrib.auth.models import User
-from django.shortcuts import redirect
-from django.contrib import messages
-from django.db.models import Count
+# Imports de auth eliminados - ya no se usan
 from django.utils import timezone
 import json
 from .models import RegistroQR
@@ -17,18 +12,6 @@ from openpyxl import Workbook
 from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import datetime
-
-# Crear usuario admin automáticamente si no existe
-def create_admin_if_not_exists():
-    try:
-        if not User.objects.filter(username='admin').exists():
-            User.objects.create_superuser(
-                username='admin',
-                email='admin@siseg.com',
-                password='admin'
-            )
-    except Exception:
-        pass  # Ignorar errores si ya existe
 
 # Vista de healthcheck para Railway
 def health_check(request):
@@ -435,77 +418,6 @@ def exportar_activos_excel(request):
         
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
-
-# Vista de login personalizada
-def login_view(request):
-    # Crear admin automáticamente si no existe
-    create_admin_if_not_exists()
-    
-    if request.method == 'POST':
-        username = request.POST.get('username')
-        password = request.POST.get('password')
-        
-        # Solo permitir usuario "admin" con contraseña "admin"
-        if username == 'admin' and password == 'admin':
-            user = authenticate(request, username=username, password=password)
-            if user is not None:
-                login(request, user)
-                return redirect('dashboard')
-            else:
-                messages.error(request, 'Credenciales incorrectas')
-        else:
-            messages.error(request, 'Solo se permite acceso con usuario: admin, contraseña: admin')
-    
-    return render(request, 'login.html')
-
-# Vista de logout
-def logout_view(request):
-    logout(request)
-    return redirect('index')
-
-# Dashboard con estadísticas (requiere login)
-@login_required
-def dashboard(request):
-    # Estadísticas básicas
-    total_registros = RegistroQR.objects.count()
-    hoy = timezone.now().date()
-    registros_hoy = RegistroQR.objects.filter(fecha_registro__date=hoy).count()
-    
-    # Últimos 10 registros
-    ultimos_registros = RegistroQR.objects.order_by('-fecha_registro')[:10]
-    
-    # Registros por usuario (top 5)
-    usuarios_top = RegistroQR.objects.values('usuario').annotate(
-        total=Count('id')
-    ).order_by('-total')[:5]
-    
-    # Registros por ubicación (top 5)
-    ubicaciones_top = RegistroQR.objects.values('ubicacion').annotate(
-        total=Count('id')
-    ).order_by('-total')[:5]
-    
-    # Registros de los últimos 7 días
-    desde_7_dias = timezone.now() - datetime.timedelta(days=7)
-    registros_7_dias = []
-    for i in range(7):
-        fecha = hoy - datetime.timedelta(days=i)
-        count = RegistroQR.objects.filter(fecha_registro__date=fecha).count()
-        registros_7_dias.append({
-            'fecha': fecha.strftime('%d/%m'),
-            'cantidad': count
-        })
-    registros_7_dias.reverse()
-    
-    context = {
-        'total_registros': total_registros,
-        'registros_hoy': registros_hoy,
-        'ultimos_registros': ultimos_registros,
-        'usuarios_top': usuarios_top,
-        'ubicaciones_top': ubicaciones_top,
-        'registros_7_dias': registros_7_dias,
-    }
-    
-    return render(request, 'dashboard.html', context)
 
 # Vista para obtener los últimos registros (API JSON)
 def ultimos_registros(request):

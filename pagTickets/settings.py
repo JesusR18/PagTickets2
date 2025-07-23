@@ -58,7 +58,7 @@ SECURE_SSL_REDIRECT = False  # Railway maneja esto automáticamente
 
 # Lista de aplicaciones instaladas en este proyecto Django
 INSTALLED_APPS = [
-    'django.contrib.admin',        # Panel de administración
+    # 'django.contrib.admin',        # Panel de administración - ELIMINADO
     'django.contrib.auth',         # Sistema de autenticación
     'django.contrib.contenttypes', # Framework de tipos de contenido
     'django.contrib.sessions',     # Framework de sesiones
@@ -75,7 +75,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',    # Sesiones
     'django.middleware.common.CommonMiddleware',               # Funcionalidad común
     'django.middleware.csrf.CsrfViewMiddleware',              # Protección CSRF
-    'django.contrib.auth.middleware.AuthenticationMiddleware', # Autenticación
+    # 'django.contrib.auth.middleware.AuthenticationMiddleware', # Autenticación - ELIMINADO (solo para admin)
     'django.contrib.messages.middleware.MessageMiddleware',    # Mensajes
     'django.middleware.clickjacking.XFrameOptionsMiddleware',  # Protección clickjacking
 ]
@@ -97,7 +97,7 @@ TEMPLATES = [
             # Procesadores de contexto que añaden variables disponibles en todos los templates
             'context_processors': [
                 'django.template.context_processors.request',  # Añade la variable 'request'
-                'django.contrib.auth.context_processors.auth', # Añade variables de usuario
+                # 'django.contrib.auth.context_processors.auth', # Añade variables de usuario - ELIMINADO (solo para admin)
                 'django.contrib.messages.context_processors.messages', # Añade mensajes
             ],
         },
