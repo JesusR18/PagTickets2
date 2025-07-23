@@ -2,11 +2,11 @@
 builder = "nixpacks"
 
 [deploy]
-startCommand = "chmod +x start_railway.sh && ./start_railway.sh"
-healthcheckPath = "/health/"
-healthcheckTimeout = 180
+startCommand = "python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:$PORT pagTickets.wsgi:application"
+healthcheckPath = "/"
+healthcheckTimeout = 300
 restartPolicyType = "on_failure"
-restartPolicyMaxRetries = 5
+restartPolicyMaxRetries = 3
 
 [experimental]
 publicNetworkAccess = true

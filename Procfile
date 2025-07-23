@@ -1,1 +1,2 @@
-web: python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:$PORT pagTickets.wsgi:application
+web: gunicorn pagTickets.wsgi --log-file -
+release: python manage.py migrate

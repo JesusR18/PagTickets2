@@ -13,13 +13,8 @@ import os
 # Importa la función para obtener la aplicación WSGI de Django
 from django.core.wsgi import get_wsgi_application
 
-# Determinar configuración basada en el entorno
-if os.environ.get('RAILWAY_ENVIRONMENT'):
-    # Usar configuración de Railway si está en Railway
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pagTickets.settings_railway')
-else:
-    # Usar configuración local
-    os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pagTickets.settings')
+# Usar configuración específica para Railway cuando sea necesario
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pagTickets.settings_railway')
 
 # Crea la aplicación WSGI que servirá tu proyecto Django
 application = get_wsgi_application()
