@@ -10,6 +10,14 @@
         /* CSS para compatibilidad de emojis en todos los dispositivos */
         * {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Garantizar renderización estable de emojis */
+        button, .status-message, .zoom-display {
+            font-variant-emoji: unicode;
+            text-rendering: optimizeLegibility;
         }
         
         body {
@@ -357,10 +365,22 @@
         let zoomTimeout = null;
         let zoomPendiente = null;
         
+        // Función para manejar emojis de forma segura
+        function setEmojiContent(element, content) {
+            if (element) {
+                // Usar innerHTML para mejor compatibilidad con emojis
+                element.innerHTML = content;
+                // Forzar re-renderización si es necesario
+                element.style.display = 'none';
+                element.offsetHeight; // Trigger reflow
+                element.style.display = '';
+            }
+        }
+        
         // Función para mostrar mensajes de estado
         function actualizarEstado(mensaje, tipo) {
             const statusDiv = document.getElementById('status-message');
-            statusDiv.textContent = mensaje;
+            setEmojiContent(statusDiv, mensaje);
             statusDiv.style.display = 'block';
             
             if (tipo === 'error') {
@@ -455,7 +475,7 @@
                     const zoomDisplay = document.getElementById('zoom-display-real');
                     const zoomRange = document.getElementById('zoom-range');
                     
-                    if (zoomDisplay) zoomDisplay.textContent = `${nivelZoom.toFixed(1)}x`;
+                    if (zoomDisplay) setEmojiContent(zoomDisplay, `${nivelZoom.toFixed(1)}x`);
                     if (zoomRange) zoomRange.value = nivelZoom;
                 });
                 
@@ -508,7 +528,7 @@
             // Aplicar zoom inmediatamente para respuesta visual
             requestAnimationFrame(() => {
                 const zoomDisplay = document.getElementById('zoom-display-real');
-                if (zoomDisplay) zoomDisplay.textContent = `${nuevoZoom.toFixed(1)}x`;
+                if (zoomDisplay) setEmojiContent(zoomDisplay, `${nuevoZoom.toFixed(1)}x`);
             });
             
             // Aplicar zoom real con debounce
@@ -532,7 +552,7 @@
             document.getElementById('camera-container').style.display = 'none';
             document.getElementById('init-btn').style.display = 'block';
             document.getElementById('init-btn').disabled = false;
-            document.getElementById('init-btn').textContent = '📹 INICIAR SCANNER QR';
+            setEmojiContent(document.getElementById('init-btn'), '📹 INICIAR SCANNER QR');
             
             scannerActivo = false;
             actualizarEstado('Scanner detenido. Presiona el botón para reiniciar', null);
@@ -616,6 +636,14 @@
             })
             .catch(error => console.error('❌ Error actualizando registros:', error));
         }
+        
+        // Asegurar que los emojis se mantengan al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const initBtn = document.getElementById('init-btn');
+            if (initBtn && !initBtn.innerHTML.includes('📹')) {
+                setEmojiContent(initBtn, '📹 INICIAR SCANNER QR');
+            }
+        });
         
         console.log('✅ JavaScript cargado - SISEG Scanner QR');
     </script>
