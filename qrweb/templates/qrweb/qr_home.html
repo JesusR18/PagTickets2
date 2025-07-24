@@ -6,22 +6,117 @@
     <!-- Carga una librería externa que permite leer códigos QR desde la cámara -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <style> 
-        #reader { width: 300px; margin: auto; } /* Hace que el lector QR tenga 300px de ancho y esté centrado */
-        #result { margin-top: 20px; font-size: 1.2em; } /* Espacio arriba del resultado y texto más grande */
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo {
+            max-width: 200px;
+            height: auto;
+            margin-bottom: 15px;
+        }
+        
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 0;
+            font-size: 2.5em;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(127, 29, 29, 0.3);
+            color: #333;
+        }
+        
+        #reader { 
+            width: 100%; 
+            max-width: 400px; 
+            margin: 20px auto; 
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(185, 28, 28, 0.3);
+        }
+        
+        #result { 
+            margin-top: 20px; 
+            font-size: 1.2em; 
+            padding: 15px;
+            background: linear-gradient(135deg, #991b1b, #b91c1c);
+            color: white;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        h2 {
+            color: #991b1b;
+            border-bottom: 2px solid #b91c1c;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        
+        ul {
+            background: #f9fafb;
+            border-radius: 8px;
+            padding: 20px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        
+        li {
+            padding: 10px;
+            border-bottom: 1px solid #e5e7eb;
+            list-style: none;
+        }
+        
+        li:last-child {
+            border-bottom: none;
+        }
+        
+        li b {
+            color: #991b1b;
+        }
     </style> <!-- Fin de los estilos CSS -->
 </head> <!-- Fin de la sección head -->
 <body> <!-- Comienza la parte visible de la página web -->
-    <h1>Lector de Código QR</h1> <!-- Título principal de la página -->
-    <div id="reader"></div> <!-- Contenedor donde aparecerá la cámara para leer códigos QR -->
-    <div id="result"></div> <!-- Contenedor donde se mostrará el resultado del escaneo -->
-    <h2>Últimos códigos registrados</h2> <!-- Subtítulo para la lista de códigos -->
-    <ul id="lista-registros"> <!-- Lista donde aparecerán los códigos registrados -->
+    <div class="header">
+        <img src="https://media.licdn.com/dms/image/C560BAQHMolSfIdIfPg/company-logo_200_200/0/1654205581057?e=2147483647&v=beta&t=ZAqEZ9fzHonEjpdYP-dgCDPaBDq0Oq4FE34I2lO60Ok" alt="Logo SISEG" class="logo">
+        <h1>SISEG - Lector de Código QR</h1>
+    </div>
+    
+    <div class="container">
+        <div id="reader"></div> <!-- Contenedor donde aparecerá la cámara para leer códigos QR -->
+        <div id="result" style="display: none;"></div> <!-- Contenedor donde se mostrará el resultado del escaneo -->
+        
+        <h2>Últimos códigos registrados</h2> <!-- Subtítulo para la lista de códigos -->
+        <ul id="lista-registros"> <!-- Lista donde aparecerán los códigos registrados -->
         {% for r in registros %} <!-- Django: recorre cada registro que viene del servidor -->
             <li><b>{{ r.codigo }}</b> - {{ r.fecha|date:'Y-m-d H:i:s' }}</li> <!-- Django: muestra el código en negrita y la fecha -->
         {% empty %} <!-- Django: si no hay registros, muestra esto -->
             <li>No hay registros aún.</li> <!-- Mensaje cuando la lista está vacía -->
         {% endfor %} <!-- Django: termina el bucle for -->
     </ul> <!-- Cierra la lista -->
+    </div> <!-- Cierra el contenedor -->
+    
     <script> <!-- Comienza el código JavaScript -->
         // Función que envía el código QR al servidor para guardarlo
         function registrarCodigo(codigo) {
@@ -32,7 +127,9 @@
             })
             .then(response => response.json()) // Cuando el servidor responde, convierte la respuesta a JSON
             .then(data => { // Cuando la conversión a JSON termina, ejecuta este código
-                document.getElementById('result').innerText = 'Código registrado: ' + data.codigo_qr; // Muestra en pantalla que el código se registró
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerText = 'Código registrado: ' + data.codigo_qr; // Muestra en pantalla que el código se registró
+                resultDiv.style.display = 'block'; // Hace visible el div de resultado
                 actualizarRegistros(); // Llama a la función para actualizar la lista de códigos
             })
             .catch(err => { // Si hay algún error en el proceso anterior
