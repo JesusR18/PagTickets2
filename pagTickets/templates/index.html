@@ -484,7 +484,7 @@
                 </thead>
                 <tbody id="tabla-activos-body">
                     <tr>
-                        <td colspan="8" class="sin-activos">Cargando activos...</td>
+                        <td colspan="9" class="sin-activos">Cargando activos...</td>
                     </tr>
                 </tbody>
             </table>
@@ -851,7 +851,7 @@
                         }
                         
                         fila.innerHTML = `
-                            <td>${activo.codigo}</td>
+                            <td>${activo.codigo}${activo.codigo_ubicacion ? ' (' + activo.codigo_ubicacion + ')' : ''}</td>
                             <td>${activo.nombre}${esDuplicado ? ' ⚠️' : ''}</td>
                             <td>${activo.ubicacion}</td>
                             <td>${activo.marca}</td>

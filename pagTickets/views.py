@@ -26,6 +26,65 @@ def format_local_datetime(dt):
         return local_dt.strftime('%Y-%m-%d %H:%M:%S')
     return ''
 
+# Función helper para obtener código según ubicación
+def obtener_codigo_ubicacion(ubicacion):
+    """
+    Determina el código específico según la ubicación del activo
+    """
+    if not ubicacion:
+        return "ARC"
+    
+    # Convertir a minúsculas para comparación case-insensitive
+    ubicacion_lower = ubicacion.lower().strip()
+    
+    # Administración
+    if ubicacion_lower in ["administracion", "1er piso administracion"]:
+        return "ADMON"
+    
+    # Almacén
+    elif ubicacion_lower in ["almacen", "1er piso almacen"]:
+        return "ALM"
+    
+    # Crédito y cobranza
+    elif ubicacion_lower in ["credito y cobranza", "cuentas por pagar", "1er piso cuentas por pagar"]:
+        return "CRED"
+    
+    # Dirección
+    elif ubicacion_lower in ["direccion", "2do piso direccion"]:
+        return "DIR"
+    
+    # Gerencia
+    elif ubicacion_lower in ["gerencia", "gerencia general", "2do piso gerencia general"]:
+        return "GER"
+    
+    # Gerencia de ventas
+    elif ubicacion_lower in ["gerencia de ventas", "1er piso gerencia de ventas"]:
+        return "GV"
+    
+    # Proyectos y Marketing
+    elif ubicacion_lower in ["proyectos", "1er piso proyectos", "marketing", "1er piso marketing"]:
+        return "PROY"
+    
+    # Monitoreo, SITE, Video Wall
+    elif ubicacion_lower in ["monitoreo", "2do piso monitoreo", "site", "2do piso site", "video wall", "2do piso video wall"]:
+        return "MON"
+    
+    # Recursos Humanos
+    elif ubicacion_lower in ["1er piso r.h"]:
+        return "R.H."
+    
+    # Sala de juntas
+    elif ubicacion_lower in ["sala de juntas", "2do piso sala juntas"]:
+        return "SJ"
+    
+    # Ventas
+    elif ubicacion_lower in ["ventas", "1er piso ventas"]:
+        return "VEN 1"
+    
+    # Archivo (default)
+    else:
+        return "ARC"
+
 # Vista de healthcheck para Railway
 def health_check(request):
     """Vista simple para verificación de salud de Railway"""
@@ -221,13 +280,15 @@ def extraer_informacion_qr(codigo_qr):
         # Intento 1: Parsear como JSON
         if codigo_qr.strip().startswith('{') and codigo_qr.strip().endswith('}'):
             qr_data = json.loads(codigo_qr)
+            ubicacion = qr_data.get('ubicacion', qr_data.get('location', 'Sin ubicación'))
             return {
                 'codigo': qr_data.get('codigo', qr_data.get('code', codigo_qr)),
                 'nombre': qr_data.get('nombre', qr_data.get('activo', qr_data.get('asset', 'Activo sin nombre'))),
-                'ubicacion': qr_data.get('ubicacion', qr_data.get('location', 'Sin ubicación')),
+                'ubicacion': ubicacion,
                 'marca': qr_data.get('marca', qr_data.get('brand', 'Sin marca')),
                 'modelo': qr_data.get('modelo', qr_data.get('model', 'Sin modelo')),
-                'no_serie': qr_data.get('no_serie', qr_data.get('serial', qr_data.get('serie', 'Sin número de serie')))
+                'no_serie': qr_data.get('no_serie', qr_data.get('serial', qr_data.get('serie', 'Sin número de serie'))),
+                'codigo_ubicacion': obtener_codigo_ubicacion(ubicacion)
             }
         
         # Intento 2: Formato de texto estructurado (el formato que mencionas)
@@ -237,13 +298,15 @@ def extraer_informacion_qr(codigo_qr):
         # Intento 3: Parsear como texto separado por |
         elif '|' in codigo_qr:
             partes = codigo_qr.split('|')
+            ubicacion = partes[2].strip() if len(partes) > 2 else 'Sin ubicación'
             return {
                 'codigo': partes[0].strip() if len(partes) > 0 else codigo_qr,
                 'nombre': partes[1].strip() if len(partes) > 1 else 'Activo sin nombre',
-                'ubicacion': partes[2].strip() if len(partes) > 2 else 'Sin ubicación',
+                'ubicacion': ubicacion,
                 'marca': partes[3].strip() if len(partes) > 3 else 'Sin marca',
                 'modelo': partes[4].strip() if len(partes) > 4 else 'Sin modelo',
-                'no_serie': partes[5].strip() if len(partes) > 5 else 'Sin número de serie'
+                'no_serie': partes[5].strip() if len(partes) > 5 else 'Sin número de serie',
+                'codigo_ubicacion': obtener_codigo_ubicacion(ubicacion)
             }
         
         # Intento 4: Buscar patrones conocidos en el texto
@@ -264,7 +327,8 @@ def extraer_informacion_qr(codigo_qr):
                 'ubicacion': 'Sin ubicación',
                 'marca': 'Sin marca',
                 'modelo': 'Sin modelo',
-                'no_serie': 'Sin número de serie'
+                'no_serie': 'Sin número de serie',
+                'codigo_ubicacion': obtener_codigo_ubicacion('Sin ubicación')
             }
             
     except Exception:
@@ -275,7 +339,8 @@ def extraer_informacion_qr(codigo_qr):
             'ubicacion': 'Sin ubicación',
             'marca': 'Sin marca',
             'modelo': 'Sin modelo',
-            'no_serie': 'Sin número de serie'
+            'no_serie': 'Sin número de serie',
+            'codigo_ubicacion': obtener_codigo_ubicacion('Sin ubicación')
         }
 
 def parsear_texto_estructurado(texto_qr):
@@ -348,6 +413,9 @@ def parsear_texto_estructurado(texto_qr):
             if len(codigo_generado) >= 3:
                 resultado['codigo'] = codigo_generado
         
+        # Agregar código de ubicación
+        resultado['codigo_ubicacion'] = obtener_codigo_ubicacion(resultado['ubicacion'])
+        
         return resultado
         
     except Exception:
@@ -358,7 +426,8 @@ def parsear_texto_estructurado(texto_qr):
             'ubicacion': 'Sin ubicación',
             'marca': 'Sin marca',
             'modelo': 'Sin modelo',
-            'no_serie': 'Sin número de serie'
+            'no_serie': 'Sin número de serie',
+            'codigo_ubicacion': obtener_codigo_ubicacion('Sin ubicación')
         }
 
 # Función para obtener los activos escaneados (para actualizar la tabla en tiempo real)
@@ -414,7 +483,12 @@ def exportar_activos_excel(request):
             # Usar la función de extracción mejorada
             activo_info = extraer_informacion_qr(registro.codigo)
             
-            ws.cell(row=row, column=1, value=activo_info['codigo']).border = border
+            # Combinar código QR con código de ubicación
+            codigo_completo = activo_info['codigo']
+            if activo_info.get('codigo_ubicacion'):
+                codigo_completo += f" ({activo_info['codigo_ubicacion']})"
+            
+            ws.cell(row=row, column=1, value=codigo_completo).border = border
             ws.cell(row=row, column=2, value=activo_info['nombre']).border = border
             ws.cell(row=row, column=3, value=activo_info['ubicacion']).border = border
             ws.cell(row=row, column=4, value=activo_info['marca']).border = border
