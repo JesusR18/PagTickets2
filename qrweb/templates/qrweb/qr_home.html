@@ -113,6 +113,40 @@
             border: 1px solid rgba(153, 27, 27, 0.2);
         }
         
+        .zoom-info {
+            text-align: center;
+            margin: 10px 0;
+            padding: 10px;
+        }
+        
+        .zoom-status {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 8px;
+            padding: 4px 8px;
+            background: rgba(255, 255, 255, 0.7);
+            border-radius: 4px;
+            display: inline-block;
+        }
+        
+        .size-btn {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 6px rgba(5, 150, 105, 0.3);
+        }
+        
+        .size-btn:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 3px 8px rgba(5, 150, 105, 0.4);
+            background: linear-gradient(135deg, #047857, #059669);
+        }
+        
         #result { 
             margin-top: 20px; 
             font-size: 1.2em; 
@@ -185,6 +219,12 @@
             <button onclick="cambiarZoom(0.5)" class="zoom-btn">🔍+</button>
         </div>
         
+        <!-- Información del zoom y controles alternativos -->
+        <div class="zoom-info">
+            <div id="zoom-status" class="zoom-status">Verificando capacidades de zoom...</div>
+            <button onclick="cambiarTamanoEscaner()" class="size-btn" id="size-btn">📐 Área Grande</button>
+        </div>
+        
         <div id="result" style="display: none;"></div> <!-- Contenedor donde se mostrará el resultado del escaneo -->
         
         <h2>Últimos códigos registrados</h2> <!-- Subtítulo para la lista de códigos -->
@@ -242,39 +282,43 @@
             html5QrcodeScanner.clear(); // Limpia/detiene el escáner después de leer
         }
 
-        // Variable global para controlar el zoom
+        // Variables globales para controlar el zoom
         let currentZoom = 1;
         let maxZoom = 3;
         let minZoom = 1;
+        let currentStream = null;
+        let videoTrack = null;
 
-        // Crea un nuevo escáner de códigos QR usando la librería Html5Qrcode con configuraciones avanzadas
-        var html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", 
-            { 
-                fps: 10, 
-                qrbox: 250,
-                // Configuraciones avanzadas de cámara
-                aspectRatio: 1.0,
-                disableFlip: false,
-                // Configuración para habilitar zoom
-                experimentalFeatures: {
-                    useBarCodeDetectorIfSupported: true
-                },
-                // Configuraciones de cámara
-                videoConstraints: {
-                    facingMode: "environment", // Cámara trasera preferida
-                    advanced: [
-                        {
-                            focusMode: "continuous",
-                            zoom: currentZoom
-                        }
-                    ]
+        // Función para obtener las capacidades de la cámara y aplicar zoom
+        async function aplicarZoom(nivelZoom) {
+            try {
+                if (videoTrack && videoTrack.getCapabilities) {
+                    const capabilities = videoTrack.getCapabilities();
+                    
+                    if (capabilities.zoom) {
+                        const settings = videoTrack.getSettings();
+                        const minZoomCap = capabilities.zoom.min || 1;
+                        const maxZoomCap = capabilities.zoom.max || 3;
+                        
+                        // Ajustar el zoom dentro de los límites del dispositivo
+                        const zoomValue = Math.max(minZoomCap, Math.min(maxZoomCap, nivelZoom));
+                        
+                        await videoTrack.applyConstraints({
+                            advanced: [{ zoom: zoomValue }]
+                        });
+                        
+                        console.log(`Zoom aplicado: ${zoomValue}`);
+                        return true;
+                    }
                 }
+            } catch (error) {
+                console.log("Error aplicando zoom:", error);
             }
-        );
+            return false;
+        }
 
-        // Función para cambiar el zoom
-        function cambiarZoom(incremento) {
+        // Función para cambiar el zoom con mejor compatibilidad móvil
+        async function cambiarZoom(incremento) {
             currentZoom += incremento;
             if (currentZoom > maxZoom) currentZoom = maxZoom;
             if (currentZoom < minZoom) currentZoom = minZoom;
@@ -282,36 +326,187 @@
             // Actualizar el texto del botón
             document.getElementById('zoom-level').textContent = `Zoom: ${currentZoom.toFixed(1)}x`;
             
-            // Reiniciar el escáner con el nuevo zoom
-            html5QrcodeScanner.clear().then(() => {
+            // Intentar aplicar zoom al stream actual primero
+            const zoomAplicado = await aplicarZoom(currentZoom);
+            
+            if (!zoomAplicado) {
+                // Si no se puede aplicar zoom directamente, reiniciar el escáner
+                try {
+                    await html5QrcodeScanner.clear();
+                    
+                    // Configuración mejorada para móviles
+                    html5QrcodeScanner = new Html5QrcodeScanner(
+                        "reader", 
+                        { 
+                            fps: 10, 
+                            qrbox: { width: 250, height: 250 },
+                            aspectRatio: 1.0,
+                            disableFlip: false,
+                            showTorchButtonIfSupported: true,
+                            showZoomSliderIfSupported: true,
+                            defaultZoomValueIfSupported: currentZoom,
+                            // Configuraciones específicas para móviles
+                            experimentalFeatures: {
+                                useBarCodeDetectorIfSupported: true
+                            },
+                            videoConstraints: {
+                                facingMode: "environment",
+                                width: { ideal: 1280 },
+                                height: { ideal: 720 }
+                            }
+                        }
+                    );
+                    
+                    html5QrcodeScanner.render(onScanSuccess, onScanError);
+                    
+                    // Obtener referencia al track de video después del render
+                    setTimeout(async () => {
+                        try {
+                            const video = document.querySelector('#reader video');
+                            if (video && video.srcObject) {
+                                currentStream = video.srcObject;
+                                const tracks = currentStream.getVideoTracks();
+                                if (tracks.length > 0) {
+                                    videoTrack = tracks[0];
+                                    await aplicarZoom(currentZoom);
+                                }
+                            }
+                        } catch (error) {
+                            console.log("Error obteniendo video track:", error);
+                        }
+                    }, 1000);
+                    
+                } catch (err) {
+                    console.log("Error al reiniciar escáner:", err);
+                }
+            }
+        }
+
+        // Función para manejar errores del escáner
+        function onScanError(errorMessage) {
+            // No mostrar errores de escaneo continuos en consola
+        }
+
+        // Inicialización del escáner con configuración optimizada para móviles
+        var html5QrcodeScanner = new Html5QrcodeScanner(
+            "reader", 
+            { 
+                fps: 10, 
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0,
+                disableFlip: false,
+                showTorchButtonIfSupported: true, // Mostrar botón de flash si está disponible
+                showZoomSliderIfSupported: true, // Mostrar control de zoom nativo si está disponible
+                defaultZoomValueIfSupported: 1,
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                },
+                videoConstraints: {
+                    facingMode: "environment",
+                    width: { ideal: 1280 },
+                    height: { ideal: 720 }
+                }
+            }
+        );
+
+        html5QrcodeScanner.render(onScanSuccess, onScanError);
+
+        // Obtener referencia al track de video después del render inicial
+        setTimeout(async () => {
+            try {
+                const video = document.querySelector('#reader video');
+                if (video && video.srcObject) {
+                    currentStream = video.srcObject;
+                    const tracks = currentStream.getVideoTracks();
+                    if (tracks.length > 0) {
+                        videoTrack = tracks[0];
+                        
+                        // Verificar capacidades de zoom del dispositivo
+                        const statusElement = document.getElementById('zoom-status');
+                        if (videoTrack.getCapabilities) {
+                            const capabilities = videoTrack.getCapabilities();
+                            if (capabilities.zoom) {
+                                maxZoom = capabilities.zoom.max || 3;
+                                minZoom = capabilities.zoom.min || 1;
+                                statusElement.textContent = `✅ Zoom disponible: ${minZoom}x - ${maxZoom}x`;
+                                statusElement.style.color = '#059669';
+                                console.log(`Zoom disponible: ${minZoom}x - ${maxZoom}x`);
+                            } else {
+                                statusElement.textContent = '❌ Zoom no soportado - Usa botón de área';
+                                statusElement.style.color = '#dc2626';
+                            }
+                        } else {
+                            statusElement.textContent = '⚠️ Capacidades de cámara limitadas';
+                            statusElement.style.color = '#d97706';
+                        }
+                    }
+                }
+            } catch (error) {
+                console.log("Error inicial obteniendo video track:", error);
+                document.getElementById('zoom-status').textContent = '❌ Error verificando zoom';
+            }
+        }, 1500);
+
+        // Variable para controlar el tamaño del área de escaneo (alternativa al zoom)
+        let areaGrande = false;
+        
+        // Función alternativa para cambiar el tamaño del área de escaneo
+        async function cambiarTamanoEscaner() {
+            areaGrande = !areaGrande;
+            const btnSize = document.getElementById('size-btn');
+            
+            try {
+                await html5QrcodeScanner.clear();
+                
+                const qrboxSize = areaGrande ? 350 : 250;
+                btnSize.textContent = areaGrande ? '📐 Área Normal' : '📐 Área Grande';
+                
                 html5QrcodeScanner = new Html5QrcodeScanner(
                     "reader", 
                     { 
                         fps: 10, 
-                        qrbox: 250,
+                        qrbox: { width: qrboxSize, height: qrboxSize },
                         aspectRatio: 1.0,
                         disableFlip: false,
+                        showTorchButtonIfSupported: true,
+                        showZoomSliderIfSupported: true,
+                        defaultZoomValueIfSupported: currentZoom,
                         experimentalFeatures: {
                             useBarCodeDetectorIfSupported: true
                         },
                         videoConstraints: {
                             facingMode: "environment",
-                            advanced: [
-                                {
-                                    focusMode: "continuous",
-                                    zoom: currentZoom
-                                }
-                            ]
+                            width: { ideal: 1280 },
+                            height: { ideal: 720 }
                         }
                     }
                 );
-                html5QrcodeScanner.render(onScanSuccess);
-            }).catch(err => {
-                console.log("Error al reiniciar escáner:", err);
-            });
+                
+                html5QrcodeScanner.render(onScanSuccess, onScanError);
+                
+                // Reestablecer el track de video
+                setTimeout(async () => {
+                    try {
+                        const video = document.querySelector('#reader video');
+                        if (video && video.srcObject) {
+                            currentStream = video.srcObject;
+                            const tracks = currentStream.getVideoTracks();
+                            if (tracks.length > 0) {
+                                videoTrack = tracks[0];
+                                await aplicarZoom(currentZoom);
+                            }
+                        }
+                    } catch (error) {
+                        console.log("Error reestableciendo video track:", error);
+                    }
+                }, 1000);
+                
+            } catch (err) {
+                console.log("Error cambiando tamaño del escáner:", err);
+                btnSize.textContent = '❌ Error';
+            }
         }
 
-        html5QrcodeScanner.render(onScanSuccess); // Inicia el escáner y le dice qué función ejecutar cuando lea un código
         setInterval(actualizarRegistros, 5000); // Ejecuta "actualizarRegistros" cada 5000 milisegundos (5 segundos)
     </script> <!-- Fin del código JavaScript -->
 </body> <!-- Fin de la parte visible de la página -->
