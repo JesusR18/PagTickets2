@@ -158,6 +158,26 @@
             color: #991b1b;
         }
         
+        .zoom-diagnostic {
+            margin: 15px 0;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.05);
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-family: 'Courier New', monospace;
+        }
+        
+        .status-line {
+            padding: 3px 0;
+            font-size: 12px;
+            color: #666;
+            border-bottom: 1px dotted #ccc;
+        }
+        
+        .status-line:last-child {
+            border-bottom: none;
+        }
+        
         .zoom-info {
             text-align: center;
             margin: 10px 0;
@@ -264,6 +284,13 @@
             <button onclick="zoomIn()" class="zoom-btn" id="zoom-in-btn">➕ ZOOM</button>
         </div>
         
+        <!-- Diagnóstico en tiempo real -->
+        <div class="zoom-diagnostic">
+            <div id="zoom-status" class="status-line">🔄 Inicializando zoom...</div>
+            <div id="capabilities-info" class="status-line">📱 Verificando capacidades...</div>
+            <div id="device-info" class="status-line">📟 Analizando dispositivo...</div>
+        </div>
+        
         <!-- Slider de zoom nativo -->
         <div class="zoom-slider-container">
             <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="setZoom(this.value)">
@@ -324,94 +351,215 @@
                 });
         }
 
-        // Variables globales para el zoom REAL de la cámara
-        let currentVideoTrack = null;
-        let currentZoomLevel = 1.0;
-        let zoomCapabilities = null;
-        
-        // Función para obtener el track de video activo
-        function getVideoTrack() {
-            const video = document.querySelector('#reader video');
-            if (video && video.srcObject) {
-                const stream = video.srcObject;
-                const tracks = stream.getVideoTracks();
-                return tracks.length > 0 ? tracks[0] : null;
+        // Actualizar diagnósticos en tiempo real
+        function updateDiagnostic(elementId, message, isSuccess = null) {
+            const element = document.getElementById(elementId);
+            if (element) {
+                element.textContent = message;
+                if (isSuccess === true) {
+                    element.style.color = '#059669';
+                    element.style.fontWeight = 'bold';
+                } else if (isSuccess === false) {
+                    element.style.color = '#dc2626';
+                    element.style.fontWeight = 'bold';
+                } else {
+                    element.style.color = '#666';
+                    element.style.fontWeight = 'normal';
+                }
             }
-            return null;
         }
         
-        // Función para aplicar zoom REAL de la cámara
-        async function applyRealZoom(zoomValue) {
+        // ZOOM REAL FORZADO - Implementación más agresiva
+        let mediaStream = null;
+        let videoTrack = null;
+        let zoomMin = 1;
+        let zoomMax = 5;
+        let currentZoom = 1;
+        
+        // Función para inicializar cámara con zoom habilitado
+        async function initCameraWithZoom() {
+            updateDiagnostic('zoom-status', '🚀 Solicitando acceso a cámara con zoom...');
+            updateDiagnostic('device-info', `📟 Navegador: ${navigator.userAgent.includes('Chrome') ? 'Chrome' : navigator.userAgent.includes('Safari') ? 'Safari' : 'Otro'}`);
+            
             try {
-                if (!currentVideoTrack) {
-                    currentVideoTrack = getVideoTrack();
-                }
-                
-                if (currentVideoTrack && currentVideoTrack.applyConstraints) {
-                    await currentVideoTrack.applyConstraints({
-                        advanced: [{ zoom: zoomValue }]
-                    });
-                    
-                    currentZoomLevel = zoomValue;
-                    document.getElementById('zoom-display').textContent = `🔍 ${zoomValue.toFixed(1)}x`;
-                    document.getElementById('zoom-slider').value = zoomValue;
-                    
-                    console.log(`✅ Zoom REAL aplicado: ${zoomValue}x`);
-                    
-                    // Vibración para confirmar
-                    if (navigator.vibrate) {
-                        navigator.vibrate(100);
+                // Solicitar cámara con configuraciones específicas para zoom
+                const constraints = {
+                    video: {
+                        facingMode: "environment",
+                        width: { ideal: 1920, min: 640 },
+                        height: { ideal: 1080, min: 480 },
+                        // Forzar capacidades avanzadas
+                        advanced: [
+                            { zoom: { min: 1, max: 5 } },
+                            { focusMode: "continuous" },
+                            { exposureMode: "continuous" },
+                            { whiteBalanceMode: "continuous" }
+                        ]
                     }
+                };
+                
+                updateDiagnostic('zoom-status', '📹 Obteniendo stream de cámara...');
+                mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoTrack = mediaStream.getVideoTracks()[0];
+                
+                if (videoTrack) {
+                    updateDiagnostic('zoom-status', '✅ Stream obtenido, verificando capacidades...', null);
                     
-                    return true;
+                    // Verificar capacidades de zoom
+                    const capabilities = videoTrack.getCapabilities();
+                    updateDiagnostic('capabilities-info', `📱 Capacidades: ${JSON.stringify(capabilities).substring(0, 100)}...`);
+                    
+                    if (capabilities.zoom) {
+                        zoomMin = capabilities.zoom.min || 1;
+                        zoomMax = capabilities.zoom.max || 5;
+                        currentZoom = zoomMin;
+                        
+                        // Actualizar controles UI
+                        updateZoomUI();
+                        enableZoomControls(true);
+                        
+                        updateDiagnostic('zoom-status', `✅ ZOOM REAL DISPONIBLE: ${zoomMin}x - ${zoomMax}x`, true);
+                        updateDiagnostic('capabilities-info', `🔍 Min: ${zoomMin}x, Max: ${zoomMax}x, Actual: ${currentZoom}x`, true);
+                        
+                        // Aplicar zoom inicial
+                        await setRealZoom(currentZoom);
+                        
+                        return true;
+                    } else {
+                        updateDiagnostic('zoom-status', '❌ Zoom no disponible en capabilities', false);
+                        updateDiagnostic('capabilities-info', '❌ Sin soporte de zoom en este dispositivo', false);
+                        enableZoomControls(false);
+                        return false;
+                    }
                 }
             } catch (error) {
-                console.error('❌ Error aplicando zoom real:', error);
+                updateDiagnostic('zoom-status', `❌ Error: ${error.message}`, false);
+                updateDiagnostic('capabilities-info', '❌ No se pudo acceder a la cámara', false);
+                enableZoomControls(false);
+                return false;
             }
-            return false;
         }
         
-        // Función para zoom hacia adentro
+        // Función para aplicar zoom real al track de video
+        async function setRealZoom(zoomValue) {
+            if (!videoTrack) {
+                console.log("❌ No hay videoTrack disponible");
+                return false;
+            }
+            
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ zoom: zoomValue }]
+                });
+                
+                currentZoom = zoomValue;
+                updateZoomDisplay(zoomValue);
+                
+                // Feedback visual y táctil
+                if (navigator.vibrate) {
+                    navigator.vibrate([100]);
+                }
+                
+                console.log(`✅ ZOOM REAL APLICADO: ${zoomValue}x`);
+                return true;
+                
+            } catch (error) {
+                console.error("❌ Error aplicando zoom:", error);
+                
+                // Intentar método alternativo
+                try {
+                    await videoTrack.applyConstraints({
+                        zoom: zoomValue
+                    });
+                    console.log(`✅ ZOOM aplicado con método alternativo: ${zoomValue}x`);
+                    return true;
+                } catch (altError) {
+                    console.error("❌ Error con método alternativo:", altError);
+                    return false;
+                }
+            }
+        }
+        
+        // Actualizar UI de zoom
+        function updateZoomUI() {
+            const slider = document.getElementById('zoom-slider');
+            const labels = document.querySelectorAll('.zoom-labels span');
+            
+            slider.min = zoomMin;
+            slider.max = zoomMax;
+            slider.value = currentZoom;
+            slider.step = (zoomMax - zoomMin) / 20;
+            
+            labels[0].textContent = `${zoomMin}x`;
+            labels[1].textContent = `${zoomMax}x`;
+        }
+        
+        // Actualizar display de zoom
+        function updateZoomDisplay(value) {
+            document.getElementById('zoom-display').textContent = `🔍 ${value.toFixed(1)}x`;
+            document.getElementById('zoom-slider').value = value;
+        }
+        
+        // Habilitar/deshabilitar controles
+        function enableZoomControls(enable) {
+            const buttons = document.querySelectorAll('.zoom-btn');
+            const slider = document.getElementById('zoom-slider');
+            const container = document.querySelector('.zoom-slider-container');
+            
+            buttons.forEach(btn => {
+                btn.disabled = !enable;
+                btn.style.opacity = enable ? '1' : '0.5';
+            });
+            
+            slider.disabled = !enable;
+            
+            if (!enable) {
+                container.innerHTML = `
+                    <div style="text-align: center; padding: 20px; background: #fee2e2; border-radius: 8px; color: #dc2626; font-weight: bold;">
+                        ❌ ZOOM NO DISPONIBLE<br>
+                        <small>Tu dispositivo/navegador no soporta zoom de cámara</small>
+                    </div>
+                `;
+            }
+        }
+        
+        // Funciones de control de zoom
         async function zoomIn() {
-            if (!zoomCapabilities) return;
-            
-            const newZoom = Math.min(currentZoomLevel + 0.5, zoomCapabilities.max);
-            await applyRealZoom(newZoom);
+            const newZoom = Math.min(currentZoom + 0.5, zoomMax);
+            await setRealZoom(newZoom);
         }
         
-        // Función para zoom hacia afuera
         async function zoomOut() {
-            if (!zoomCapabilities) return;
-            
-            const newZoom = Math.max(currentZoomLevel - 0.5, zoomCapabilities.min);
-            await applyRealZoom(newZoom);
+            const newZoom = Math.max(currentZoom - 0.5, zoomMin);
+            await setRealZoom(newZoom);
         }
         
-        // Función para establecer zoom específico (desde slider)
         async function setZoom(value) {
             const zoomValue = parseFloat(value);
-            await applyRealZoom(zoomValue);
+            await setRealZoom(zoomValue);
         }
         
         // Función que se ejecuta cuando el escáner QR lee correctamente un código
         function onScanSuccess(decodedText, decodedResult) {
             registrarCodigo(decodedText);
-            // NO limpiar el escáner para mantener el zoom
+            // Continuar escaneando sin limpiar para mantener zoom
             setTimeout(() => {
-                html5QrcodeScanner.resume();
-            }, 3000);
+                if (html5QrcodeScanner && html5QrcodeScanner.getState() === 2) {
+                    html5QrcodeScanner.resume();
+                }
+            }, 2000);
         }
 
         function onScanError(errorMessage) {
             // Silencioso
         }
 
-        // Inicializar escáner básico
+        // Inicializar escáner QR básico primero
         var html5QrcodeScanner = new Html5QrcodeScanner(
             "reader", 
             { 
                 fps: 10, 
-                qrbox: 280,
+                qrbox: 300,
                 aspectRatio: 1.0,
                 disableFlip: false,
                 videoConstraints: {
@@ -422,49 +570,46 @@
 
         html5QrcodeScanner.render(onScanSuccess, onScanError);
 
-        // Configurar zoom REAL después de inicializar la cámara
+        // Inicializar zoom REAL después de que el escáner esté listo
         setTimeout(async () => {
-            currentVideoTrack = getVideoTrack();
+            console.log("🚀 Iniciando configuración de zoom real...");
             
-            if (currentVideoTrack && currentVideoTrack.getCapabilities) {
-                try {
-                    const capabilities = currentVideoTrack.getCapabilities();
+            // Primero intentar con el video existente
+            const existingVideo = document.querySelector('#reader video');
+            if (existingVideo && existingVideo.srcObject) {
+                const stream = existingVideo.srcObject;
+                const tracks = stream.getVideoTracks();
+                
+                if (tracks.length > 0) {
+                    videoTrack = tracks[0];
+                    
+                    const capabilities = videoTrack.getCapabilities();
+                    console.log("📱 Capacidades detectadas:", capabilities);
                     
                     if (capabilities.zoom) {
-                        zoomCapabilities = capabilities.zoom;
+                        zoomMin = capabilities.zoom.min || 1;
+                        zoomMax = capabilities.zoom.max || 5;
+                        currentZoom = zoomMin;
                         
-                        // Actualizar slider con valores reales
-                        const slider = document.getElementById('zoom-slider');
-                        slider.min = zoomCapabilities.min;
-                        slider.max = zoomCapabilities.max;
-                        slider.step = (zoomCapabilities.max - zoomCapabilities.min) / 50;
+                        updateZoomUI();
+                        enableZoomControls(true);
                         
-                        // Actualizar etiquetas
-                        const labels = document.querySelectorAll('.zoom-labels span');
-                        labels[0].textContent = `${zoomCapabilities.min}x`;
-                        labels[1].textContent = `${zoomCapabilities.max}x`;
-                        
-                        // Habilitar botones
-                        document.getElementById('zoom-in-btn').disabled = false;
-                        document.getElementById('zoom-out-btn').disabled = false;
-                        
-                        console.log(`🎯 Zoom REAL disponible: ${zoomCapabilities.min}x - ${zoomCapabilities.max}x`);
-                        
-                        // Aplicar zoom inicial
-                        await applyRealZoom(zoomCapabilities.min);
-                        
+                        console.log(`✅ ZOOM ENCONTRADO: ${zoomMin}x - ${zoomMax}x`);
+                        await setRealZoom(currentZoom);
                     } else {
-                        console.log('❌ Zoom no soportado por este dispositivo');
-                        // Deshabilitar controles
-                        document.querySelector('.zoom-controls').style.display = 'none';
-                        document.querySelector('.zoom-slider-container').innerHTML = 
-                            '<div style="text-align: center; color: #dc2626; padding: 20px; font-weight: bold;">❌ Tu dispositivo no soporta zoom de cámara</div>';
+                        console.log("⚠️ Intentando forzar inicialización de cámara con zoom...");
+                        await initCameraWithZoom();
                     }
-                } catch (error) {
-                    console.error('Error verificando capacidades:', error);
+                } else {
+                    console.log("⚠️ No hay tracks, intentando inicialización manual...");
+                    await initCameraWithZoom();
                 }
+            } else {
+                console.log("⚠️ No hay video, intentando inicialización manual...");
+                await initCameraWithZoom();
             }
-        }, 3000);
+            
+        }, 4000); // Más tiempo para asegurar que todo esté cargado
 
         setInterval(actualizarRegistros, 5000);
     </script> <!-- Fin del código JavaScript -->
