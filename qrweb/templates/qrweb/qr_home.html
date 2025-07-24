@@ -66,62 +66,96 @@
             position: relative;
         }
         
-        /* Estilo para el video con zoom CSS */
-        #reader video {
-            transform-origin: center center;
-            transition: transform 0.3s ease;
-        }
-        
         .zoom-controls {
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
-            margin: 15px 0;
-            padding: 15px;
-            background: rgba(153, 27, 27, 0.1);
-            border-radius: 10px;
-            border: 2px solid rgba(153, 27, 27, 0.3);
-            position: relative;
+            gap: 20px;
+            margin: 20px 0;
+            padding: 20px;
+            background: rgba(153, 27, 27, 0.2);
+            border-radius: 15px;
+            border: 3px solid #991b1b;
         }
         
         .zoom-btn {
-            background: linear-gradient(135deg, #991b1b, #b91c1c);
+            background: linear-gradient(135deg, #991b1b, #dc2626);
             color: white;
             border: none;
-            padding: 15px 20px;
-            border-radius: 10px;
-            font-size: 18px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 3px 10px rgba(153, 27, 27, 0.4);
-            min-width: 60px;
+            padding: 18px 25px;
+            border-radius: 12px;
+            font-size: 16px;
             font-weight: bold;
-            -webkit-tap-highlight-color: transparent;
-            user-select: none;
-        }
-        
-        .zoom-btn:hover, .zoom-btn:active {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(153, 27, 27, 0.5);
-            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.5);
+            min-width: 120px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
         
         .zoom-btn:active {
             transform: scale(0.95);
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
         }
         
         .zoom-level {
             font-weight: bold;
             color: #991b1b;
-            font-size: 18px;
-            min-width: 100px;
+            font-size: 20px;
             text-align: center;
-            padding: 12px 16px;
+            padding: 15px 20px;
+            background: white;
+            border-radius: 10px;
+            border: 3px solid #991b1b;
+            box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
+            min-width: 80px;
+        }
+        
+        .zoom-slider-container {
+            margin: 15px 0;
+            padding: 15px;
             background: rgba(255, 255, 255, 0.9);
-            border-radius: 8px;
-            border: 2px solid rgba(153, 27, 27, 0.3);
-            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 10px;
+            border: 2px solid #991b1b;
+        }
+        
+        #zoom-slider {
+            width: 100%;
+            height: 8px;
+            border-radius: 5px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        #zoom-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #991b1b;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        #zoom-slider::-moz-range-thumb {
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            background: #991b1b;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .zoom-labels {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 8px;
+            font-weight: bold;
+            color: #991b1b;
         }
         
         .zoom-info {
@@ -223,18 +257,19 @@
     <div class="container">
         <div id="reader"></div> <!-- Contenedor donde aparecerá la cámara para leer códigos QR -->
         
-        <!-- Controles de Zoom Simplificados -->
+        <!-- Controles de Zoom REAL de la cámara -->
         <div class="zoom-controls">
-            <button onclick="cambiarZoom(-0.3)" class="zoom-btn">🔍-</button>
-            <span id="zoom-level" class="zoom-level">Zoom: 1.0x</span>
-            <button onclick="cambiarZoom(0.3)" class="zoom-btn">🔍+</button>
+            <button onclick="zoomOut()" class="zoom-btn" id="zoom-out-btn">➖ ZOOM</button>
+            <span id="zoom-display" class="zoom-level">🔍 1.0x</span>
+            <button onclick="zoomIn()" class="zoom-btn" id="zoom-in-btn">➕ ZOOM</button>
         </div>
         
-        <!-- Estado del zoom -->
-        <div class="zoom-info">
-            <div id="zoom-status" class="zoom-status">🔄 Cargando controles de zoom...</div>
-            <div style="font-size: 12px; color: #666; margin-top: 5px;">
-                💡 Usa los botones + y - | 🤏 Pellizca la pantalla para zoom
+        <!-- Slider de zoom nativo -->
+        <div class="zoom-slider-container">
+            <input type="range" id="zoom-slider" min="1" max="5" step="0.1" value="1" oninput="setZoom(this.value)">
+            <div class="zoom-labels">
+                <span>1x</span>
+                <span>5x</span>
             </div>
         </div>
         
@@ -289,118 +324,147 @@
                 });
         }
 
-        // Variables para el zoom CSS (garantizado que funciona en móviles)
-        let zoomLevel = 1.0;
-        const minZoom = 0.8;
-        const maxZoom = 3.0;
-        const zoomStep = 0.3;
+        // Variables globales para el zoom REAL de la cámara
+        let currentVideoTrack = null;
+        let currentZoomLevel = 1.0;
+        let zoomCapabilities = null;
         
-        // Función simple para aplicar zoom CSS al video
-        function aplicarZoomCSS(nivel) {
+        // Función para obtener el track de video activo
+        function getVideoTrack() {
             const video = document.querySelector('#reader video');
-            if (video) {
-                video.style.transform = `scale(${nivel})`;
-                console.log(`Zoom CSS aplicado: ${nivel}x`);
-                return true;
+            if (video && video.srcObject) {
+                const stream = video.srcObject;
+                const tracks = stream.getVideoTracks();
+                return tracks.length > 0 ? tracks[0] : null;
+            }
+            return null;
+        }
+        
+        // Función para aplicar zoom REAL de la cámara
+        async function applyRealZoom(zoomValue) {
+            try {
+                if (!currentVideoTrack) {
+                    currentVideoTrack = getVideoTrack();
+                }
+                
+                if (currentVideoTrack && currentVideoTrack.applyConstraints) {
+                    await currentVideoTrack.applyConstraints({
+                        advanced: [{ zoom: zoomValue }]
+                    });
+                    
+                    currentZoomLevel = zoomValue;
+                    document.getElementById('zoom-display').textContent = `🔍 ${zoomValue.toFixed(1)}x`;
+                    document.getElementById('zoom-slider').value = zoomValue;
+                    
+                    console.log(`✅ Zoom REAL aplicado: ${zoomValue}x`);
+                    
+                    // Vibración para confirmar
+                    if (navigator.vibrate) {
+                        navigator.vibrate(100);
+                    }
+                    
+                    return true;
+                }
+            } catch (error) {
+                console.error('❌ Error aplicando zoom real:', error);
             }
             return false;
         }
         
-        // Función de zoom que SIEMPRE funciona en móviles
-        function cambiarZoom(incremento) {
-            zoomLevel += incremento;
+        // Función para zoom hacia adentro
+        async function zoomIn() {
+            if (!zoomCapabilities) return;
             
-            // Mantener dentro de los límites
-            if (zoomLevel > maxZoom) zoomLevel = maxZoom;
-            if (zoomLevel < minZoom) zoomLevel = minZoom;
+            const newZoom = Math.min(currentZoomLevel + 0.5, zoomCapabilities.max);
+            await applyRealZoom(newZoom);
+        }
+        
+        // Función para zoom hacia afuera
+        async function zoomOut() {
+            if (!zoomCapabilities) return;
             
-            // Actualizar el indicador
-            document.getElementById('zoom-level').textContent = `Zoom: ${zoomLevel.toFixed(1)}x`;
-            
-            // Aplicar zoom CSS inmediatamente
-            aplicarZoomCSS(zoomLevel);
-            
-            // Vibración táctil en móviles
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
+            const newZoom = Math.max(currentZoomLevel - 0.5, zoomCapabilities.min);
+            await applyRealZoom(newZoom);
+        }
+        
+        // Función para establecer zoom específico (desde slider)
+        async function setZoom(value) {
+            const zoomValue = parseFloat(value);
+            await applyRealZoom(zoomValue);
         }
         
         // Función que se ejecuta cuando el escáner QR lee correctamente un código
         function onScanSuccess(decodedText, decodedResult) {
-            registrarCodigo(decodedText); // Llama a la función para registrar el código leído
-            html5QrcodeScanner.clear(); // Limpia/detiene el escáner después de leer
+            registrarCodigo(decodedText);
+            // NO limpiar el escáner para mantener el zoom
+            setTimeout(() => {
+                html5QrcodeScanner.resume();
+            }, 3000);
         }
 
-        // Función para manejar errores del escáner (silenciosa)
         function onScanError(errorMessage) {
-            // No mostrar errores continuos
+            // Silencioso
         }
 
-        // Inicializar el escáner con configuración simple y efectiva
+        // Inicializar escáner básico
         var html5QrcodeScanner = new Html5QrcodeScanner(
             "reader", 
             { 
                 fps: 10, 
-                qrbox: { width: 280, height: 280 },
+                qrbox: 280,
                 aspectRatio: 1.0,
                 disableFlip: false,
-                // Configuración optimizada para móviles
                 videoConstraints: {
-                    facingMode: "environment",
-                    width: { ideal: 1280, min: 640 },
-                    height: { ideal: 720, min: 480 }
+                    facingMode: "environment"
                 }
             }
         );
 
-        // Iniciar el escáner
         html5QrcodeScanner.render(onScanSuccess, onScanError);
 
-        // Aplicar zoom inicial después de que el video se cargue
-        setTimeout(() => {
-            aplicarZoomCSS(zoomLevel);
+        // Configurar zoom REAL después de inicializar la cámara
+        setTimeout(async () => {
+            currentVideoTrack = getVideoTrack();
             
-            // Actualizar el indicador de estado
-            const statusElement = document.getElementById('zoom-status');
-            if (statusElement) {
-                statusElement.textContent = '✅ Zoom CSS activo - Usa los botones + y -';
-                statusElement.style.color = '#059669';
-            }
-            
-            // Agregar soporte para gestos de pellizco en móviles
-            const readerDiv = document.getElementById('reader');
-            if (readerDiv) {
-                let lastTouchDistance = 0;
-                
-                readerDiv.addEventListener('touchstart', function(e) {
-                    if (e.touches.length === 2) {
-                        lastTouchDistance = Math.hypot(
-                            e.touches[0].pageX - e.touches[1].pageX,
-                            e.touches[0].pageY - e.touches[1].pageY
-                        );
-                    }
-                });
-                
-                readerDiv.addEventListener('touchmove', function(e) {
-                    if (e.touches.length === 2) {
-                        e.preventDefault();
-                        const currentDistance = Math.hypot(
-                            e.touches[0].pageX - e.touches[1].pageX,
-                            e.touches[0].pageY - e.touches[1].pageY
-                        );
+            if (currentVideoTrack && currentVideoTrack.getCapabilities) {
+                try {
+                    const capabilities = currentVideoTrack.getCapabilities();
+                    
+                    if (capabilities.zoom) {
+                        zoomCapabilities = capabilities.zoom;
                         
-                        if (lastTouchDistance > 0) {
-                            const delta = currentDistance - lastTouchDistance;
-                            if (Math.abs(delta) > 10) {
-                                cambiarZoom(delta > 0 ? zoomStep : -zoomStep);
-                                lastTouchDistance = currentDistance;
-                            }
-                        }
+                        // Actualizar slider con valores reales
+                        const slider = document.getElementById('zoom-slider');
+                        slider.min = zoomCapabilities.min;
+                        slider.max = zoomCapabilities.max;
+                        slider.step = (zoomCapabilities.max - zoomCapabilities.min) / 50;
+                        
+                        // Actualizar etiquetas
+                        const labels = document.querySelectorAll('.zoom-labels span');
+                        labels[0].textContent = `${zoomCapabilities.min}x`;
+                        labels[1].textContent = `${zoomCapabilities.max}x`;
+                        
+                        // Habilitar botones
+                        document.getElementById('zoom-in-btn').disabled = false;
+                        document.getElementById('zoom-out-btn').disabled = false;
+                        
+                        console.log(`🎯 Zoom REAL disponible: ${zoomCapabilities.min}x - ${zoomCapabilities.max}x`);
+                        
+                        // Aplicar zoom inicial
+                        await applyRealZoom(zoomCapabilities.min);
+                        
+                    } else {
+                        console.log('❌ Zoom no soportado por este dispositivo');
+                        // Deshabilitar controles
+                        document.querySelector('.zoom-controls').style.display = 'none';
+                        document.querySelector('.zoom-slider-container').innerHTML = 
+                            '<div style="text-align: center; color: #dc2626; padding: 20px; font-weight: bold;">❌ Tu dispositivo no soporta zoom de cámara</div>';
                     }
-                });
+                } catch (error) {
+                    console.error('Error verificando capacidades:', error);
+                }
             }
-        }, 2000);
+        }, 3000);
 
         setInterval(actualizarRegistros, 5000);
     </script> <!-- Fin del código JavaScript -->
