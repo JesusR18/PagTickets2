@@ -2,9 +2,10 @@
 <html lang="es">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>SISEG - Sistema de Activos</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
         * {
             margin: 0;
@@ -36,6 +37,12 @@
             background: rgba(255, 255, 255, 0.95);
             border-radius: 12px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .logo-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
         }
         
         h1 {
@@ -97,14 +104,157 @@
             box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
         }
         
-        #reader {
-            width: 100%;
+        /* Scanner integrado */
+        .scanner-container {
+            margin: 20px 0;
+            text-align: center;
+        }
+        
+        .scanner-toggle {
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            color: white;
+            border: none;
+            padding: 20px 40px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(127, 29, 29, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 20px;
+        }
+        
+        .scanner-toggle:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 25px rgba(127, 29, 29, 0.5);
+        }
+        
+        .scanner-toggle:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .camera-container {
+            position: relative;
             max-width: 400px;
             margin: 20px auto;
-            border-radius: 10px;
+            background: #000;
+            border-radius: 15px;
             overflow: hidden;
-            box-shadow: 0 5px 15px rgba(185, 28, 28, 0.3);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
             display: none;
+        }
+        
+        #camera-video {
+            width: 100%;
+            height: auto;
+            display: block;
+        }
+        
+        .zoom-controls-real {
+            position: absolute;
+            bottom: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 20px;
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .zoom-btn-real {
+            background: linear-gradient(135deg, #991b1b, #dc2626);
+            color: white;
+            border: none;
+            padding: 12px 15px;
+            border-radius: 50%;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.5);
+            width: 50px;
+            height: 50px;
+        }
+        
+        .zoom-btn-real:active {
+            transform: scale(0.9);
+        }
+        
+        .zoom-display {
+            color: white;
+            font-weight: bold;
+            font-size: 16px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 8px 15px;
+            border-radius: 15px;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .zoom-slider-real {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            right: 20px;
+        }
+        
+        #zoom-range {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            -webkit-appearance: none;
+            appearance: none;
+        }
+        
+        #zoom-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #991b1b;
+            cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        #zoom-range::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #991b1b;
+            cursor: pointer;
+            border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }
+        
+        .control-buttons {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+            color: white;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            margin: 0 10px;
+            transition: all 0.2s ease;
+        }
+        
+        .stop-btn {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
         }
         
         .scanner-status {
@@ -172,6 +322,16 @@
             box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
         }
         
+        .activo-duplicado {
+            background-color: #fef2f2 !important;
+            border-left: 4px solid #dc2626;
+        }
+        
+        .activo-duplicado td {
+            color: #991b1b;
+            font-weight: bold;
+        }
+        
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -198,6 +358,18 @@
             th, td {
                 padding: 8px;
             }
+            
+            .zoom-controls-real {
+                bottom: 60px;
+                gap: 10px;
+                padding: 10px 15px;
+            }
+            
+            .zoom-btn-real {
+                width: 40px;
+                height: 40px;
+                font-size: 16px;
+            }
         }
         
         .alert {
@@ -217,6 +389,12 @@
             background-color: #fee2e2;
             color: #dc2626;
             border: 1px solid #fecaca;
+        }
+        
+        .alert-warning {
+            background-color: #fef3c7;
+            color: #d97706;
+            border: 1px solid #fed7aa;
         }
     </style>
 </head>
@@ -239,19 +417,44 @@
     
     <div class="container">
         <div class="controls">
-            <button onclick="toggleScanner()" class="btn" id="start-stop-btn">
-                📱 Iniciar Escáner
-            </button>
             <button onclick="exportarExcel()" class="btn btn-secondary">
-                📊 Exportar a Excel
+                � Exportar a Excel
             </button>
         </div>
         
-        <div id="scanner-status" class="scanner-status">
-            Presiona "Iniciar Escáner" para comenzar a leer códigos QR
+        <!-- Scanner integrado -->
+        <div class="scanner-container">
+            <button onclick="toggleScanner()" class="scanner-toggle" id="scanner-toggle-btn">
+                � INICIAR SCANNER QR
+            </button>
+            
+            <div id="scanner-status" class="scanner-status">
+                Presiona el botón para iniciar la cámara con zoom de hardware
+            </div>
+            
+            <!-- Contenedor de la cámara (inicialmente oculto) -->
+            <div id="camera-container" class="camera-container">
+                <video id="camera-video" autoplay playsinline></video>
+                <canvas id="qr-canvas" style="display: none;"></canvas>
+                
+                <!-- Controles de Zoom REAL -->
+                <div class="zoom-controls-real">
+                    <button onclick="aplicarZoom(-1)" class="zoom-btn-real">➖</button>
+                    <span id="zoom-display-real" class="zoom-display">1.0x</span>
+                    <button onclick="aplicarZoom(1)" class="zoom-btn-real">➕</button>
+                </div>
+                
+                <!-- Slider de zoom -->
+                <div class="zoom-slider-real">
+                    <input type="range" id="zoom-range" min="1" max="10" step="0.5" value="1" oninput="cambiarZoom(this.value)">
+                </div>
+                
+                <!-- Botones de control -->
+                <div class="control-buttons">
+                    <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER</button>
+                </div>
+            </div>
         </div>
-        
-        <div id="reader"></div>
         
         <div class="tabla-container">
             <table>
@@ -277,11 +480,19 @@
     </div>
 
     <script>
-        console.log('🚀 Iniciando aplicación SISEG...');
+        console.log('🚀 Iniciando aplicación SISEG - Sistema de Activos...');
         
-        // Variables globales
-        let html5QrcodeScanner;
-        let isScanning = false;
+        // Variables globales para el scanner QR con zoom real
+        let videoStream = null;
+        let videoTrack = null;
+        let zoomActual = 1;
+        let zoomMin = 1;
+        let zoomMax = 10;
+        let scannerActivo = false;
+        let video = null;
+        let canvas = null;
+        let context = null;
+        let activosEscaneados = [];
         
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
@@ -289,91 +500,233 @@
             cargarActivosEscaneados();
         });
         
-        // Función para mostrar mensajes
+        // Función para mostrar mensajes en la interfaz
         function showMessage(message, type) {
             const statusDiv = document.getElementById('scanner-status');
-            statusDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-            
-            setTimeout(() => {
-                statusDiv.innerHTML = 'Presiona "Iniciar Escáner" para comenzar a leer códigos QR';
-            }, 3000);
-        }
-        
-        // Función para alternar el escáner
-        function toggleScanner() {
-            console.log('🎯 Toggle scanner, estado actual:', isScanning);
-            const btn = document.getElementById('start-stop-btn');
-            
-            if (!isScanning) {
-                startScanner();
-                btn.textContent = '⏹️ Detener Escáner';
-            } else {
-                stopScanner();
-                btn.textContent = '📱 Iniciar Escáner';
+            if (statusDiv) {
+                statusDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+                
+                setTimeout(() => {
+                    if (!scannerActivo) {
+                        statusDiv.innerHTML = 'Presiona el botón para iniciar la cámara con zoom de hardware';
+                    }
+                }, 4000);
             }
         }
         
-        // Función para iniciar el escáner
-        function startScanner() {
-            console.log('▶️ Iniciando escáner...');
+        // Función para actualizar el estado en pantalla
+        function actualizarEstado(mensaje, esExito = null) {
+            const statusEl = document.getElementById('scanner-status');
+            if (statusEl) {
+                statusEl.textContent = mensaje;
+                if (esExito === true) {
+                    statusEl.style.backgroundColor = '#dcfce7';
+                    statusEl.style.color = '#166534';
+                } else if (esExito === false) {
+                    statusEl.style.backgroundColor = '#fee2e2';
+                    statusEl.style.color = '#dc2626';
+                } else {
+                    statusEl.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+                    statusEl.style.color = '#991b1b';
+                }
+            }
+        }
+        
+        // Función para alternar el escáner (iniciar/detener)
+        function toggleScanner() {
+            console.log('🎯 Toggle scanner, estado actual:', scannerActivo);
+            
+            if (!scannerActivo) {
+                iniciarScanner();
+            } else {
+                detenerScanner();
+            }
+        }
+        
+        // Función para iniciar la cámara con zoom
+        async function iniciarScanner() {
+            const toggleBtn = document.getElementById('scanner-toggle-btn');
+            const cameraContainer = document.getElementById('camera-container');
             
             try {
-                html5QrcodeScanner = new Html5QrcodeScanner(
-                    "reader",
-                    { 
-                        fps: 10,
-                        qrbox: { width: 300, height: 300 },
-                        aspectRatio: 1.0,
-                        disableFlip: false,
-                        videoConstraints: {
-                            facingMode: "environment"
-                        }
+                toggleBtn.disabled = true;
+                toggleBtn.textContent = '📹 INICIANDO...';
+                actualizarEstado('🚀 Solicitando acceso a la cámara...', null);
+                
+                // Configuración avanzada para solicitar zoom
+                const constraints = {
+                    video: {
+                        facingMode: 'environment',
+                        width: { ideal: 1280, min: 640 },
+                        height: { ideal: 720, min: 480 },
+                        // Solicitar explícitamente capacidades de zoom
+                        advanced: [
+                            { zoom: { min: 1, max: 10 } },
+                            { focusMode: 'continuous' }
+                        ]
                     }
-                );
+                };
                 
-                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-                document.getElementById('reader').style.display = 'block';
-                isScanning = true;
+                // Obtener stream de video
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoTrack = videoStream.getVideoTracks()[0];
                 
-                showMessage('📱 Escáner iniciado correctamente', 'success');
+                // Configurar elementos de video
+                video = document.getElementById('camera-video');
+                canvas = document.getElementById('qr-canvas');
+                context = canvas.getContext('2d');
+                
+                video.srcObject = videoStream;
+                
+                // Verificar capacidades de zoom
+                if (videoTrack.getCapabilities) {
+                    const capabilities = videoTrack.getCapabilities();
+                    console.log('📱 Capacidades de la cámara:', capabilities);
+                    
+                    if (capabilities.zoom) {
+                        zoomMin = capabilities.zoom.min || 1;
+                        zoomMax = capabilities.zoom.max || 10;
+                        zoomActual = zoomMin;
+                        
+                        // Configurar slider
+                        const zoomRange = document.getElementById('zoom-range');
+                        zoomRange.min = zoomMin;
+                        zoomRange.max = zoomMax;
+                        zoomRange.value = zoomActual;
+                        zoomRange.step = (zoomMax - zoomMin) / 20;
+                        
+                        actualizarEstado(`✅ Cámara iniciada con ZOOM REAL: ${zoomMin}x - ${zoomMax}x`, true);
+                        
+                        // Aplicar zoom inicial
+                        await aplicarZoomReal(zoomActual);
+                    } else {
+                        actualizarEstado('⚠️ Cámara iniciada - Zoom no soportado por el dispositivo', false);
+                    }
+                } else {
+                    actualizarEstado('⚠️ Cámara iniciada - API de zoom no disponible', false);
+                }
+                
+                // Mostrar interfaz de cámara
+                cameraContainer.style.display = 'block';
+                toggleBtn.textContent = '⏹️ DETENER SCANNER';
+                toggleBtn.disabled = false;
+                scannerActivo = true;
+                
+                // Iniciar detección de QR
+                iniciarDeteccionQR();
                 
             } catch (error) {
-                console.error('❌ Error iniciando escáner:', error);
-                showMessage('❌ Error iniciando escáner: ' + error.message, 'error');
+                console.error('❌ Error iniciando cámara:', error);
+                actualizarEstado(`❌ Error: ${error.message}`, false);
+                toggleBtn.disabled = false;
+                toggleBtn.textContent = '📱 INICIAR SCANNER QR';
             }
         }
         
-        // Función para detener el escáner
-        function stopScanner() {
-            console.log('⏹️ Deteniendo escáner...');
+        // Función para aplicar zoom real a la cámara
+        async function aplicarZoomReal(nivelZoom) {
+            if (!videoTrack) return false;
             
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear().catch(error => {
-                    console.error('Error deteniendo escáner:', error);
+            try {
+                await videoTrack.applyConstraints({
+                    advanced: [{ zoom: nivelZoom }]
                 });
+                
+                zoomActual = nivelZoom;
+                document.getElementById('zoom-display-real').textContent = `${nivelZoom.toFixed(1)}x`;
+                document.getElementById('zoom-range').value = nivelZoom;
+                
+                // Vibración para feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(50);
+                }
+                
+                console.log(`✅ Zoom aplicado: ${nivelZoom}x`);
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Error aplicando zoom:', error);
+                return false;
             }
-            
-            document.getElementById('reader').style.display = 'none';
-            isScanning = false;
-            
-            showMessage('⏹️ Escáner detenido', 'success');
         }
         
-        // Función cuando se lee un código QR exitosamente
-        function onScanSuccess(decodedText) {
-            console.log('✅ Código QR detectado:', decodedText);
+        // Funciones de control de zoom
+        async function aplicarZoom(direccion) {
+            const incremento = 0.5;
+            let nuevoZoom;
             
-            // Vibración para feedback
-            if (navigator.vibrate) {
-                navigator.vibrate([200, 100, 200]);
+            if (direccion > 0) {
+                nuevoZoom = Math.min(zoomActual + incremento, zoomMax);
+            } else {
+                nuevoZoom = Math.max(zoomActual - incremento, zoomMin);
             }
             
-            registrarCodigo(decodedText);
+            await aplicarZoomReal(nuevoZoom);
         }
         
-        // Función cuando hay error leyendo QR
-        function onScanFailure(error) {
-            // Silencioso - no mostrar errores de lectura continua
+        async function cambiarZoom(valor) {
+            const nuevoZoom = parseFloat(valor);
+            await aplicarZoomReal(nuevoZoom);
+        }
+        
+        // Función para detener el scanner
+        function detenerScanner() {
+            console.log('⏹️ Deteniendo scanner...');
+            
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+                videoTrack = null;
+            }
+            
+            document.getElementById('camera-container').style.display = 'none';
+            const toggleBtn = document.getElementById('scanner-toggle-btn');
+            toggleBtn.textContent = '📱 INICIAR SCANNER QR';
+            toggleBtn.disabled = false;
+            
+            scannerActivo = false;
+            actualizarEstado('Scanner detenido. Presiona el botón para reiniciar', null);
+        }
+        
+        // Función para detectar códigos QR
+        function iniciarDeteccionQR() {
+            if (!scannerActivo || !video || !canvas || !context) return;
+            
+            const detectar = () => {
+                if (!scannerActivo) return;
+                
+                try {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        
+                        if (code) {
+                            console.log('🎯 Código QR detectado:', code.data);
+                            registrarCodigo(code.data);
+                            
+                            // Pausar detección por 3 segundos para evitar registros múltiples
+                            scannerActivo = false;
+                            setTimeout(() => {
+                                if (videoStream) { // Solo reactivar si el stream sigue activo
+                                    scannerActivo = true;
+                                    iniciarDeteccionQR();
+                                }
+                            }, 3000);
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Error en detección QR:', error);
+                }
+                
+                requestAnimationFrame(detectar);
+            };
+            
+            detectar();
         }
         
         // Función para registrar código QR
@@ -395,14 +748,23 @@
                 console.log('✅ Respuesta del servidor:', data);
                 
                 if (data.success) {
-                    showMessage(`✅ ${data.message}`, data.ya_existe ? 'error' : 'success');
+                    if (data.already_registered) {
+                        showMessage(`⚠️ ${data.mensaje}`, 'warning');
+                    } else {
+                        showMessage(`✅ ${data.mensaje}`, 'success');
+                    }
+                    
+                    // Vibración para feedback
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200]);
+                    }
                     
                     // Recargar activos después de un breve delay
                     setTimeout(() => {
                         cargarActivosEscaneados();
                     }, 1000);
                 } else {
-                    showMessage(`❌ Error: ${data.message}`, 'error');
+                    showMessage(`❌ Error: ${data.error}`, 'error');
                 }
             })
             .catch(error => {
@@ -427,12 +789,20 @@
                 if (data.activos && data.activos.length > 0) {
                     console.log(`✅ Mostrando ${data.activos.length} activos`);
                     tbody.innerHTML = '';
+                    activosEscaneados = data.activos;
                     
                     data.activos.forEach((activo, index) => {
                         const fila = document.createElement('tr');
+                        
+                        // Verificar si es duplicado basado en características similares
+                        const esDuplicado = verificarDuplicado(activo, data.activos, index);
+                        if (esDuplicado) {
+                            fila.classList.add('activo-duplicado');
+                        }
+                        
                         fila.innerHTML = `
                             <td>${activo.codigo}</td>
-                            <td>${activo.nombre}</td>
+                            <td>${activo.nombre}${esDuplicado ? ' ⚠️' : ''}</td>
                             <td>${activo.ubicacion}</td>
                             <td>${activo.marca}</td>
                             <td>${activo.modelo}</td>
@@ -449,6 +819,7 @@
                 } else {
                     console.log('⚠️ No hay activos para mostrar');
                     tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">No hay activos escaneados aún</td></tr>';
+                    activosEscaneados = [];
                 }
             })
             .catch(error => {
@@ -456,6 +827,26 @@
                 document.getElementById('tabla-activos-body').innerHTML = 
                     '<tr><td colspan="8" class="sin-activos">❌ Error al cargar activos</td></tr>';
             });
+        }
+        
+        // Función para verificar duplicados
+        function verificarDuplicado(activo, listaActivos, indiceActual) {
+            for (let i = 0; i < listaActivos.length; i++) {
+                if (i === indiceActual) continue;
+                
+                const otro = listaActivos[i];
+                
+                // Verificar similitudes en características principales
+                const nombreSimilar = activo.nombre.toLowerCase().trim() === otro.nombre.toLowerCase().trim();
+                const ubicacionSimilar = activo.ubicacion.toLowerCase().trim() === otro.ubicacion.toLowerCase().trim();
+                const marcaSimilar = activo.marca.toLowerCase().trim() === otro.marca.toLowerCase().trim();
+                const modeloSimilar = activo.modelo.toLowerCase().trim() === otro.modelo.toLowerCase().trim();
+                
+                if (nombreSimilar && ubicacionSimilar && marcaSimilar && modeloSimilar) {
+                    return true;
+                }
+            }
+            return false;
         }
         
         // Función para eliminar activo
@@ -474,7 +865,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({ activo_id: id })
+                body: JSON.stringify({ id: id })
             })
             .then(response => response.json())
             .then(data => {
@@ -482,7 +873,7 @@
                     showMessage(`✅ Activo "${nombre}" eliminado correctamente`, 'success');
                     cargarActivosEscaneados();
                 } else {
-                    showMessage(`❌ Error eliminando activo: ${data.message}`, 'error');
+                    showMessage(`❌ Error eliminando activo: ${data.error}`, 'error');
                 }
             })
             .catch(error => {
@@ -496,8 +887,9 @@
             console.log('📊 Exportando activos a Excel...');
             showMessage('📊 Generando archivo Excel...', 'success');
             
+            // Pequeño delay para mostrar el mensaje antes de abrir la descarga
             setTimeout(() => {
-                window.open('/exportar_excel/', '_blank');
+                window.open('/exportar_activos_excel/', '_blank');
             }, 500);
         }
         
@@ -520,7 +912,7 @@
         // Actualizar activos cada 30 segundos
         setInterval(cargarActivosEscaneados, 30000);
         
-        console.log('✅ JavaScript cargado completamente');
+        console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
     </script>
 </body>
 </html>
