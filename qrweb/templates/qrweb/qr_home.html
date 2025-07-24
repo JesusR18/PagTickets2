@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISEG - Lector Código QR</title>
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <style> 
+        /* CSS para compatibilidad de emojis en todos los dispositivos */
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+        }
+        
+        body {
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: white;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .logo-container {
+            display: inline-block;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .logo-container:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        }
+        
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 10px 0;
+            font-size: 2.2em;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            text-align: center;
+        }
+        
+        .init-btn {
+            background: linear-gradient(135deg, #991b1b, #b91c1c);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 8px 20px rgba(153, 27, 27, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .init-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 12px 30px rgba(153, 27, 27, 0.6);
+        }
+        
+        .init-btn:active {
+            transform: translateY(-1px);
+        }
+        
+        .init-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .status-message {
+            margin-top: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 8px;
+            font-weight: bold;
+            color: #991b1b;
+        }
+        
+        .camera-container {
+            position: relative;
+            max-width: 320px;
+            margin: 15px auto;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+        }
+        
+        #video {
+            width: 100%;
+            height: 240px;
+            object-fit: cover;
+            display: block;
+        }
+        
+        #canvas {
+            display: none;
+        }
+        
+        .zoom-controls-real {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 10px 0;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .zoom-btn-real {
+            background: linear-gradient(135deg, #059669, #10b981);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            min-width: 90px;
+        }
+        
+        .zoom-btn-real:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+        }
+        
+        .zoom-display {
+            background: rgba(255, 255, 255, 0.95);
+            color: #991b1b;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-weight: bold;
+            font-size: 16px;
+            min-width: 60px;
+            text-align: center;
+        }
+        
+        .zoom-slider-real {
+            margin: 10px 0;
+            padding: 10px;
+        }
+        
+        #zoom-range {
+            width: 100%;
+            max-width: 280px;
+            height: 6px;
+            border-radius: 3px;
+            background: #ddd;
+            outline: none;
+            -webkit-appearance: none;
+        }
+        
+        #zoom-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #991b1b;
+            cursor: pointer;
+        }
+        
+        #zoom-range::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #991b1b;
+            cursor: pointer;
+            border: none;
+        }
+        
+        .control-buttons {
+            margin: 10px 0;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+        
+        .control-btn {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .control-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+        }
+        
+        h2 {
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+            margin: 20px 0 10px 0;
+        }
+        
+        ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        li {
+            background: rgba(255, 255, 255, 0.9);
+            color: #991b1b;
+            margin: 5px 0;
+            padding: 10px;
+            border-radius: 8px;
+            font-weight: bold;
+            text-align: left;
+        }
+        
+        #result {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            border-radius: 12px;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+        }
+        
+        /* Responsivo */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            
+            .camera-container {
+                max-width: 280px;
+            }
+            
+            #video {
+                height: 200px;
+            }
+            
+            .zoom-controls-real {
+                gap: 10px;
+            }
+            
+            .zoom-btn-real {
+                min-width: 70px;
+                font-size: 12px;
+                padding: 6px 10px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <a href="/">
+            <div class="logo-container">
+                <svg width="200" height="80" viewBox="0 0 200 80">
+                    <rect x="10" y="10" width="180" height="60" rx="8" fill="#991b1b" stroke="#7f1d1d" stroke-width="2"/>
+                    <text x="100" y="35" text-anchor="middle" fill="white" font-size="20" font-weight="bold" font-family="Arial">SISEG</text>
+                    <text x="100" y="55" text-anchor="middle" fill="#fca5a5" font-size="12" font-family="Arial">Sistema Integral de Seguridad</text>
+                    <rect x="25" y="60" width="150" height="2" fill="#991b1b" opacity="0.5"/>
+                </svg>
+            </div>
+        </a>
+        <h1>Lector de Código QR</h1>
+    </div>
+
+    <div class="container">
+        <div class="scanner-section">
+            <button onclick="iniciarScanner()" class="init-btn" id="init-btn">
+                📹 INICIAR SCANNER QR
+            </button>
+            
+            <div id="status-message" class="status-message" style="display: none;"></div>
+            
+            <div id="camera-container" class="camera-container" style="display: none;">
+                <video id="video" autoplay playsinline></video>
+                <canvas id="canvas"></canvas>
+                
+                <!-- Controles de Zoom REAL -->
+                <div class="zoom-controls-real">
+                    <button onclick="aplicarZoom(-1)" class="zoom-btn-real">➖ ZOOM</button>
+                    <span id="zoom-display-real" class="zoom-display">1.0x</span>
+                    <button onclick="aplicarZoom(1)" class="zoom-btn-real">➕ ZOOM</button>
+                </div>
+                
+                <!-- Slider de zoom -->
+                <div class="zoom-slider-real">
+                    <input type="range" id="zoom-range" min="1" max="10" step="0.1" value="1" oninput="cambiarZoom(this.value)">
+                </div>
+                
+                <!-- Botones de control -->
+                <div class="control-buttons">
+                    <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER</button>
+                </div>
+            </div>
+
+            <div id="result" style="display: none;"></div>
+        </div>
+        
+        <h2>Últimos códigos registrados</h2>
+        <ul id="lista-registros">
+        {% for r in registros %}
+            <li><b>{{ r.codigo }}</b> - {{ r.fecha|date:'Y-m-d H:i:s' }}</li>
+        {% empty %}
+            <li>No hay registros aún.</li>
+        {% endfor %}
+        </ul>
+    </div>
+
+    <script>
+        // Variables globales
+        let video = null;
+        let canvas = null;
+        let context = null;
+        let videoStream = null;
+        let videoTrack = null;
+        let scannerActivo = false;
+        let zoomActual = 1.0;
+        let zoomMin = 1.0;
+        let zoomMax = 10.0;
+        let zoomTimeout = null;
+        let zoomPendiente = null;
+        
+        // Función para mostrar mensajes de estado
+        function actualizarEstado(mensaje, tipo) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.textContent = mensaje;
+            statusDiv.style.display = 'block';
+            
+            if (tipo === 'error') {
+                statusDiv.style.background = 'rgba(239, 68, 68, 0.9)';
+                statusDiv.style.color = 'white';
+            } else if (tipo === 'success') {
+                statusDiv.style.background = 'rgba(16, 185, 129, 0.9)';
+                statusDiv.style.color = 'white';
+            } else {
+                statusDiv.style.background = 'rgba(255, 255, 255, 0.9)';
+                statusDiv.style.color = '#991b1b';
+            }
+        }
+        
+        // Función principal para iniciar el scanner
+        async function iniciarScanner() {
+            try {
+                console.log('📹 Iniciando scanner QR...');
+                actualizarEstado('🔄 Iniciando cámara...', null);
+                
+                document.getElementById('init-btn').disabled = true;
+                
+                // Configuración optimizada para móviles
+                const constraints = {
+                    video: {
+                        facingMode: 'environment', // Cámara trasera preferida
+                        width: { ideal: 640 },
+                        height: { ideal: 480 },
+                        aspectRatio: { ideal: 4/3 }
+                    }
+                };
+                
+                videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+                videoTrack = videoStream.getVideoTracks()[0];
+                
+                // Verificar capacidades de zoom
+                const capabilities = videoTrack.getCapabilities();
+                if (capabilities.zoom) {
+                    zoomMin = capabilities.zoom.min || 1.0;
+                    zoomMax = capabilities.zoom.max || 10.0;
+                    console.log(`📐 Zoom disponible: ${zoomMin}x - ${zoomMax}x`);
+                }
+                
+                // Configurar elementos de video
+                video = document.getElementById('video');
+                canvas = document.getElementById('canvas');
+                context = canvas.getContext('2d');
+                
+                video.srcObject = videoStream;
+                
+                video.onloadedmetadata = async () => {
+                    document.getElementById('camera-container').style.display = 'block';
+                    document.getElementById('init-btn').style.display = 'none';
+                    
+                    scannerActivo = true;
+                    actualizarEstado('✅ Cámara iniciada. Enfoca un código QR', 'success');
+                    
+                    // Aplicar zoom inicial
+                    if (capabilities.zoom) {
+                        await aplicarZoomReal(zoomActual);
+                    }
+                    
+                    iniciarDeteccionQR();
+                };
+                
+            } catch (error) {
+                console.error('❌ Error accediendo a la cámara:', error);
+                actualizarEstado('❌ Error: No se pudo acceder a la cámara', 'error');
+                document.getElementById('init-btn').disabled = false;
+            }
+        }
+        
+        // Función mejorada para aplicar zoom fluido
+        async function aplicarZoomReal(nivelZoom) {
+            if (!videoTrack) return false;
+            
+            try {
+                const constraints = {
+                    advanced: [{ 
+                        zoom: nivelZoom,
+                        focusMode: 'continuous',
+                        exposureMode: 'continuous'
+                    }]
+                };
+                
+                await videoTrack.applyConstraints(constraints);
+                
+                zoomActual = nivelZoom;
+                
+                // Actualizar UI de forma eficiente
+                requestAnimationFrame(() => {
+                    const zoomDisplay = document.getElementById('zoom-display-real');
+                    const zoomRange = document.getElementById('zoom-range');
+                    
+                    if (zoomDisplay) zoomDisplay.textContent = `${nivelZoom.toFixed(1)}x`;
+                    if (zoomRange) zoomRange.value = nivelZoom;
+                });
+                
+                // Vibración sutil para feedback
+                if (navigator.vibrate) {
+                    navigator.vibrate(30);
+                }
+                
+                console.log(`✅ Zoom fluido aplicado: ${nivelZoom}x`);
+                return true;
+                
+            } catch (error) {
+                console.error('❌ Error aplicando zoom:', error);
+                // Fallback a zoom básico
+                try {
+                    await videoTrack.applyConstraints({ zoom: nivelZoom });
+                    zoomActual = nivelZoom;
+                    return true;
+                } catch (fallbackError) {
+                    console.warn('⚠️ Zoom no soportado en este dispositivo');
+                    return false;
+                }
+            }
+        }
+        
+        // Funciones de control de zoom mejoradas
+        async function aplicarZoom(direccion) {
+            const incremento = 0.3;
+            let nuevoZoom;
+            
+            if (direccion > 0) {
+                nuevoZoom = Math.min(zoomActual + incremento, zoomMax);
+            } else {
+                nuevoZoom = Math.max(zoomActual - incremento, zoomMin);
+            }
+            
+            await aplicarZoomReal(nuevoZoom);
+        }
+        
+        // Función de zoom con debounce para slider fluido
+        async function cambiarZoom(valor) {
+            const nuevoZoom = parseFloat(valor);
+            zoomPendiente = nuevoZoom;
+            
+            // Cancelar zoom anterior si existe
+            if (zoomTimeout) {
+                clearTimeout(zoomTimeout);
+            }
+            
+            // Aplicar zoom inmediatamente para respuesta visual
+            requestAnimationFrame(() => {
+                const zoomDisplay = document.getElementById('zoom-display-real');
+                if (zoomDisplay) zoomDisplay.textContent = `${nuevoZoom.toFixed(1)}x`;
+            });
+            
+            // Aplicar zoom real con debounce
+            zoomTimeout = setTimeout(async () => {
+                if (zoomPendiente === nuevoZoom) {
+                    await aplicarZoomReal(nuevoZoom);
+                    zoomPendiente = null;
+                }
+                zoomTimeout = null;
+            }, 100);
+        }
+        
+        // Función para detener el scanner
+        function detenerScanner() {
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+                videoStream = null;
+                videoTrack = null;
+            }
+            
+            document.getElementById('camera-container').style.display = 'none';
+            document.getElementById('init-btn').style.display = 'block';
+            document.getElementById('init-btn').disabled = false;
+            document.getElementById('init-btn').textContent = '📹 INICIAR SCANNER QR';
+            
+            scannerActivo = false;
+            actualizarEstado('Scanner detenido. Presiona el botón para reiniciar', null);
+        }
+        
+        // Función para detectar códigos QR
+        function iniciarDeteccionQR() {
+            if (!scannerActivo || !video || !canvas || !context) return;
+            
+            const detectar = () => {
+                if (!scannerActivo) return;
+                
+                try {
+                    if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                        canvas.width = video.videoWidth;
+                        canvas.height = video.videoHeight;
+                        context.drawImage(video, 0, 0, canvas.width, canvas.height);
+                        
+                        const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                        const code = jsQR(imageData.data, imageData.width, imageData.height);
+                        
+                        if (code) {
+                            console.log('🎯 Código QR detectado:', code.data);
+                            actualizarEstado('✅ ¡Código detectado! Registrando...', 'success');
+                            
+                            registrarCodigo(code.data);
+                            detenerScanner();
+                            return;
+                        }
+                    }
+                } catch (error) {
+                    console.error('❌ Error en detección:', error);
+                }
+                
+                requestAnimationFrame(detectar);
+            };
+            
+            detectar();
+        }
+        
+        // Función para registrar código QR
+        function registrarCodigo(codigo) {
+            fetch('/registrar_qr/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ codigo_qr: codigo })
+            })
+            .then(response => response.json())
+            .then(data => {
+                const resultDiv = document.getElementById('result');
+                if (data.success) {
+                    resultDiv.innerHTML = `✅ <strong>Código registrado:</strong><br>${data.codigo_qr}`;
+                    resultDiv.style.background = 'rgba(16, 185, 129, 0.9)';
+                } else {
+                    resultDiv.innerHTML = `⚠️ <strong>${data.message}</strong><br>Código: ${codigo}`;
+                    resultDiv.style.background = 'rgba(245, 158, 11, 0.9)';
+                }
+                resultDiv.style.display = 'block';
+                actualizarRegistros();
+            })
+            .catch(error => {
+                console.error('❌ Error registrando código:', error);
+                const resultDiv = document.getElementById('result');
+                resultDiv.innerHTML = `❌ <strong>Error de conexión</strong><br>Código: ${codigo}`;
+                resultDiv.style.background = 'rgba(239, 68, 68, 0.9)';
+                resultDiv.style.display = 'block';
+            });
+        }
+        
+        // Función para actualizar la lista de registros
+        function actualizarRegistros() {
+            fetch('/qr/')
+            .then(response => response.text())
+            .then(html => {
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const nuevaLista = doc.getElementById('lista-registros');
+                if (nuevaLista) {
+                    document.getElementById('lista-registros').innerHTML = nuevaLista.innerHTML;
+                }
+            })
+            .catch(error => console.error('❌ Error actualizando registros:', error));
+        }
+        
+        console.log('✅ JavaScript cargado - SISEG Scanner QR');
+    </script>
+</body>
+</html>
