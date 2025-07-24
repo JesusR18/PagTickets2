@@ -738,6 +738,7 @@
 
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
+            console.log('🚀 DOM cargado, iniciando aplicación...');
             cargarActivosEscaneados();
         });
 
@@ -1044,12 +1045,19 @@
 
         // Función para cargar los activos escaneados
         function cargarActivosEscaneados() {
+            console.log('📦 Cargando activos escaneados...');
+            
             fetch('/obtener_activos_escaneados/')
-            .then(response => response.json())
+            .then(response => {
+                console.log('📡 Respuesta recibida:', response.status);
+                return response.json();
+            })
             .then(data => {
+                console.log('📋 Datos recibidos:', data);
                 const tbody = document.getElementById('tabla-activos-body');
                 
                 if (data.activos && data.activos.length > 0) {
+                    console.log(`✅ Mostrando ${data.activos.length} activos`);
                     tbody.innerHTML = ''; // Limpiar tabla
                     
                     data.activos.forEach(activo => {
@@ -1085,11 +1093,12 @@
                         }
                     });
                 } else {
+                    console.log('⚠️ No hay activos para mostrar');
                     tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">No hay activos escaneados aún</td></tr>';
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('❌ Error cargando activos:', error);
                 document.getElementById('tabla-activos-body').innerHTML = 
                     '<tr><td colspan="8" class="sin-activos">Error al cargar activos</td></tr>';
             });
@@ -1141,6 +1150,7 @@
         
         // Función para exportar registros a Excel (mantener compatibilidad)
         function exportarExcel() {
+            console.log('📊 Exportando activos a Excel...');
             window.open('/exportar_excel/', '_blank');
         }
 
