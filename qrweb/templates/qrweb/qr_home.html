@@ -1,3 +1,4 @@
+{% load tz %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -344,7 +345,7 @@
         <h2>Últimos códigos registrados</h2>
         <ul id="lista-registros">
         {% for r in registros %}
-            <li><b>{{ r.codigo }}</b> - {{ r.fecha|date:'Y-m-d H:i:s' }}</li>
+            <li><b>{{ r.codigo }}</b> - {{ r.fecha|localtime|date:'Y-m-d H:i:s' }}</li>
         {% empty %}
             <li>No hay registros aún.</li>
         {% endfor %}

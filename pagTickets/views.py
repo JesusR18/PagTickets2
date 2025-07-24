@@ -13,6 +13,19 @@ from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
 from openpyxl.utils import get_column_letter
 import datetime
 
+# Función helper para formatear fechas con zona horaria local
+def format_local_datetime(dt):
+    """
+    Convierte un datetime UTC a la zona horaria local configurada en Django
+    y lo formatea como string
+    """
+    if dt:
+        # Convertir a zona horaria local
+        local_dt = timezone.localtime(dt)
+        # Formatear con zona horaria local
+        return local_dt.strftime('%Y-%m-%d %H:%M:%S')
+    return ''
+
 # Vista de healthcheck para Railway
 def health_check(request):
     """Vista simple para verificación de salud de Railway"""
@@ -44,7 +57,7 @@ def index(request):
                 'marca': qr_data.get('marca', 'Sin marca'),
                 'modelo': qr_data.get('modelo', 'Sin modelo'),
                 'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
-                'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                'fecha_registro': format_local_datetime(registro.fecha_registro)
             }
         except (json.JSONDecodeError, AttributeError):
             # Si no es JSON válido, usar información básica
@@ -55,7 +68,7 @@ def index(request):
                 'marca': 'Sin marca',
                 'modelo': 'Sin modelo',
                 'no_serie': 'Sin número de serie',
-                'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                'fecha_registro': format_local_datetime(registro.fecha_registro)
             }
         activos_escaneados.append(activo_info)
     
@@ -133,7 +146,7 @@ def registrar_qr(request):
                 # Si ya existe, devolver información de que está registrado
                 activo_existente = extraer_informacion_qr(registro_existente.codigo)
                 activo_existente['id'] = registro_existente.id
-                activo_existente['fecha_registro'] = registro_existente.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                activo_existente['fecha_registro'] = format_local_datetime(registro_existente.fecha_registro)
                 return JsonResponse({
                     'success': True,
                     'already_registered': True,
@@ -151,7 +164,7 @@ def registrar_qr(request):
             
             # Agregar ID y fecha al activo_info
             activo_info['id'] = nuevo_registro.id
-            activo_info['fecha_registro'] = nuevo_registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+            activo_info['fecha_registro'] = format_local_datetime(nuevo_registro.fecha_registro)
             
             return JsonResponse({
                 'success': True,
@@ -360,7 +373,7 @@ def obtener_activos_escaneados(request):
             activo_info = extraer_informacion_qr(registro.codigo)
             # Agregar ID del registro y fecha de registro
             activo_info['id'] = registro.id
-            activo_info['fecha_registro'] = registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+            activo_info['fecha_registro'] = format_local_datetime(registro.fecha_registro)
             activos_data.append(activo_info)
         
         return JsonResponse({'activos': activos_data})
@@ -407,7 +420,7 @@ def exportar_activos_excel(request):
             ws.cell(row=row, column=4, value=activo_info['marca']).border = border
             ws.cell(row=row, column=5, value=activo_info['modelo']).border = border
             ws.cell(row=row, column=6, value=activo_info['no_serie']).border = border
-            ws.cell(row=row, column=7, value=registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')).border = border
+            ws.cell(row=row, column=7, value=format_local_datetime(registro.fecha_registro)).border = border
             row += 1
         
         # Ajustar ancho de columnas
@@ -446,7 +459,7 @@ def ultimos_registros(request):
                     'marca': qr_data.get('marca', 'Sin marca'),
                     'modelo': qr_data.get('modelo', 'Sin modelo'),
                     'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
-                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                    'fecha_registro': format_local_datetime(registro.fecha_registro)
                 })
             except (json.JSONDecodeError, AttributeError):
                 # Si no es JSON, usar el código tal como está
@@ -458,7 +471,7 @@ def ultimos_registros(request):
                     'marca': 'Sin marca',
                     'modelo': 'Sin modelo',
                     'no_serie': 'Sin número de serie',
-                    'fecha_registro': registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                    'fecha_registro': format_local_datetime(registro.fecha_registro)
                 })
         
         return JsonResponse({'registros': datos})
@@ -497,7 +510,7 @@ def exportar_excel(request):
             ws.append([
                 registro.id,
                 registro.codigo,
-                registro.fecha_registro.strftime('%Y-%m-%d %H:%M:%S')
+                format_local_datetime(registro.fecha_registro)
             ])
         
         # Ajustar ancho de columnas

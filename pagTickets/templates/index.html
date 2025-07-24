@@ -7,14 +7,23 @@
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style>
+        /* CSS para compatibilidad de emojis en todos los dispositivos */
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        
+        /* Garantizar renderización estable de emojis */
+        button, .scanner-status, .zoom-display {
+            font-variant-emoji: unicode;
+            text-rendering: optimizeLegibility;
         }
         
         body {
-            font-family: 'Arial', sans-serif;
             background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
             min-height: 100vh;
             color: white;
@@ -436,7 +445,7 @@
             <!-- Botón DETENER fuera de la cámara -->
             <div id="stop-button-container" style="display: none; text-align: center; margin: 15px 0;">
                 <button onclick="detenerScanner()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
-                    [STOP] DETENER SCANNER
+                    ⏹️ DETENER SCANNER
                 </button>
             </div>
             
@@ -498,6 +507,18 @@
         let activosEscaneados = [];
         let zoomTimeout = null; // Para hacer el zoom más fluido
         
+        // Función para manejar emojis de forma segura
+        function setEmojiContent(element, content) {
+            if (element) {
+                // Usar textContent pero asegurarse de que el emoji se mantenga
+                element.textContent = content;
+                // Forzar re-renderización si es necesario
+                element.style.display = 'none';
+                element.offsetHeight; // Trigger reflow
+                element.style.display = '';
+            }
+        }
+        
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📦 DOM cargado, iniciando aplicación...');
@@ -512,7 +533,7 @@
                 
                 setTimeout(() => {
                     if (!scannerActivo) {
-                        statusDiv.innerHTML = 'Presiona el botón para iniciar la cámara con zoom de hardware';
+                        statusDiv.innerHTML = 'Presiona el botón para comenzar a escanear';
                     }
                 }, 4000);
             }
@@ -554,7 +575,7 @@
             
             try {
                 toggleBtn.disabled = true;
-                toggleBtn.textContent = '[INIT] INICIANDO...';
+                setEmojiContent(toggleBtn, '📹 INICIANDO...');
                 actualizarEstado('🚀 Solicitando acceso a la cámara...', null);
                 
                 // Configuración avanzada para solicitar zoom
@@ -613,7 +634,7 @@
                 // Mostrar interfaz de cámara y botón detener
                 cameraContainer.style.display = 'block';
                 document.getElementById('stop-button-container').style.display = 'block';
-                toggleBtn.textContent = '[ACTIVE] SCANNER ACTIVO';
+                setEmojiContent(toggleBtn, '📹 SCANNER ACTIVO');
                 toggleBtn.disabled = true;
                 scannerActivo = true;
                 
@@ -624,7 +645,7 @@
                 console.error('❌ Error iniciando cámara:', error);
                 actualizarEstado(`❌ Error: ${error.message}`, false);
                 toggleBtn.disabled = false;
-                toggleBtn.textContent = '[CAM] INICIAR SCANNER QR';
+                setEmojiContent(toggleBtn, '📹 INICIAR SCANNER QR');
             }
         }
         
@@ -710,7 +731,7 @@
             document.getElementById('camera-container').style.display = 'none';
             document.getElementById('stop-button-container').style.display = 'none';
             const toggleBtn = document.getElementById('scanner-toggle-btn');
-            toggleBtn.textContent = '[CAM] INICIAR SCANNER QR';
+            setEmojiContent(toggleBtn, '📹 INICIAR SCANNER QR');
             toggleBtn.disabled = false;
             
             scannerActivo = false;
@@ -975,6 +996,14 @@
         
         // Actualizar activos cada 30 segundos
         setInterval(cargarActivosEscaneados, 30000);
+        
+        // Asegurar que los emojis se mantengan al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            const scannerBtn = document.getElementById('scanner-toggle-btn');
+            if (scannerBtn && !scannerBtn.textContent.includes('📹')) {
+                setEmojiContent(scannerBtn, '📹 INICIAR SCANNER QR');
+            }
+        });
         
         console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
     </script>
