@@ -103,6 +103,15 @@
         .btn-secondary:hover {
             box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
         }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+        }
+        
+        .btn-danger:hover {
+            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+            transform: translateY(-2px);
+        }
         
         /* Scanner integrado */
         .scanner-container {
@@ -407,14 +416,17 @@
     <div class="container">
         <div class="controls">
             <button onclick="exportarExcel()" class="btn btn-secondary">
-                [EXCEL] Exportar a Excel
+                🗂️ Exportar a Excel
+            </button>
+            <button onclick="eliminarTodos()" class="btn btn-danger">
+                🗑️ Eliminar Todos
             </button>
         </div>
         
         <!-- Scanner integrado -->
         <div class="scanner-container">
             <button onclick="toggleScanner()" class="scanner-toggle" id="scanner-toggle-btn">
-                [CAM] INICIAR SCANNER QR
+                📹 INICIAR SCANNER QR
             </button>
             
             <div id="scanner-status" class="scanner-status">
@@ -908,6 +920,41 @@
             setTimeout(() => {
                 window.open('/exportar_activos_excel/', '_blank');
             }, 500);
+        }
+
+        // Función para eliminar todos los activos
+        function eliminarTodos() {
+            if (!confirm('⚠️ ¿Estás seguro de que quieres eliminar TODOS los activos?\n\nEsta acción no se puede deshacer.')) {
+                return;
+            }
+            
+            if (!confirm('🚨 ÚLTIMA CONFIRMACIÓN:\n\nEsto eliminará TODOS los activos registrados.\n\n¿Continuar?')) {
+                return;
+            }
+
+            console.log('🗑️ Eliminando todos los activos...');
+            showMessage('🗑️ Eliminando todos los activos...', 'info');
+
+            fetch('/eliminar_todos_activos/', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken'),
+                    'Content-Type': 'application/json'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(`✅ ${data.message}`, 'success');
+                    cargarActivosEscaneados(); // Recargar la tabla
+                } else {
+                    showMessage(`❌ ${data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error:', error);
+                showMessage('❌ Error al eliminar activos', 'error');
+            });
         }
         
         // Función para obtener cookie CSRF

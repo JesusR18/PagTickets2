@@ -525,3 +525,40 @@ def exportar_excel(request):
         
     except Exception as e:
         return JsonResponse({'error': f'Error al exportar: {str(e)}'}, status=500)
+
+@csrf_exempt
+def eliminar_todos_activos(request):
+    """Vista para eliminar todos los activos registrados"""
+    if request.method == 'POST':
+        try:
+            # Contar activos antes de eliminar
+            total_qr_registros = RegistroQR.objects.count()
+            
+            # Eliminar todos los registros QR de pagTickets
+            RegistroQR.objects.all().delete()
+            
+            # Eliminar todos los registros QR de qrweb (si existen)
+            try:
+                from qrweb.models import QRRegistro
+                total_qr_registros_web = QRRegistro.objects.count()
+                QRRegistro.objects.all().delete()
+                total_eliminados = total_qr_registros + total_qr_registros_web
+            except ImportError:
+                total_eliminados = total_qr_registros
+            
+            print(f"🗑️ ELIMINACIÓN MASIVA: {total_eliminados} activos eliminados por el usuario")
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Se eliminaron {total_eliminados} activos correctamente',
+                'total_eliminados': total_eliminados
+            })
+            
+        except Exception as e:
+            print(f"❌ Error al eliminar todos los activos: {e}")
+            return JsonResponse({
+                'success': False,
+                'message': f'Error al eliminar activos: {str(e)}'
+            }, status=500)
+    
+    return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)

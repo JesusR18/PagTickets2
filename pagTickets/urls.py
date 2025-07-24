@@ -28,4 +28,6 @@ urlpatterns = [
     path('exportar_excel/', views.exportar_excel, name='exportar_excel'),
     # Ruta para exportar activos escaneados a Excel (nueva funcionalidad)
     path('exportar_activos_excel/', views.exportar_activos_excel, name='exportar_activos_excel'),
+    # Ruta para eliminar todos los activos
+    path('eliminar_todos_activos/', views.eliminar_todos_activos, name='eliminar_todos_activos'),
 ]
