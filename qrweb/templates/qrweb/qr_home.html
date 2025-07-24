@@ -2,7 +2,12 @@
 <html lang="es"> <!-- Inicia el documento HTML en español -->
 <head> <!-- Sección que contiene información sobre la página (no visible para el usuario) -->
     <meta charset="UTF-8"> <!-- Configura la codificación de caracteres para mostrar acentos y ñ -->
-    <title>Lector de Código QR</title> <!-- Título que aparece en la pestaña del navegador -->
+    <title>Lect            <!-- Controles de Zoom REAL -->
+            <div class="zoom-controls-real">
+                <button onclick="aplicarZoom(-1)" class="zoom-btn-real">[-] ZOOM</button>
+                <span id="zoom-display-real" class="zoom-display">1.0x</span>
+                <button onclick="aplicarZoom(1)" class="zoom-btn-real">[+] ZOOM</button>
+            </div>Código QR</title> <!-- Título que aparece en la pestaña del navegador -->
     <!-- Carga librerías para leer códigos QR desde la cámara -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
@@ -110,12 +115,12 @@
         
         .camera-container {
             position: relative;
-            max-width: 400px;
-            margin: 0 auto;
+            max-width: 320px; /* Más compacto */
+            margin: 15px auto; /* Márgenes reducidos */
             background: #000;
-            border-radius: 15px;
+            border-radius: 12px; /* Radio más pequeño */
             overflow: hidden;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); /* Sombra más sutil */
         }
         
         #camera-video {
@@ -126,15 +131,15 @@
         
         .zoom-controls-real {
             position: absolute;
-            bottom: 80px;
+            bottom: 60px; /* Más arriba para compactar */
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             align-items: center;
-            gap: 15px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px 20px;
-            border-radius: 25px;
+            gap: 12px; /* Gap más pequeño */
+            background: rgba(0, 0, 0, 0.75);
+            padding: 10px 15px; /* Padding más pequeño */
+            border-radius: 20px; /* Más compacto */
             backdrop-filter: blur(10px);
         }
         
@@ -142,14 +147,14 @@
             background: linear-gradient(135deg, #991b1b, #dc2626);
             color: white;
             border: none;
-            padding: 12px 15px;
+            padding: 8px 10px; /* Más pequeño */
             border-radius: 50%;
-            font-size: 18px;
+            font-size: 16px; /* Fuente más pequeña */
             cursor: pointer;
             transition: all 0.2s ease;
-            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.5);
-            width: 50px;
-            height: 50px;
+            box-shadow: 0 3px 8px rgba(153, 27, 27, 0.4);
+            width: 40px; /* Más pequeño */
+            height: 40px;
         }
         
         .zoom-btn-real:active {
@@ -159,19 +164,19 @@
         .zoom-display {
             color: white;
             font-weight: bold;
-            font-size: 16px;
+            font-size: 14px; /* Más pequeño */
             background: rgba(255, 255, 255, 0.2);
-            padding: 8px 15px;
-            border-radius: 15px;
-            min-width: 60px;
+            padding: 6px 12px; /* Más compacto */
+            border-radius: 12px;
+            min-width: 50px; /* Más pequeño */
             text-align: center;
         }
         
         .zoom-slider-real {
             position: absolute;
-            bottom: 20px;
-            left: 20px;
-            right: 20px;
+            bottom: 15px; /* Más arriba */
+            left: 15px; /* Márgenes más pequeños */
+            right: 15px;
         }
         
         #zoom-range {
@@ -326,7 +331,7 @@
         <!-- Botón para iniciar el scanner -->
         <div class="scanner-init">
             <button onclick="iniciarScanner()" class="init-btn" id="init-btn">
-                📹 INICIAR SCANNER QR
+                [CAM] INICIAR SCANNER QR
             </button>
             <div id="status-message" class="status-message">
                 Presiona el botón para iniciar la cámara con zoom
@@ -352,7 +357,7 @@
             
             <!-- Botones de control -->
             <div class="control-buttons">
-                <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER</button>
+                <button onclick="detenerScanner()" class="control-btn stop-btn">[STOP] DETENER</button>
             </div>
         </div>
 
