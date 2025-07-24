@@ -3,1047 +3,415 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>SISEG - Escáner QR</title>
+    <title>SISEG - Sistema de Activos</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
-    
-    <!-- Token CSRF para JavaScript -->
-    <meta name="csrf-token" content="{{ csrf_token }}">
-    
     <style>
-        :root {
-            --color-primary: #b91c1c;
-            --color-primary-dark: #991b1b;
-            --color-primary-light: #dc2626;
-            --color-red-intense: #8b0000;
-            --color-white: #ffffff;
-            --color-gray-50: #f9fafb;
-            --color-gray-100: #f3f4f6;
-            --color-gray-700: #374151;
-            --color-gray-900: #111827;
-            --shadow-soft: 0 4px 6px -1px rgba(185, 28, 28, 0.2), 0 2px 4px -1px rgba(185, 28, 28, 0.1);
-            --shadow-medium: 0 10px 15px -3px rgba(185, 28, 28, 0.2), 0 4px 6px -2px rgba(185, 28, 28, 0.1);
-            --shadow-red: 0 0 20px rgba(185, 28, 28, 0.3);
-        }
-        
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
         }
         
         body {
-            font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-            background: linear-gradient(135deg, var(--color-red-intense) 0%, var(--color-primary) 50%, var(--color-primary-dark) 100%);
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
             min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 0.5rem;
-            line-height: 1.6;
-            color: var(--color-gray-700);
-            position: relative;
-            overflow-x: hidden;
-        }
-        
-        body::before {
-            content: '';
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: radial-gradient(circle at 30% 20%, rgba(185, 28, 28, 0.3) 0%, transparent 50%),
-                        radial-gradient(circle at 70% 80%, rgba(153, 27, 27, 0.3) 0%, transparent 50%);
-            z-index: -1;
-            animation: pulseBackground 4s ease-in-out infinite alternate;
-        }
-        
-        @keyframes pulseBackground {
-            0% { opacity: 0.7; }
-            100% { opacity: 1; }
+            color: white;
+            padding: 20px;
         }
         
         .header {
-            background: linear-gradient(135deg, var(--color-white) 0%, rgba(255, 255, 255, 0.95) 100%);
-            padding: 2rem;
-            border-radius: 16px;
-            box-shadow: var(--shadow-red);
             text-align: center;
-            width: 100%;
-            max-width: 600px;
-            margin-bottom: 2rem;
-            border: 2px solid rgba(185, 28, 28, 0.1);
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
             backdrop-filter: blur(10px);
         }
         
-        .header h1 {
-            color: var(--color-primary);
-            font-size: clamp(1.8rem, 4vw, 2.5rem);
-            font-weight: 700;
-            margin-bottom: 0.5rem;
-            text-shadow: 2px 2px 4px rgba(185, 28, 28, 0.3);
-            background: linear-gradient(45deg, var(--color-primary), var(--color-red-intense));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            text-align: center;
+        .logo-container {
+            display: inline-block;
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
-        .header p {
-            color: var(--color-gray-700);
-            font-size: clamp(0.9rem, 2.5vw, 1.1rem);
-            font-weight: 500;
-            text-align: center;
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            margin: 0;
+            font-size: 2.5em;
         }
         
-        .main-container {
-            display: flex;
-            flex-direction: column;
-            gap: 1.5rem;
-            width: 100%;
+        .container {
             max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(127, 29, 29, 0.3);
+            color: #333;
         }
         
-        @media (min-width: 768px) {
-            .main-container {
-                display: grid;
-                grid-template-columns: 1fr 1fr;
-                gap: 2rem;
-            }
-        }
-        
-        .scanner-section {
-            background: linear-gradient(135deg, var(--color-white) 0%, rgba(255, 255, 255, 0.95) 100%);
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: var(--shadow-red);
-            border: 2px solid rgba(185, 28, 28, 0.1);
-            backdrop-filter: blur(10px);
-            width: 100%;
-        }
-        
-        @media (min-width: 768px) {
-            .scanner-section {
-                padding: 2rem;
-            }
-        }
-        
-        .scanner-section h2 {
-            color: var(--color-primary);
-            font-size: clamp(1.2rem, 3vw, 1.5rem);
-            margin-bottom: 1.5rem;
-            text-align: center;
-            font-weight: 600;
-        }
-        
-        .qr-camera-container {
+        .controls {
             display: flex;
-            flex-direction: column;
+            justify-content: space-between;
             align-items: center;
-            gap: 1rem;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #991b1b, #dc2626);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.3);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(153, 27, 27, 0.4);
+        }
+        
+        .btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #059669, #10b981);
+        }
+        
+        .btn-secondary:hover {
+            box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
         }
         
         #reader {
             width: 100%;
-            max-width: min(400px, 90vw);
-            margin: 0 auto;
-            border-radius: 12px;
+            max-width: 400px;
+            margin: 20px auto;
+            border-radius: 10px;
             overflow: hidden;
-            box-shadow: var(--shadow-red);
-            border: 3px solid var(--color-primary);
+            box-shadow: 0 5px 15px rgba(185, 28, 28, 0.3);
+            display: none;
         }
         
-        .btn {
-            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-red-intense) 100%);
-            color: var(--color-white);
-            border: none;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-size: clamp(0.9rem, 2.5vw, 1rem);
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: var(--shadow-red);
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            width: 100%;
-            max-width: 300px;
-            min-height: 48px;
-        }
-        
-        @media (min-width: 768px) {
-            .btn {
-                width: auto;
-                min-height: auto;
-            }
-        }
-        
-        .btn:hover {
-            background: linear-gradient(135deg, var(--color-red-intense) 0%, var(--color-primary-dark) 100%);
-            transform: translateY(-2px);
-            box-shadow: 0 8px 25px rgba(185, 28, 28, 0.4);
-        }
-        
-        .btn:active {
-            transform: translateY(0);
-        }
-        
-        .btn:disabled {
-            background: #9ca3af;
-            cursor: not-allowed;
-            transform: none;
-        }
-        
-        .history-section {
-            background: var(--color-white);
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: var(--shadow-medium);
-            width: 100%;
-        }
-        
-        @media (min-width: 768px) {
-            .history-section {
-                padding: 2rem;
-            }
-        }
-        
-        .history-section h2 {
-            color: var(--color-gray-700);
-            font-size: clamp(1.2rem, 3vw, 1.5rem);
-            margin-bottom: 1.5rem;
+        .scanner-status {
             text-align: center;
-        }
-        
-        /* Estilos para la tabla de activos */
-        .activos-section {
-            background: linear-gradient(135deg, var(--color-white) 0%, rgba(255, 255, 255, 0.95) 100%);
-            padding: 1.5rem;
-            border-radius: 16px;
-            box-shadow: var(--shadow-red);
-            border: 2px solid rgba(185, 28, 28, 0.1);
-            backdrop-filter: blur(10px);
-            width: 100%;
-            overflow: hidden;
-        }
-        
-        @media (min-width: 768px) {
-            .activos-section {
-                padding: 2rem;
-            }
-        }
-        
-        .activos-section h2 {
-            color: var(--color-primary);
-            font-size: clamp(1.2rem, 3vw, 1.5rem);
-            margin-bottom: 1.5rem;
-            text-align: center;
-            font-weight: 600;
-        }
-        
-        .export-btn {
-            background: linear-gradient(135deg, #059669 0%, #047857 100%);
-            margin-bottom: 1rem;
-            width: 100%;
-            border: 2px solid rgba(5, 150, 105, 0.3);
-        }
-        
-        .export-btn:hover {
-            background: linear-gradient(135deg, #047857 0%, #065f46 100%);
-            box-shadow: 0 8px 25px rgba(5, 150, 105, 0.4);
-        }
-        
-        .tabla-activos-container {
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch;
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.9);
             border-radius: 8px;
-            box-shadow: var(--shadow-soft);
-            position: relative;
-        }
-        
-        .tabla-activos {
-            width: 100%;
-            min-width: 600px;
-            border-collapse: collapse;
-            margin-top: 1rem;
-            font-size: clamp(0.75rem, 2vw, 0.9rem);
-            position: relative;
-        }
-        
-        .tabla-activos tbody tr {
-            position: relative;
-            transition: transform 0.3s ease;
-        }
-        
-        /* Contenedor de fila con efecto deslizar */
-        .fila-activo {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* Área de eliminación que aparece al deslizar */
-        .eliminar-area {
-            position: absolute;
-            right: -120px;
-            top: 0;
-            bottom: 0;
-            width: 120px;
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
             font-weight: bold;
-            font-size: 0.9rem;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            z-index: 10;
-        }
-        
-        .eliminar-area:hover {
-            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
-        }
-        
-        .eliminar-area.visible {
-            right: 0;
-        }
-        
-        /* Estilos para móvil con detección de deslizamiento */
-        @media (max-width: 768px) {
-            .tabla-activos-container {
-                scroll-snap-type: x mandatory;
-                scrollbar-width: none;
-                -ms-overflow-style: none;
-            }
-            
-            .tabla-activos-container::-webkit-scrollbar {
-                display: none;
-            }
-            
-            .tabla-activos tbody tr {
-                scroll-snap-align: start;
-            }
-            
-            /* Indicador visual de que se puede deslizar más */
-            .tabla-activos-container::after {
-                content: '👈 Desliza para eliminar';
-                position: absolute;
-                right: 10px;
-                top: 50%;
-                transform: translateY(-50%);
-                background: rgba(220, 38, 38, 0.9);
-                color: white;
-                padding: 5px 10px;
-                border-radius: 15px;
-                font-size: 0.7rem;
-                font-weight: bold;
-                pointer-events: none;
-                opacity: 0;
-                transition: opacity 0.3s ease;
-                z-index: 20;
-            }
-            
-            .tabla-activos-container.show-delete-hint::after {
-                opacity: 1;
-            }
-        }
-        
-        .tabla-activos th,
-        .tabla-activos td {
-            padding: 0.5rem;
-            text-align: left;
-            border-bottom: 1px solid var(--color-gray-100);
-        }
-        
-        .tabla-activos th {
-            background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-red-intense) 100%);
-            font-weight: 600;
-            color: var(--color-white);
-            position: sticky;
-            top: 0;
-            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
-        }
-        
-        .tabla-activos tbody tr:hover {
-            background: linear-gradient(135deg, rgba(185, 28, 28, 0.1) 0%, rgba(153, 27, 27, 0.1) 100%);
-            transform: scale(1.01);
-            transition: all 0.2s ease;
+            color: #991b1b;
         }
         
         .tabla-container {
-            max-height: 400px;
-            overflow-y: auto;
-            border: 3px solid var(--color-primary);
-            border-radius: 8px;
-            box-shadow: var(--shadow-red);
+            margin-top: 30px;
+            overflow-x: auto;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
         
-        .btn-registrado {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            min-width: 800px;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #991b1b, #b91c1c);
             color: white;
-            border: none;
-            padding: 0.25rem 0.75rem;
-            border-radius: 20px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: default;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-            text-transform: uppercase;
+            font-weight: bold;
+            position: sticky;
+            top: 0;
         }
         
-        .btn-eliminar {
-            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
-            color: white;
-            border: none;
-            padding: 0.375rem 0.75rem;
-            border-radius: 6px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 8px rgba(220, 38, 38, 0.3);
-            text-transform: uppercase;
-        }
-        
-        .btn-eliminar:hover {
-            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 12px rgba(220, 38, 38, 0.4);
-        }
-        
-        .btn-eliminar:active {
-            transform: translateY(0);
-        }
-        
-        .acciones-celda {
-            text-align: center;
-            padding: 0.5rem;
+        tr:hover {
+            background-color: #f9fafb;
         }
         
         .sin-activos {
             text-align: center;
-            padding: 2rem;
-            color: var(--color-gray-700);
+            color: #6b7280;
+            font-style: italic;
+            padding: 40px;
+        }
+        
+        .btn-eliminar {
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 5px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .btn-eliminar:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 2px 6px rgba(220, 38, 38, 0.3);
+        }
+        
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            
+            h1 {
+                font-size: 1.8em;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+            
+            table {
+                font-size: 14px;
+            }
+            
+            th, td {
+                padding: 8px;
+            }
         }
         
         .alert {
-            padding: 1rem;
+            padding: 15px;
+            margin: 15px 0;
             border-radius: 8px;
-            margin: 1rem 0;
-            text-align: center;
-            font-weight: 500;
+            font-weight: bold;
         }
         
         .alert-success {
-            background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-            color: #065f46;
-            border: 2px solid #10b981;
-            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+            background-color: #dcfce7;
+            color: #166534;
+            border: 1px solid #bbf7d0;
         }
         
         .alert-error {
-            background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%);
-            color: #991b1b;
-            border: 2px solid var(--color-primary);
-            box-shadow: 0 4px 12px rgba(185, 28, 28, 0.2);
-        }
-        
-        .spinner {
-            border: 3px solid rgba(185, 28, 28, 0.2);
-            border-top: 3px solid var(--color-primary);
-            border-radius: 50%;
-            width: 20px;
-            height: 20px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        
-        /* Efectos especiales para escaneo */
-        .scan-effect {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 9999;
-            background: radial-gradient(circle, rgba(185, 28, 28, 0.3) 0%, transparent 70%);
-            animation: scanFlash 0.5s ease-out;
-        }
-        
-        @keyframes scanFlash {
-            0% { opacity: 0; transform: scale(0.8); }
-            50% { opacity: 1; transform: scale(1.1); }
-            100% { opacity: 0; transform: scale(1); }
-        }
-        
-        .success-pulse {
-            animation: successPulse 1s ease-in-out;
-        }
-        
-        @keyframes successPulse {
-            0% { transform: scale(1); box-shadow: var(--shadow-red); }
-            50% { transform: scale(1.02); box-shadow: 0 0 30px rgba(16, 185, 129, 0.6); }
-            100% { transform: scale(1); box-shadow: var(--shadow-red); }
-        }
-        
-        .error-shake {
-            animation: errorShake 0.5s ease-in-out;
-        }
-        
-        @keyframes errorShake {
-            0%, 100% { transform: translateX(0); }
-            25% { transform: translateX(-5px); }
-            75% { transform: translateX(5px); }
-        }
-        
-        /* Efecto de brillo para botones */
-        .btn-glow {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        .btn-glow::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-            transition: left 0.5s;
-        }
-        
-        .btn-glow:hover::before {
-            left: 100%;
-        }
-
-        /* Responsive design */
-        @media (max-width: 768px) {
-            body {
-                padding: 0.25rem;
-            }
-            
-            .header {
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
-            
-            .header h1 {
-                font-size: 1.8rem;
-                margin-bottom: 0.25rem;
-            }
-            
-            .header p {
-                font-size: 0.9rem;
-            }
-            
-            .scanner-section, .activos-section {
-                padding: 1rem;
-                margin-bottom: 1rem;
-            }
-            
-            .scanner-section h2, .activos-section h2 {
-                font-size: 1.2rem;
-                margin-bottom: 1rem;
-            }
-            
-            #reader {
-                max-width: 100%;
-                border-radius: 8px;
-            }
-            
-            .btn {
-                padding: 0.875rem 1rem;
-                font-size: 0.9rem;
-                width: 100%;
-                margin-bottom: 0.5rem;
-            }
-            
-            .tabla-activos {
-                font-size: 0.75rem;
-                min-width: 500px;
-            }
-            
-            .tabla-activos th,
-            .tabla-activos td {
-                padding: 0.375rem 0.25rem;
-                white-space: nowrap;
-            }
-            
-            .alert {
-                padding: 0.75rem;
-                font-size: 0.875rem;
-                margin: 0.5rem 0;
-            }
-            
-            .sin-activos {
-                padding: 1.5rem;
-                font-size: 0.875rem;
-            }
-            
-            .btn-eliminar {
-                padding: 0.25rem 0.5rem;
-                font-size: 0.7rem;
-                min-height: 32px;
-            }
-            
-            .acciones-celda {
-                padding: 0.25rem;
-            }
-        }
-        /* Estilos para pantallas muy pequeñas */
-        @media (max-width: 480px) {
-            .header h1 {
-                font-size: 1.5rem;
-            }
-            
-            .main-container {
-                gap: 1rem;
-            }
-            
-            .scanner-section, .activos-section {
-                padding: 0.75rem;
-            }
-            
-            .tabla-activos {
-                font-size: 0.7rem;
-                min-width: 500px;
-            }
-            
-            .tabla-activos th,
-            .tabla-activos td {
-                padding: 0.25rem 0.125rem;
-            }
-            
-            .btn {
-                padding: 0.75rem;
-                font-size: 0.85rem;
-            }
-            
-            .btn-eliminar {
-                padding: 0.2rem 0.4rem;
-                font-size: 0.65rem;
-                min-height: 28px;
-            }
-        }
-        
-        /* Mejoras para dispositivos táctiles */
-        @media (pointer: coarse) {
-            .btn {
-                min-height: 48px;
-                touch-action: manipulation;
-            }
-            
-            .tabla-activos th,
-            .tabla-activos td {
-                min-height: 40px;
-            }
-        }
-        
-        /* Orientación horizontal en móviles */
-        @media screen and (max-height: 500px) and (orientation: landscape) {
-            .header {
-                padding: 0.5rem;
-                margin-bottom: 0.5rem;
-            }
-            
-            .header h1 {
-                font-size: 1.4rem;
-            }
-            
-            .main-container {
-                gap: 1rem;
-            }
-            
-            .scanner-section, .activos-section {
-                padding: 1rem;
-            }
+            background-color: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fecaca;
         }
     </style>
 </head>
 <body>
-    <!-- Header principal -->
     <div class="header">
-        <h1>SISEG</h1>
-        <p>Sistema de Escáner QR</p>
+        <a href="https://www.linkedin.com/company/siseg-seguridad-integral/" target="_blank" style="text-decoration: none;">
+            <div class="logo-container">
+                <svg width="180" height="80" viewBox="0 0 200 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <rect x="10" y="10" width="180" height="70" rx="10" fill="white" stroke="#991b1b" stroke-width="2"/>
+                    <text x="100" y="35" text-anchor="middle" fill="#991b1b" font-size="18" font-weight="bold" font-family="Arial, sans-serif">SISEG</text>
+                    <text x="100" y="55" text-anchor="middle" fill="#666" font-size="10" font-family="Arial, sans-serif">SEGURIDAD INTEGRAL</text>
+                    <circle cx="30" cy="30" r="8" fill="#991b1b" opacity="0.8"/>
+                    <circle cx="170" cy="30" r="8" fill="#991b1b" opacity="0.8"/>
+                    <rect x="25" y="60" width="150" height="2" fill="#991b1b" opacity="0.5"/>
+                </svg>
+            </div>
+        </a>
+        <h1>SISEG - Sistema de Activos</h1>
     </div>
-
-    <!-- Contenedor principal -->
-    <div class="main-container">
-        <!-- Sección del escáner QR -->
-        <div class="scanner-section">
-            <h2>📱 Escáner QR</h2>
-            
-            <div class="qr-camera-container">
-                <!-- Contenedor para la cámara del escáner QR -->
-                <div id="reader"></div>
-                
-                <!-- Botón para iniciar/detener el escáner -->
-                <button id="start-stop-btn" class="btn btn-glow" onclick="toggleScanner()">
-                    Iniciar Escáner
-                </button>
-            </div>
-            
-            <!-- Área para mostrar mensajes de estado -->
-            <div id="scanner-status"></div>
-        </div>
-
-        <!-- Sección de activos escaneados -->
-        <div class="activos-section">
-            <h2>📋 Activos Escaneados</h2>
-            
-            <!-- Botón para exportar a Excel -->
-            <button class="btn export-btn btn-glow" onclick="exportarActivosExcel()">
-                📊 Exportar Activos a Excel
+    
+    <div class="container">
+        <div class="controls">
+            <button onclick="toggleScanner()" class="btn" id="start-stop-btn">
+                📱 Iniciar Escáner
             </button>
-            
-            <!-- Tabla de activos -->
-            <div class="tabla-activos-container">
-                <table class="tabla-activos" id="tabla-activos">
-                    <thead>
-                        <tr>
-                            <th>Código QR</th>
-                            <th>Activo</th>
-                            <th>Ubicación</th>
-                            <th>Marca</th>
-                            <th>Modelo</th>
-                            <th>No. de Serie</th>
-                            <th>Fecha</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-                    <tbody id="tabla-activos-body">
-                        <tr>
-                            <td colspan="8" class="sin-activos">
-                                <div class="spinner"></div>
-                                Cargando activos...
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <button onclick="exportarExcel()" class="btn btn-secondary">
+                📊 Exportar a Excel
+            </button>
+        </div>
+        
+        <div id="scanner-status" class="scanner-status">
+            Presiona "Iniciar Escáner" para comenzar a leer códigos QR
+        </div>
+        
+        <div id="reader"></div>
+        
+        <div class="tabla-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Código</th>
+                        <th>Nombre</th>
+                        <th>Ubicación</th>
+                        <th>Marca</th>
+                        <th>Modelo</th>
+                        <th>No. Serie</th>
+                        <th>Fecha Registro</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody id="tabla-activos-body">
+                    <tr>
+                        <td colspan="8" class="sin-activos">Cargando activos...</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 
     <script>
-        // Variables globales para el escáner QR
+        console.log('🚀 Iniciando aplicación SISEG...');
+        
+        // Variables globales
         let html5QrcodeScanner;
         let isScanning = false;
-
+        
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('🚀 DOM cargado, iniciando aplicación...');
+            console.log('📦 DOM cargado, iniciando aplicación...');
             cargarActivosEscaneados();
         });
-
-        // Función para alternar el escáner (iniciar/detener)
+        
+        // Función para mostrar mensajes
+        function showMessage(message, type) {
+            const statusDiv = document.getElementById('scanner-status');
+            statusDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                statusDiv.innerHTML = 'Presiona "Iniciar Escáner" para comenzar a leer códigos QR';
+            }, 3000);
+        }
+        
+        // Función para alternar el escáner
         function toggleScanner() {
+            console.log('🎯 Toggle scanner, estado actual:', isScanning);
             const btn = document.getElementById('start-stop-btn');
             
             if (!isScanning) {
                 startScanner();
-                btn.textContent = 'Detener Escáner';
-                btn.style.background = '#dc2626';
+                btn.textContent = '⏹️ Detener Escáner';
             } else {
                 stopScanner();
-                btn.textContent = 'Iniciar Escáner';
-                btn.style.background = '#059669';
+                btn.textContent = '📱 Iniciar Escáner';
             }
         }
-
-        // Función para iniciar el escáner QR
+        
+        // Función para iniciar el escáner
         function startScanner() {
-            html5QrcodeScanner = new Html5Qrcode("reader");
+            console.log('▶️ Iniciando escáner...');
             
-            // Configuración del escáner
-            const config = {
-                fps: 10,
-                qrbox: { width: 250, height: 250 },
-                aspectRatio: 1.0
-            };
-
-            html5QrcodeScanner.start(
-                { facingMode: "environment" }, // Usar cámara trasera
-                config,
-                onScanSuccess,
-                onScanFailure
-            ).then(() => {
+            try {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader",
+                    { 
+                        fps: 10,
+                        qrbox: { width: 300, height: 300 },
+                        aspectRatio: 1.0,
+                        disableFlip: false,
+                        videoConstraints: {
+                            facingMode: "environment"
+                        }
+                    }
+                );
+                
+                html5QrcodeScanner.render(onScanSuccess, onScanFailure);
+                document.getElementById('reader').style.display = 'block';
                 isScanning = true;
-                showMessage('Escáner iniciado correctamente', 'success');
-            }).catch(err => {
-                console.error('Error al iniciar escáner:', err);
-                showMessage('Error al iniciar la cámara: ' + err, 'error');
-            });
+                
+                showMessage('📱 Escáner iniciado correctamente', 'success');
+                
+            } catch (error) {
+                console.error('❌ Error iniciando escáner:', error);
+                showMessage('❌ Error iniciando escáner: ' + error.message, 'error');
+            }
         }
-
-        // Función para detener el escáner QR
+        
+        // Función para detener el escáner
         function stopScanner() {
+            console.log('⏹️ Deteniendo escáner...');
+            
             if (html5QrcodeScanner) {
-                html5QrcodeScanner.stop().then(() => {
-                    isScanning = false;
-                    showMessage('Escáner detenido', 'success');
-                }).catch(err => {
-                    console.error('Error al detener escáner:', err);
-                    showMessage('Error al detener el escáner', 'error');
+                html5QrcodeScanner.clear().catch(error => {
+                    console.error('Error deteniendo escáner:', error);
                 });
             }
-        }
-
-        // Función que se ejecuta cuando se lee un código QR exitosamente
-        function onScanSuccess(decodedText) {
-            // Detener el escáner temporalmente
-            stopScanner();
-            document.getElementById('start-stop-btn').textContent = 'Iniciar Escáner';
-            document.getElementById('start-stop-btn').style.background = '#059669';
             
-            // Registrar el código QR
+            document.getElementById('reader').style.display = 'none';
+            isScanning = false;
+            
+            showMessage('⏹️ Escáner detenido', 'success');
+        }
+        
+        // Función cuando se lee un código QR exitosamente
+        function onScanSuccess(decodedText) {
+            console.log('✅ Código QR detectado:', decodedText);
+            
+            // Vibración para feedback
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
             registrarCodigo(decodedText);
         }
-
-        // Función que maneja errores del escáner (se ejecuta continuamente)
+        
+        // Función cuando hay error leyendo QR
         function onScanFailure(error) {
-            // No mostrar errores continuos del escáner para evitar spam en consola
+            // Silencioso - no mostrar errores de lectura continua
         }
-
-        // Función para registrar un código QR en la base de datos
+        
+        // Función para registrar código QR
         function registrarCodigo(codigo) {
-            // Efecto visual de escaneo
-            createScanEffect();
-            showMessage('Registrando código...', 'success');
+            console.log('📝 Registrando código:', codigo);
+            
+            const csrftoken = getCookie('csrftoken');
             
             fetch('/registrar_qr/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({
-                    codigo: codigo,
-                    usuario: 'Usuario Web',
-                    ubicacion: 'Escáner Web'
-                })
+                body: JSON.stringify({ codigo_qr: codigo })
             })
             .then(response => response.json())
             .then(data => {
+                console.log('✅ Respuesta del servidor:', data);
+                
                 if (data.success) {
-                    if (data.already_registered) {
-                        // Si ya está registrado, mostrar botón "Registrado"
-                        showMessage('✅ Activo ya registrado: ' + data.activo.nombre, 'success');
-                        showRegisteredButton(data.activo);
-                        addSuccessEffect();
-                    } else {
-                        // Si es nuevo, agregarlo a la tabla
-                        showMessage('✅ Nuevo activo registrado: ' + data.activo.nombre, 'success');
-                        agregarActivoATabla(data.activo);
-                        addSuccessEffect();
-                    }
+                    showMessage(`✅ ${data.message}`, data.ya_existe ? 'error' : 'success');
+                    
+                    // Recargar activos después de un breve delay
+                    setTimeout(() => {
+                        cargarActivosEscaneados();
+                    }, 1000);
                 } else {
-                    showMessage('❌ Error: ' + data.error, 'error');
-                    addErrorEffect();
+                    showMessage(`❌ Error: ${data.message}`, 'error');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
+                console.error('❌ Error registrando código:', error);
                 showMessage('❌ Error de conexión', 'error');
-                addErrorEffect();
             });
         }
         
-        // Función para crear efecto visual de escaneo
-        function createScanEffect() {
-            const effect = document.createElement('div');
-            effect.className = 'scan-effect';
-            document.body.appendChild(effect);
-            
-            setTimeout(() => {
-                document.body.removeChild(effect);
-            }, 500);
-        }
-        
-        // Función para efecto de éxito
-        function addSuccessEffect() {
-            const scanner = document.querySelector('.scanner-section');
-            const tabla = document.querySelector('.activos-section');
-            
-            scanner.classList.add('success-pulse');
-            tabla.classList.add('success-pulse');
-            
-            setTimeout(() => {
-                scanner.classList.remove('success-pulse');
-                tabla.classList.remove('success-pulse');
-            }, 1000);
-        }
-        
-        // Función para efecto de error
-        function addErrorEffect() {
-            const scanner = document.querySelector('.scanner-section');
-            
-            scanner.classList.add('error-shake');
-            
-            setTimeout(() => {
-                scanner.classList.remove('error-shake');
-            }, 500);
-        }
-        
-        // Función para mostrar el botón "Registrado"
-        function showRegisteredButton(activo) {
-            const statusDiv = document.getElementById('scanner-status');
-            statusDiv.innerHTML = `
-                <div class="alert alert-success">
-                    <strong>Activo ya registrado:</strong><br>
-                    ${activo.nombre}<br>
-                    <button class="btn-registrado">✅ Registrado</button>
-                </div>
-            `;
-        }
-        
-        // Función para agregar un activo a la tabla
-        function agregarActivoATabla(activo) {
-            const tbody = document.getElementById('tabla-activos-body');
-            
-            // Si es la primera fila y está vacía, limpiar
-            if (tbody.children.length === 1 && tbody.children[0].children.length === 1) {
-                tbody.innerHTML = '';
-            }
-            
-            // Crear nueva fila con funcionalidad de deslizar
-            const fila = document.createElement('tr');
-            fila.className = 'fila-activo';
-            fila.dataset.activoId = activo.id;
-            fila.dataset.activoNombre = activo.nombre;
-            
-            fila.innerHTML = `
-                <td>${activo.codigo}</td>
-                <td>${activo.nombre}</td>
-                <td>${activo.ubicacion}</td>
-                <td>${activo.marca}</td>
-                <td>${activo.modelo}</td>
-                <td>${activo.no_serie}</td>
-                <td>${activo.fecha_registro}</td>
-                <td class="acciones-celda">
-                    <span class="mobile-only" style="color: #999; font-size: 0.8rem;">Desliza →</span>
-                    <button class="btn-eliminar desktop-only" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
-                        🗑️ Eliminar
-                    </button>
-                </td>
-                <div class="eliminar-area" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
-                    🗑️ ELIMINAR
-                </div>
-            `;
-            
-            tbody.appendChild(fila);
-            
-            // Configurar eventos de deslizamiento para móvil
-            if (window.innerWidth <= 768) {
-                configurarDeslizamientoFila(fila);
-            }
-            
-            // Configurar eventos de deslizamiento para móvil
-            if (window.innerWidth <= 768) {
-                configurarDeslizamientoFila(fila);
-            }
-        }
-        
-        // Función para configurar el deslizamiento en cada fila
-        function configurarDeslizamientoFila(fila) {
-            const container = fila.closest('.tabla-activos-container');
-            const eliminarArea = fila.querySelector('.eliminar-area');
-            let startX = 0;
-            let scrollLeft = 0;
-            let isDragging = false;
-            let hasReachedEnd = false;
-            
-            // Detectar cuando se llega al final del scroll horizontal
-            container.addEventListener('scroll', function() {
-                const maxScroll = container.scrollWidth - container.clientWidth;
-                const currentScroll = container.scrollLeft;
-                const threshold = 50; // Píxeles del final para mostrar eliminación
-                
-                if (currentScroll >= maxScroll - threshold) {
-                    if (!hasReachedEnd) {
-                        hasReachedEnd = true;
-                        mostrarOpcionEliminar(fila);
-                    }
-                } else {
-                    if (hasReachedEnd) {
-                        hasReachedEnd = false;
-                        ocultarOpcionEliminar(fila);
-                    }
-                }
-            });
-            
-            // Eventos táctiles para mejor control
-            fila.addEventListener('touchstart', function(e) {
-                startX = e.touches[0].clientX;
-                scrollLeft = container.scrollLeft;
-                isDragging = true;
-            });
-            
-            fila.addEventListener('touchmove', function(e) {
-                if (!isDragging) return;
-                
-                const currentX = e.touches[0].clientX;
-                const deltaX = startX - currentX;
-                
-                // Si está deslizando hacia la derecha y ya llegó al final
-                if (deltaX > 20 && container.scrollLeft >= container.scrollWidth - container.clientWidth - 10) {
-                    mostrarOpcionEliminar(fila);
-                }
-            });
-            
-            fila.addEventListener('touchend', function() {
-                isDragging = false;
-            });
-        }
-        
-        // Función para mostrar la opción de eliminar
-        function mostrarOpcionEliminar(fila) {
-            const eliminarArea = fila.querySelector('.eliminar-area');
-            const container = fila.closest('.tabla-activos-container');
-            
-            eliminarArea.classList.add('visible');
-            container.classList.add('show-delete-hint');
-            
-            // Vibración para feedback táctil
-            if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100]);
-            }
-            
-            // Mostrar hint visual
-            setTimeout(() => {
-                container.classList.remove('show-delete-hint');
-            }, 2000);
-        }
-        
-        // Función para ocultar la opción de eliminar
-        function ocultarOpcionEliminar(fila) {
-            const eliminarArea = fila.querySelector('.eliminar-area');
-            eliminarArea.classList.remove('visible');
-        }
-        
-        // Detectar cambios de tamaño de ventana para reconfigurar
-        window.addEventListener('resize', function() {
-            const filas = document.querySelectorAll('.fila-activo');
-            filas.forEach(fila => {
-                if (window.innerWidth <= 768) {
-                    configurarDeslizamientoFila(fila);
-                } else {
-                    ocultarOpcionEliminar(fila);
-                }
-            });
-        });
-            
-            // Agregar al inicio de la tabla
-            tbody.insertBefore(fila, tbody.firstChild);
-        }
-
-        // Función para cargar los activos escaneados
+        // Función para cargar activos escaneados
         function cargarActivosEscaneados() {
             console.log('📦 Cargando activos escaneados...');
             
@@ -1058,14 +426,10 @@
                 
                 if (data.activos && data.activos.length > 0) {
                     console.log(`✅ Mostrando ${data.activos.length} activos`);
-                    tbody.innerHTML = ''; // Limpiar tabla
+                    tbody.innerHTML = '';
                     
-                    data.activos.forEach(activo => {
+                    data.activos.forEach((activo, index) => {
                         const fila = document.createElement('tr');
-                        fila.className = 'fila-activo';
-                        fila.dataset.activoId = activo.id;
-                        fila.dataset.activoNombre = activo.nombre;
-                        
                         fila.innerHTML = `
                             <td>${activo.codigo}</td>
                             <td>${activo.nombre}</td>
@@ -1074,23 +438,13 @@
                             <td>${activo.modelo}</td>
                             <td>${activo.no_serie}</td>
                             <td>${activo.fecha_registro}</td>
-                            <td class="acciones-celda">
-                                <span class="mobile-only" style="color: #999; font-size: 0.8rem;">Desliza →</span>
-                                <button class="btn-eliminar desktop-only" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                            <td>
+                                <button class="btn-eliminar" onclick="eliminarActivo(${activo.id || index}, '${activo.nombre.replace(/'/g, "\\'")}')">
                                     🗑️ Eliminar
                                 </button>
                             </td>
-                            <div class="eliminar-area" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
-                                🗑️ ELIMINAR
-                            </div>
                         `;
-                        
                         tbody.appendChild(fila);
-                        
-                        // Configurar eventos de deslizamiento para móvil
-                        if (window.innerWidth <= 768) {
-                            configurarDeslizamientoFila(fila);
-                        }
                     });
                 } else {
                     console.log('⚠️ No hay activos para mostrar');
@@ -1100,80 +454,55 @@
             .catch(error => {
                 console.error('❌ Error cargando activos:', error);
                 document.getElementById('tabla-activos-body').innerHTML = 
-                    '<tr><td colspan="8" class="sin-activos">Error al cargar activos</td></tr>';
+                    '<tr><td colspan="8" class="sin-activos">❌ Error al cargar activos</td></tr>';
             });
         }
-
-        // Función para eliminar un activo
+        
+        // Función para eliminar activo
         function eliminarActivo(id, nombre) {
-            // Confirmar eliminación
-            if (!confirm(`¿Estás seguro de que deseas eliminar el activo "${nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+            if (!confirm(`¿Estás seguro de que quieres eliminar el activo "${nombre}"?`)) {
                 return;
             }
             
-            // Mostrar mensaje de carga
-            showMessage('Eliminando activo...', 'success');
+            console.log('🗑️ Eliminando activo:', id, nombre);
+            
+            const csrftoken = getCookie('csrftoken');
             
             fetch('/eliminar_activo/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'X-CSRFToken': getCookie('csrftoken')
+                    'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({
-                    id: id
-                })
+                body: JSON.stringify({ activo_id: id })
             })
             .then(response => response.json())
             .then(data => {
                 if (data.success) {
-                    showMessage('✅ ' + data.mensaje, 'success');
-                    // Recargar la tabla para reflejar los cambios
+                    showMessage(`✅ Activo "${nombre}" eliminado correctamente`, 'success');
                     cargarActivosEscaneados();
-                    addSuccessEffect();
                 } else {
-                    showMessage('❌ Error: ' + data.error, 'error');
-                    addErrorEffect();
+                    showMessage(`❌ Error eliminando activo: ${data.message}`, 'error');
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
-                showMessage('❌ Error de conexión al eliminar', 'error');
-                addErrorEffect();
+                console.error('❌ Error eliminando activo:', error);
+                showMessage('❌ Error de conexión', 'error');
             });
         }
-
-        // Función para exportar activos a Excel
-        function exportarActivosExcel() {
-            window.open('/exportar_activos_excel/', '_blank');
-        }
         
-        // Función para exportar registros a Excel (mantener compatibilidad)
+        // Función para exportar a Excel
         function exportarExcel() {
             console.log('📊 Exportando activos a Excel...');
-            window.open('/exportar_excel/', '_blank');
-        }
-
-        // Función para mostrar mensajes de estado
-        function showMessage(message, type) {
-            const statusDiv = document.getElementById('scanner-status');
-            statusDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+            showMessage('📊 Generando archivo Excel...', 'success');
             
-            // Ocultar el mensaje después de 3 segundos
             setTimeout(() => {
-                statusDiv.innerHTML = '';
-            }, 3000);
+                window.open('/exportar_excel/', '_blank');
+            }, 500);
         }
-
-        // Función para obtener el token CSRF de Django
+        
+        // Función para obtener cookie CSRF
         function getCookie(name) {
-            // Primero intentar obtener del meta tag
-            const token = document.querySelector('meta[name="csrf-token"]');
-            if (token) {
-                return token.getAttribute('content');
-            }
-            
-            // Si no, obtener de las cookies
             let cookieValue = null;
             if (document.cookie && document.cookie !== '') {
                 const cookies = document.cookie.split(';');
@@ -1187,9 +516,11 @@
             }
             return cookieValue;
         }
-
+        
         // Actualizar activos cada 30 segundos
         setInterval(cargarActivosEscaneados, 30000);
+        
+        console.log('✅ JavaScript cargado completamente');
     </script>
 </body>
 </html>
