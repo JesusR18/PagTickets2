@@ -111,7 +111,15 @@ def registrar_qr(request):
             # Convierte los datos JSON recibidos a un diccionario de Python
             data = json.loads(request.body)
             # Extrae el código QR de los datos recibidos
-            codigo_qr = data.get('codigo')
+            codigo_qr = data.get('codigo_qr') or data.get('codigo')
+            
+            # Validar que el código QR no esté vacío
+            if not codigo_qr or codigo_qr.strip() == '':
+                return JsonResponse({
+                    'success': False,
+                    'error': 'Código QR vacío o inválido'
+                })
+            
             usuario = data.get('usuario', 'Usuario Web')
             ubicacion_scan = data.get('ubicacion', 'Escáner Web')
             

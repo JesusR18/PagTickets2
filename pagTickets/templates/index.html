@@ -432,26 +432,28 @@
                 Presiona el botón para iniciar la cámara con zoom de hardware
             </div>
             
+            <!-- Botón DETENER fuera de la cámara -->
+            <div id="stop-button-container" style="display: none; text-align: center; margin: 15px 0;">
+                <button onclick="detenerScanner()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                    ⏹️ DETENER SCANNER
+                </button>
+            </div>
+            
             <!-- Contenedor de la cámara (inicialmente oculto) -->
             <div id="camera-container" class="camera-container">
                 <video id="camera-video" autoplay playsinline></video>
                 <canvas id="qr-canvas" style="display: none;"></canvas>
                 
-                <!-- Controles de Zoom REAL -->
+                <!-- Controles de Zoom REAL - Mejorados -->
                 <div class="zoom-controls-real">
-                    <button onclick="aplicarZoom(-1)" class="zoom-btn-real">➖</button>
+                    <button onclick="aplicarZoomRapido(-0.5)" class="zoom-btn-real">➖</button>
                     <span id="zoom-display-real" class="zoom-display">1.0x</span>
-                    <button onclick="aplicarZoom(1)" class="zoom-btn-real">➕</button>
+                    <button onclick="aplicarZoomRapido(0.5)" class="zoom-btn-real">➕</button>
                 </div>
                 
-                <!-- Slider de zoom -->
+                <!-- Slider de zoom mejorado -->
                 <div class="zoom-slider-real">
-                    <input type="range" id="zoom-range" min="1" max="10" step="0.5" value="1" oninput="cambiarZoom(this.value)">
-                </div>
-                
-                <!-- Botones de control -->
-                <div class="control-buttons">
-                    <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER</button>
+                    <input type="range" id="zoom-range" min="1" max="10" step="0.1" value="1" oninput="cambiarZoomFluido(this.value)">
                 </div>
             </div>
         </div>
@@ -493,6 +495,7 @@
         let canvas = null;
         let context = null;
         let activosEscaneados = [];
+        let zoomTimeout = null; // Para hacer el zoom más fluido
         
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
@@ -606,10 +609,11 @@
                     actualizarEstado('⚠️ Cámara iniciada - API de zoom no disponible', false);
                 }
                 
-                // Mostrar interfaz de cámara
+                // Mostrar interfaz de cámara y botón detener
                 cameraContainer.style.display = 'block';
-                toggleBtn.textContent = '⏹️ DETENER SCANNER';
-                toggleBtn.disabled = false;
+                document.getElementById('stop-button-container').style.display = 'block';
+                toggleBtn.textContent = '📹 SCANNER ACTIVO';
+                toggleBtn.disabled = true;
                 scannerActivo = true;
                 
                 // Iniciar detección de QR
@@ -650,23 +654,46 @@
             }
         }
         
-        // Funciones de control de zoom
-        async function aplicarZoom(direccion) {
-            const incremento = 0.5;
+        // Funciones de control de zoom mejoradas
+        async function aplicarZoomRapido(incremento) {
             let nuevoZoom;
             
-            if (direccion > 0) {
+            if (incremento > 0) {
                 nuevoZoom = Math.min(zoomActual + incremento, zoomMax);
             } else {
-                nuevoZoom = Math.max(zoomActual - incremento, zoomMin);
+                nuevoZoom = Math.max(zoomActual + incremento, zoomMin);
             }
             
             await aplicarZoomReal(nuevoZoom);
         }
         
-        async function cambiarZoom(valor) {
+        // Zoom fluido con debounce (como iPhone)
+        function cambiarZoomFluido(valor) {
             const nuevoZoom = parseFloat(valor);
-            await aplicarZoomReal(nuevoZoom);
+            
+            // Cancelar timeout anterior si existe
+            if (zoomTimeout) {
+                clearTimeout(zoomTimeout);
+            }
+            
+            // Actualizar display inmediatamente para feedback visual
+            document.getElementById('zoom-display-real').textContent = `${nuevoZoom.toFixed(1)}x`;
+            
+            // Aplicar zoom con debounce para suavidad
+            zoomTimeout = setTimeout(async () => {
+                await aplicarZoomReal(nuevoZoom);
+            }, 50); // 50ms de delay para suavidad
+        }
+        
+        // Función legacy para compatibilidad
+        async function cambiarZoom(valor) {
+            await cambiarZoomFluido(valor);
+        }
+        
+        // Función legacy para compatibilidad  
+        async function aplicarZoom(direccion) {
+            const incremento = direccion > 0 ? 0.5 : -0.5;
+            await aplicarZoomRapido(incremento);
         }
         
         // Función para detener el scanner
@@ -680,6 +707,7 @@
             }
             
             document.getElementById('camera-container').style.display = 'none';
+            document.getElementById('stop-button-container').style.display = 'none';
             const toggleBtn = document.getElementById('scanner-toggle-btn');
             toggleBtn.textContent = '📱 INICIAR SCANNER QR';
             toggleBtn.disabled = false;
