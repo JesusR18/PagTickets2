@@ -65,6 +65,54 @@
             box-shadow: 0 5px 15px rgba(185, 28, 28, 0.3);
         }
         
+        .zoom-controls {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(153, 27, 27, 0.1);
+            border-radius: 10px;
+            border: 1px solid rgba(153, 27, 27, 0.2);
+        }
+        
+        .zoom-btn {
+            background: linear-gradient(135deg, #991b1b, #b91c1c);
+            color: white;
+            border: none;
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 2px 8px rgba(153, 27, 27, 0.3);
+            min-width: 50px;
+        }
+        
+        .zoom-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.4);
+            background: linear-gradient(135deg, #7f1d1d, #991b1b);
+        }
+        
+        .zoom-btn:active {
+            transform: translateY(0);
+            box-shadow: 0 2px 6px rgba(153, 27, 27, 0.3);
+        }
+        
+        .zoom-level {
+            font-weight: bold;
+            color: #991b1b;
+            font-size: 16px;
+            min-width: 80px;
+            text-align: center;
+            padding: 8px 12px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 6px;
+            border: 1px solid rgba(153, 27, 27, 0.2);
+        }
+        
         #result { 
             margin-top: 20px; 
             font-size: 1.2em; 
@@ -129,6 +177,14 @@
     
     <div class="container">
         <div id="reader"></div> <!-- Contenedor donde aparecerá la cámara para leer códigos QR -->
+        
+        <!-- Controles de Zoom -->
+        <div class="zoom-controls">
+            <button onclick="cambiarZoom(-0.5)" class="zoom-btn">🔍-</button>
+            <span id="zoom-level" class="zoom-level">Zoom: 1.0x</span>
+            <button onclick="cambiarZoom(0.5)" class="zoom-btn">🔍+</button>
+        </div>
+        
         <div id="result" style="display: none;"></div> <!-- Contenedor donde se mostrará el resultado del escaneo -->
         
         <h2>Últimos códigos registrados</h2> <!-- Subtítulo para la lista de códigos -->
@@ -186,10 +242,75 @@
             html5QrcodeScanner.clear(); // Limpia/detiene el escáner después de leer
         }
 
-        // Crea un nuevo escáner de códigos QR usando la librería Html5Qrcode
+        // Variable global para controlar el zoom
+        let currentZoom = 1;
+        let maxZoom = 3;
+        let minZoom = 1;
+
+        // Crea un nuevo escáner de códigos QR usando la librería Html5Qrcode con configuraciones avanzadas
         var html5QrcodeScanner = new Html5QrcodeScanner(
-            "reader", { fps: 10, qrbox: 250 } // Configura: contenedor "reader", 10 fotos por segundo, cuadro de 250px
+            "reader", 
+            { 
+                fps: 10, 
+                qrbox: 250,
+                // Configuraciones avanzadas de cámara
+                aspectRatio: 1.0,
+                disableFlip: false,
+                // Configuración para habilitar zoom
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                },
+                // Configuraciones de cámara
+                videoConstraints: {
+                    facingMode: "environment", // Cámara trasera preferida
+                    advanced: [
+                        {
+                            focusMode: "continuous",
+                            zoom: currentZoom
+                        }
+                    ]
+                }
+            }
         );
+
+        // Función para cambiar el zoom
+        function cambiarZoom(incremento) {
+            currentZoom += incremento;
+            if (currentZoom > maxZoom) currentZoom = maxZoom;
+            if (currentZoom < minZoom) currentZoom = minZoom;
+            
+            // Actualizar el texto del botón
+            document.getElementById('zoom-level').textContent = `Zoom: ${currentZoom.toFixed(1)}x`;
+            
+            // Reiniciar el escáner con el nuevo zoom
+            html5QrcodeScanner.clear().then(() => {
+                html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader", 
+                    { 
+                        fps: 10, 
+                        qrbox: 250,
+                        aspectRatio: 1.0,
+                        disableFlip: false,
+                        experimentalFeatures: {
+                            useBarCodeDetectorIfSupported: true
+                        },
+                        videoConstraints: {
+                            facingMode: "environment",
+                            advanced: [
+                                {
+                                    focusMode: "continuous",
+                                    zoom: currentZoom
+                                }
+                            ]
+                        }
+                    }
+                );
+                html5QrcodeScanner.render(onScanSuccess);
+            }).catch(err => {
+                console.log("Error al reiniciar escáner:", err);
+            });
+        }
+
         html5QrcodeScanner.render(onScanSuccess); // Inicia el escáner y le dice qué función ejecutar cuando lea un código
         setInterval(actualizarRegistros, 5000); // Ejecuta "actualizarRegistros" cada 5000 milisegundos (5 segundos)
     </script> <!-- Fin del código JavaScript -->
