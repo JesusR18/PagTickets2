@@ -258,6 +258,7 @@
             -webkit-overflow-scrolling: touch;
             border-radius: 8px;
             box-shadow: var(--shadow-soft);
+            position: relative;
         }
         
         .tabla-activos {
@@ -266,6 +267,85 @@
             border-collapse: collapse;
             margin-top: 1rem;
             font-size: clamp(0.75rem, 2vw, 0.9rem);
+            position: relative;
+        }
+        
+        .tabla-activos tbody tr {
+            position: relative;
+            transition: transform 0.3s ease;
+        }
+        
+        /* Contenedor de fila con efecto deslizar */
+        .fila-activo {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        /* Área de eliminación que aparece al deslizar */
+        .eliminar-area {
+            position: absolute;
+            right: -120px;
+            top: 0;
+            bottom: 0;
+            width: 120px;
+            background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 0.9rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+        
+        .eliminar-area:hover {
+            background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+        }
+        
+        .eliminar-area.visible {
+            right: 0;
+        }
+        
+        /* Estilos para móvil con detección de deslizamiento */
+        @media (max-width: 768px) {
+            .tabla-activos-container {
+                scroll-snap-type: x mandatory;
+                scrollbar-width: none;
+                -ms-overflow-style: none;
+            }
+            
+            .tabla-activos-container::-webkit-scrollbar {
+                display: none;
+            }
+            
+            .tabla-activos tbody tr {
+                scroll-snap-align: start;
+            }
+            
+            /* Indicador visual de que se puede deslizar más */
+            .tabla-activos-container::after {
+                content: '👈 Desliza para eliminar';
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                background: rgba(220, 38, 38, 0.9);
+                color: white;
+                padding: 5px 10px;
+                border-radius: 15px;
+                font-size: 0.7rem;
+                font-weight: bold;
+                pointer-events: none;
+                opacity: 0;
+                transition: opacity 0.3s ease;
+                z-index: 20;
+            }
+            
+            .tabla-activos-container.show-delete-hint::after {
+                opacity: 1;
+            }
         }
         
         .tabla-activos th,
@@ -831,8 +911,12 @@
                 tbody.innerHTML = '';
             }
             
-            // Crear nueva fila
+            // Crear nueva fila con funcionalidad de deslizar
             const fila = document.createElement('tr');
+            fila.className = 'fila-activo';
+            fila.dataset.activoId = activo.id;
+            fila.dataset.activoNombre = activo.nombre;
+            
             fila.innerHTML = `
                 <td>${activo.codigo}</td>
                 <td>${activo.nombre}</td>
@@ -842,11 +926,117 @@
                 <td>${activo.no_serie}</td>
                 <td>${activo.fecha_registro}</td>
                 <td class="acciones-celda">
-                    <button class="btn-eliminar" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                    <span class="mobile-only" style="color: #999; font-size: 0.8rem;">Desliza →</span>
+                    <button class="btn-eliminar desktop-only" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
                         🗑️ Eliminar
                     </button>
                 </td>
+                <div class="eliminar-area" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                    🗑️ ELIMINAR
+                </div>
             `;
+            
+            tbody.appendChild(fila);
+            
+            // Configurar eventos de deslizamiento para móvil
+            if (window.innerWidth <= 768) {
+                configurarDeslizamientoFila(fila);
+            }
+            
+            // Configurar eventos de deslizamiento para móvil
+            if (window.innerWidth <= 768) {
+                configurarDeslizamientoFila(fila);
+            }
+        }
+        
+        // Función para configurar el deslizamiento en cada fila
+        function configurarDeslizamientoFila(fila) {
+            const container = fila.closest('.tabla-activos-container');
+            const eliminarArea = fila.querySelector('.eliminar-area');
+            let startX = 0;
+            let scrollLeft = 0;
+            let isDragging = false;
+            let hasReachedEnd = false;
+            
+            // Detectar cuando se llega al final del scroll horizontal
+            container.addEventListener('scroll', function() {
+                const maxScroll = container.scrollWidth - container.clientWidth;
+                const currentScroll = container.scrollLeft;
+                const threshold = 50; // Píxeles del final para mostrar eliminación
+                
+                if (currentScroll >= maxScroll - threshold) {
+                    if (!hasReachedEnd) {
+                        hasReachedEnd = true;
+                        mostrarOpcionEliminar(fila);
+                    }
+                } else {
+                    if (hasReachedEnd) {
+                        hasReachedEnd = false;
+                        ocultarOpcionEliminar(fila);
+                    }
+                }
+            });
+            
+            // Eventos táctiles para mejor control
+            fila.addEventListener('touchstart', function(e) {
+                startX = e.touches[0].clientX;
+                scrollLeft = container.scrollLeft;
+                isDragging = true;
+            });
+            
+            fila.addEventListener('touchmove', function(e) {
+                if (!isDragging) return;
+                
+                const currentX = e.touches[0].clientX;
+                const deltaX = startX - currentX;
+                
+                // Si está deslizando hacia la derecha y ya llegó al final
+                if (deltaX > 20 && container.scrollLeft >= container.scrollWidth - container.clientWidth - 10) {
+                    mostrarOpcionEliminar(fila);
+                }
+            });
+            
+            fila.addEventListener('touchend', function() {
+                isDragging = false;
+            });
+        }
+        
+        // Función para mostrar la opción de eliminar
+        function mostrarOpcionEliminar(fila) {
+            const eliminarArea = fila.querySelector('.eliminar-area');
+            const container = fila.closest('.tabla-activos-container');
+            
+            eliminarArea.classList.add('visible');
+            container.classList.add('show-delete-hint');
+            
+            // Vibración para feedback táctil
+            if (navigator.vibrate) {
+                navigator.vibrate([100, 50, 100]);
+            }
+            
+            // Mostrar hint visual
+            setTimeout(() => {
+                container.classList.remove('show-delete-hint');
+            }, 2000);
+        }
+        
+        // Función para ocultar la opción de eliminar
+        function ocultarOpcionEliminar(fila) {
+            const eliminarArea = fila.querySelector('.eliminar-area');
+            eliminarArea.classList.remove('visible');
+        }
+        
+        // Detectar cambios de tamaño de ventana para reconfigurar
+        window.addEventListener('resize', function() {
+            const filas = document.querySelectorAll('.fila-activo');
+            filas.forEach(fila => {
+                if (window.innerWidth <= 768) {
+                    configurarDeslizamientoFila(fila);
+                } else {
+                    ocultarOpcionEliminar(fila);
+                }
+            });
+        });
             
             // Agregar al inicio de la tabla
             tbody.insertBefore(fila, tbody.firstChild);
@@ -860,26 +1050,40 @@
                 const tbody = document.getElementById('tabla-activos-body');
                 
                 if (data.activos && data.activos.length > 0) {
-                    let html = '';
+                    tbody.innerHTML = ''; // Limpiar tabla
+                    
                     data.activos.forEach(activo => {
-                        html += `
-                            <tr>
-                                <td>${activo.codigo}</td>
-                                <td>${activo.nombre}</td>
-                                <td>${activo.ubicacion}</td>
-                                <td>${activo.marca}</td>
-                                <td>${activo.modelo}</td>
-                                <td>${activo.no_serie}</td>
-                                <td>${activo.fecha_registro}</td>
-                                <td class="acciones-celda">
-                                    <button class="btn-eliminar" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
-                                        🗑️ Eliminar
-                                    </button>
-                                </td>
-                            </tr>
+                        const fila = document.createElement('tr');
+                        fila.className = 'fila-activo';
+                        fila.dataset.activoId = activo.id;
+                        fila.dataset.activoNombre = activo.nombre;
+                        
+                        fila.innerHTML = `
+                            <td>${activo.codigo}</td>
+                            <td>${activo.nombre}</td>
+                            <td>${activo.ubicacion}</td>
+                            <td>${activo.marca}</td>
+                            <td>${activo.modelo}</td>
+                            <td>${activo.no_serie}</td>
+                            <td>${activo.fecha_registro}</td>
+                            <td class="acciones-celda">
+                                <span class="mobile-only" style="color: #999; font-size: 0.8rem;">Desliza →</span>
+                                <button class="btn-eliminar desktop-only" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                                    🗑️ Eliminar
+                                </button>
+                            </td>
+                            <div class="eliminar-area" onclick="eliminarActivo(${activo.id}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                                🗑️ ELIMINAR
+                            </div>
                         `;
+                        
+                        tbody.appendChild(fila);
+                        
+                        // Configurar eventos de deslizamiento para móvil
+                        if (window.innerWidth <= 768) {
+                            configurarDeslizamientoFila(fila);
+                        }
                     });
-                    tbody.innerHTML = html;
                 } else {
                     tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">No hay activos escaneados aún</td></tr>';
                 }
