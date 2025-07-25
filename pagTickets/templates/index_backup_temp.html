@@ -251,6 +251,9 @@
             overflow-x: auto;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            /* Evitar que interfiera con el swipe en móvil */
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior-x: contain;
         }
         
         table {
@@ -366,6 +369,11 @@
             
             th, td {
                 padding: 8px;
+            }
+            
+            /* Ocultar headers en móvil excepto el primero */
+            th:not(:first-child) {
+                display: none;
             }
             
             .camera-container {
@@ -857,12 +865,20 @@
                     activosEscaneados = data.activos;
                     
                     // Agregar hint de swipe solo en móvil
-                    if (window.innerWidth <= 768) {
+                    const esMobileParaHint = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                    if (esMobileParaHint) {
                         const hintRow = document.createElement('tr');
                         hintRow.innerHTML = `
-                            <td colspan="8" class="swipe-hint">
-                                💡 Desliza hacia la izquierda para eliminar activos
+                            <td class="swipe-hint" style="text-align: center; color: #6b7280; font-size: 12px; padding: 10px; background: #f9fafb; border-radius: 5px;">
+                                � Desliza las filas hacia la izquierda para eliminarlas
                             </td>
+                            <td style="display: none;"></td>
+                            <td style="display: none;"></td>
+                            <td style="display: none;"></td>
+                            <td style="display: none;"></td>
+                            <td style="display: none;"></td>
+                            <td style="display: none;"></td>
+                            <td style="display: none;"></td>
                         `;
                         tbody.appendChild(hintRow);
                     }
@@ -877,34 +893,37 @@
                             fila.classList.add('activo-duplicado');
                         }
                         
-                        // Detectar si es móvil
-                        const esMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-                        console.log(`📱 Detectando dispositivo: width=${window.innerWidth}, userAgent=${navigator.userAgent}, esMobile=${esMobile}`);
+                        // Detectar si es móvil - Usar 'ontouchstart' que es más confiable
+                        const esMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+                        console.log(`📱 Detectando dispositivo: ontouchstart=${('ontouchstart' in window)}, maxTouchPoints=${navigator.maxTouchPoints}, width=${window.innerWidth}, esMobile=${esMobile}`);
                         
                         if (esMobile) {
-                            // Estructura para móvil con swipe
+                            // Para móvil: fila que se desliza COMPLETA sin botón
                             fila.innerHTML = `
-                                <td colspan="8" class="celda-swipe" style="padding: 0; position: relative;">
-                                    <div class="contenido-fila" style="transition: transform 0.3s ease; background: white; position: relative; z-index: 2;">
-                                        <div style="padding: 12px; border-bottom: 1px solid #e5e7eb;">
-                                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
-                                                <div><strong>Código:</strong> ${activo.codigo}</div>
-                                                <div><strong>Ubicación:</strong> ${activo.ubicacion}</div>
-                                                <div style="grid-column: 1 / -1;"><strong>Nombre:</strong> ${activo.nombre}${esDuplicado ? ' ⚠️' : ''}</div>
-                                                <div><strong>Marca:</strong> ${activo.marca}</div>
-                                                <div><strong>Modelo:</strong> ${activo.modelo}</div>
-                                                <div><strong>Serie:</strong> ${activo.no_serie}</div>
-                                                <div><strong>Fecha:</strong> ${activo.fecha_registro}</div>
-                                            </div>
+                                <td style="padding: 0; position: relative;">
+                                    <div class="fila-deslizable" style="position: relative; background: white; transition: transform 0.2s ease; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+                                        <div style="margin-bottom: 8px;"><strong>📋 ${activo.codigo}</strong></div>
+                                        <div style="margin-bottom: 8px; font-size: 16px;">${activo.nombre}${esDuplicado ? ' ⚠️' : ''}</div>
+                                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; color: #666;">
+                                            <div>📍 ${activo.ubicacion}</div>
+                                            <div>🏷️ ${activo.marca}</div>
+                                            <div>📦 ${activo.modelo}</div>
+                                            <div>🔢 ${activo.no_serie}</div>
+                                            <div style="grid-column: 1 / -1;">📅 ${activo.fecha_registro}</div>
                                         </div>
                                     </div>
-                                    <div class="accion-eliminar" data-activo-id="${activo.id || index}" data-activo-nombre="${activo.nombre.replace(/"/g, '&quot;')}" style="position: absolute; right: 0; top: 0; bottom: 0; width: 100px; background: linear-gradient(135deg, #dc2626, #ef4444); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 14px; z-index: 1; opacity: 0; transition: opacity 0.3s ease;">
-                                        🗑️ ELIMINAR
-                                    </div>
                                 </td>
+                                <td style="display: none;"></td>
+                                <td style="display: none;"></td>
+                                <td style="display: none;"></td>
+                                <td style="display: none;"></td>
+                                <td style="display: none;"></td>
+                                <td style="display: none;"></td>
+                                <td style="display: none;"></td>
                             `;
-                            // Agregar eventos swipe
-                            agregarEventosSwipe(fila);
+                            
+                            // Configurar deslizado DIRECTO de la fila
+                            configurarDeslizadoDirecto(fila, activo.id || index, activo.nombre);
                         } else {
                             // Estructura tradicional para desktop
                             fila.innerHTML = `
@@ -958,109 +977,257 @@
             return false;
         }
         
-        // Funciones para swipe to delete en móvil
-        function agregarEventosSwipe(fila) {
-            let startX = 0;
-            let startY = 0;
-            let isMoving = false;
-            let contenidoFila = fila.querySelector('.contenido-fila');
-            let accionEliminar = fila.querySelector('.accion-eliminar');
+        // Función para configurar deslizado DIRECTO de la fila (como WhatsApp)
+        function configurarDeslizadoDirecto(fila, activoId, activoNombre) {
+            const filaDeslizable = fila.querySelector('.fila-deslizable');
             
-            // Eventos touch
+            let inicioX = 0;
+            let inicioY = 0;
+            let deltaX = 0;
+            let estaDeslizando = false;
+            let yaEliminado = false;
+            
+            console.log('🔧 Configurando deslizado DIRECTO para:', activoNombre);
+            
+            // Inicio del toque
             fila.addEventListener('touchstart', function(e) {
-                startX = e.touches[0].clientX;
-                startY = e.touches[0].clientY;
-                isMoving = false;
-                console.log('📱 Touch start:', startX, startY);
+                if (yaEliminado) return;
+                
+                inicioX = e.touches[0].clientX;
+                inicioY = e.touches[0].clientY;
+                deltaX = 0;
+                estaDeslizando = false;
+                
+                // Sin transiciones durante el deslizado
+                filaDeslizable.style.transition = 'none';
+                
+                console.log('👆 Inicio toque en fila:', activoNombre);
             }, { passive: true });
             
+            // Movimiento del toque
             fila.addEventListener('touchmove', function(e) {
-                if (!startX || !startY) return;
+                if (yaEliminado) return;
                 
-                let currentX = e.touches[0].clientX;
-                let currentY = e.touches[0].clientY;
-                let diffX = startX - currentX;
-                let diffY = startY - currentY;
+                const actualX = e.touches[0].clientX;
+                const actualY = e.touches[0].clientY;
                 
-                // Solo activar swipe si es más horizontal que vertical
-                if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 15) {
-                    e.preventDefault();
-                    isMoving = true;
+                deltaX = inicioX - actualX;
+                const deltaY = Math.abs(inicioY - actualY);
+                
+                // Solo si es más horizontal que vertical
+                if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+                    e.preventDefault(); // Prevenir scroll
+                    estaDeslizando = true;
                     
-                    console.log('📱 Swipe detectado:', diffX);
+                    console.log('📱 Deslizando fila:', deltaX);
                     
-                    // Solo permitir swipe hacia la izquierda
-                    if (diffX > 0) {
-                        let moveDistance = Math.min(diffX, 120);
-                        contenidoFila.style.transform = `translateX(-${moveDistance}px)`;
+                    // Mover TODA la fila hacia la izquierda (deltaX positivo = izquierda)
+                    if (deltaX > 0) {
+                        filaDeslizable.style.transform = `translateX(-${deltaX}px)`;
                         
-                        // Mostrar botón eliminar gradualmente
-                        if (moveDistance > 20) {
-                            accionEliminar.style.opacity = Math.min(moveDistance / 100, 1);
-                            fila.classList.add('swiping');
+                        // Cambiar color gradualmente a rojo mientras desliza
+                        const intensidad = Math.min(deltaX / 150, 1);
+                        const rojo = Math.floor(220 + (35 * intensidad)); // De 220 a 255
+                        const otros = Math.floor(240 - (240 * intensidad)); // De 240 a 0
+                        filaDeslizable.style.backgroundColor = `rgb(${rojo}, ${otros}, ${otros})`;
+                        
+                        // Vibrar cuando llegue a cierto punto
+                        if (deltaX >= 100 && navigator.vibrate) {
+                            navigator.vibrate(30);
                         }
                         
-                        // Activar delete ready
-                        if (diffX >= swipeThreshold) {
-                            fila.classList.add('delete-ready');
-                            if (navigator.vibrate) {
-                                navigator.vibrate(50);
-                            }
-                        } else {
-                            fila.classList.remove('delete-ready');
+                        // Si desliza MUY lejos, eliminar automáticamente
+                        if (deltaX >= 200 && !yaEliminado) {
+                            yaEliminado = true;
+                            eliminarFilaDirectamente();
                         }
+                    } else {
+                        // Si desliza hacia la derecha, no hacer nada
+                        filaDeslizable.style.transform = 'translateX(0)';
+                        filaDeslizable.style.backgroundColor = 'white';
                     }
                 }
             }, { passive: false });
             
+            // Fin del toque
             fila.addEventListener('touchend', function(e) {
-                if (!isMoving) {
-                    resetSwipeLocal();
-                    return;
-                }
+                if (yaEliminado) return;
                 
-                let endX = e.changedTouches[0].clientX;
-                let diffX = startX - endX;
+                console.log('✋ Fin toque, deltaX final:', deltaX);
                 
-                console.log('📱 Touch end, diffX:', diffX);
+                // Restaurar transición
+                filaDeslizable.style.transition = 'transform 0.3s ease, background-color 0.3s ease';
                 
-                if (diffX >= swipeThreshold && fila.classList.contains('delete-ready')) {
-                    // Eliminar
-                    let activoId = accionEliminar.getAttribute('data-activo-id');
-                    let activoNombre = accionEliminar.getAttribute('data-activo-nombre');
-                    
-                    console.log('🗑️ Eliminando activo por swipe:', activoId, activoNombre);
-                    
-                    // Animación de eliminación
-                    fila.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
-                    fila.style.transform = 'translateX(-100%)';
-                    fila.style.opacity = '0';
-                    
-                    setTimeout(() => {
-                        eliminarActivo(activoId, activoNombre);
-                    }, 300);
+                if (estaDeslizando && deltaX >= 80) {
+                    // ¡ELIMINAR! La fila se deslizó lo suficiente
+                    yaEliminado = true;
+                    eliminarFilaDirectamente();
                 } else {
-                    // Regresar
-                    resetSwipeLocal();
+                    // Regresar la fila a su posición
+                    filaDeslizable.style.transform = 'translateX(0)';
+                    filaDeslizable.style.backgroundColor = 'white';
                 }
                 
-                function resetSwipeLocal() {
-                    contenidoFila.style.transform = 'translateX(0)';
-                    accionEliminar.style.opacity = '0';
-                    fila.classList.remove('swiping', 'delete-ready');
-                    startX = 0;
-                    startY = 0;
-                    isMoving = false;
+                estaDeslizando = false;
+            }, { passive: true });
+            
+            // Función para eliminar la fila directamente
+            function eliminarFilaDirectamente() {
+                console.log('🗑️ ¡ELIMINANDO FILA DIRECTAMENTE!:', activoNombre);
+                
+                // Vibración de confirmación
+                if (navigator.vibrate) {
+                    navigator.vibrate([100, 50, 100]);
+                }
+                
+                // Animación: deslizar completamente fuera de la pantalla
+                filaDeslizable.style.transition = 'transform 0.4s ease, opacity 0.4s ease';
+                filaDeslizable.style.transform = 'translateX(-100vw)'; // Fuera de la pantalla
+                filaDeslizable.style.opacity = '0';
+                filaDeslizable.style.backgroundColor = '#dc2626';
+                
+                // Eliminar del servidor después de la animación
+                setTimeout(() => {
+                    eliminarActivo(activoId, activoNombre);
+                }, 400);
+            }
+            
+            // También manejar cancelación
+            fila.addEventListener('touchcancel', function() {
+                if (!yaEliminado) {
+                    filaDeslizable.style.transition = 'transform 0.3s ease, background-color 0.3s ease';
+                    filaDeslizable.style.transform = 'translateX(0)';
+                    filaDeslizable.style.backgroundColor = 'white';
+                    estaDeslizando = false;
                 }
             }, { passive: true });
         }
         
-        // Función para eliminar activo
-        function eliminarActivo(id, nombre) {
-            if (!confirm(`¿Estás seguro de que quieres eliminar el activo "${nombre}"?`)) {
-                return;
+        // Función para configurar swipe real y funcional
+        function configurarSwipeReal(fila) {
+            const contenido = fila.querySelector('.contenido-swipe');
+            const botonEliminar = fila.querySelector('.boton-eliminar-swipe');
+            
+            let inicioX = 0;
+            let inicioY = 0;
+            let deltaX = 0;
+            let estaDeslizando = false;
+            let animacionFrame = null;
+            
+            console.log('🔧 Configurando swipe para fila:', fila);
+            
+            // Evento de inicio del toque
+            fila.addEventListener('touchstart', function(e) {
+                inicioX = e.touches[0].clientX;
+                inicioY = e.touches[0].clientY;
+                deltaX = 0;
+                estaDeslizando = false;
+                
+                // Cancelar transiciones para movimiento suave
+                contenido.style.transition = 'none';
+                botonEliminar.style.transition = 'none';
+                
+                console.log('� Touch start en:', inicioX, inicioY);
+            }, { passive: true });
+            
+            // Evento de movimiento del toque
+            fila.addEventListener('touchmove', function(e) {
+                const actualX = e.touches[0].clientX;
+                const actualY = e.touches[0].clientY;
+                
+                deltaX = inicioX - actualX;
+                const deltaY = Math.abs(inicioY - actualY);
+                
+                // Solo procesar si el movimiento es más horizontal que vertical
+                if (Math.abs(deltaX) > deltaY && Math.abs(deltaX) > 10) {
+                    e.preventDefault(); // Prevenir scroll
+                    estaDeslizando = true;
+                    
+                    // Solo permitir deslizar hacia la izquierda (deltaX positivo)
+                    if (deltaX > 0) {
+                        const maxDeslizar = Math.min(deltaX, 120);
+                        
+                        // Mover contenido hacia la izquierda
+                        contenido.style.transform = `translateX(-${maxDeslizar}px)`;
+                        
+                        // Mostrar botón de eliminar desde la derecha
+                        const progreso = Math.min(maxDeslizar / 120, 1);
+                        botonEliminar.style.transform = `translateX(${100 - (progreso * 100)}%)`;
+                        
+                        console.log('📱 Deslizando:', maxDeslizar, 'progreso:', progreso);
+                        
+                        // Vibrar cuando llegue al threshold
+                        if (deltaX >= 80 && navigator.vibrate) {
+                            navigator.vibrate(30);
+                            fila.style.backgroundColor = '#fee2e2';
+                        } else {
+                            fila.style.backgroundColor = '';
+                        }
+                    } else {
+                        // Resetear si intenta deslizar hacia la derecha
+                        contenido.style.transform = 'translateX(0)';
+                        botonEliminar.style.transform = 'translateX(100%)';
+                    }
+                }
+            }, { passive: false });
+            
+            // Evento de fin del toque
+            fila.addEventListener('touchend', function(e) {
+                if (!estaDeslizando) {
+                    resetearPosicion();
+                    return;
+                }
+                
+                console.log('✋ Touch end, deltaX final:', deltaX);
+                
+                // Restaurar transiciones
+                contenido.style.transition = 'transform 0.3s ease';
+                botonEliminar.style.transition = 'transform 0.3s ease';
+                
+                // Si deslizó lo suficiente, eliminar
+                if (deltaX >= 80) {
+                    console.log('🗑️ Threshold alcanzado, eliminando...');
+                    
+                    // Animación final de eliminación
+                    contenido.style.transform = 'translateX(-100%)';
+                    botonEliminar.style.transform = 'translateX(-20%)';
+                    fila.style.backgroundColor = '#fee2e2';
+                    
+                    // Vibración de confirmación
+                    if (navigator.vibrate) {
+                        navigator.vibrate([100, 50, 100]);
+                    }
+                    
+                    // Eliminar después de la animación
+                    setTimeout(() => {
+                        const activoId = botonEliminar.getAttribute('data-activo-id');
+                        const activoNombre = botonEliminar.getAttribute('data-activo-nombre');
+                        eliminarActivo(activoId, activoNombre);
+                    }, 300);
+                } else {
+                    // No llegó al threshold, regresar
+                    resetearPosicion();
+                }
+                
+                estaDeslizando = false;
+            }, { passive: true });
+            
+            // Función para resetear posición
+            function resetearPosicion() {
+                contenido.style.transition = 'transform 0.3s ease';
+                botonEliminar.style.transition = 'transform 0.3s ease';
+                contenido.style.transform = 'translateX(0)';
+                botonEliminar.style.transform = 'translateX(100%)';
+                fila.style.backgroundColor = '';
             }
             
+            // También manejar cuando se sale del área
+            fila.addEventListener('touchcancel', resetearPosicion, { passive: true });
+        }
+        
+        // Función para eliminar activo
+        function eliminarActivo(id, nombre) {
+            // No pedir confirmación porque el deslizado ya es la confirmación
             console.log('🗑️ Eliminando activo:', id, nombre);
             
             const csrftoken = getCookie('csrftoken');
