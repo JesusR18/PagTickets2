@@ -519,13 +519,7 @@
         </div>
         <div style="margin-top: 15px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 12px;">
             <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
-                <span id="connection-status">🟢 Sistema Conectado</span>
-            </div>
-            <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
                 <span id="time-display">🕒 Cargando...</span>
-            </div>
-            <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
-                <span>📱 Optimizado para Móvil</span>
             </div>
         </div>
     </div>
@@ -657,10 +651,6 @@
             updateClock();
             setInterval(updateClock, 1000);
             
-            // Verificar conexión cada 30 segundos
-            checkConnection();
-            setInterval(checkConnection, 30000);
-            
             // Mostrar consejos y características móviles por defecto
             const esMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 768;
             
@@ -692,26 +682,6 @@
                 month: 'short'
             });
             document.getElementById('time-display').textContent = `🕒 ${timeString} - ${dateString}`;
-        }
-        
-        // Función para verificar conexión
-        function checkConnection() {
-            fetch('/cargar_activos/', {
-                method: 'GET',
-                headers: {
-                    'X-CSRFToken': getCookie('csrftoken')
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    document.getElementById('connection-status').textContent = '🟢 Sistema Conectado';
-                } else {
-                    document.getElementById('connection-status').textContent = '🟡 Conexión Inestable';
-                }
-            })
-            .catch(error => {
-                document.getElementById('connection-status').textContent = '🔴 Sin Conexión';
-            });
         }
         
         // Función para mostrar mensajes en la interfaz
