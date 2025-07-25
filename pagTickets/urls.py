@@ -20,13 +20,9 @@ urlpatterns = [
     path('registrar_qr/', views.registrar_qr, name='registrar_qr'),
     # Ruta para eliminar un activo
     path('eliminar_activo/', views.eliminar_activo, name='eliminar_activo'),
-    # Ruta para obtener los últimos códigos registrados (devuelve JSON)
-    path('ultimos_registros/', views.ultimos_registros, name='ultimos_registros'),
     # Ruta para obtener los activos escaneados (nueva funcionalidad)
     path('obtener_activos_escaneados/', views.obtener_activos_escaneados, name='obtener_activos_escaneados'),
-    # Ruta para exportar códigos QR a Excel
-    path('exportar_excel/', views.exportar_excel, name='exportar_excel'),
-    # Ruta para exportar activos escaneados a Excel (nueva funcionalidad)
+    # Ruta para exportar activos escaneados a Excel
     path('exportar_activos_excel/', views.exportar_activos_excel, name='exportar_activos_excel'),
     # Ruta para eliminar todos los activos
     path('eliminar_todos_activos/', views.eliminar_todos_activos, name='eliminar_todos_activos'),

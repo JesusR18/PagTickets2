@@ -6,7 +6,7 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('pagTickets', '0005_auto_20250723_1034'),
+        ('pagTickets', '0004_activofijo'),
     ]
 
     operations = [

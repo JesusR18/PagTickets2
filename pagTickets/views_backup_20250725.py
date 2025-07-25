@@ -514,6 +514,41 @@ def exportar_activos_excel(request):
     except Exception as e:
         return JsonResponse({'success': False, 'error': str(e)})
 
+# Vista para obtener los últimos registros (API JSON)
+def ultimos_registros(request):
+    """Vista que devuelve los últimos registros QR en formato JSON"""
+    try:
+        registros = RegistroQR.objects.order_by('-fecha_registro')[:10]
+        datos = []
+        
+        for registro in registros:
+            try:
+                # Intentar parsear como JSON
+                qr_data = json.loads(registro.codigo)
+                datos.append({
+                    'id': registro.id,
+                    'codigo': qr_data.get('codigo', registro.codigo),
+                    'nombre': qr_data.get('nombre', 'Sin nombre'),
+                    'ubicacion': qr_data.get('ubicacion', 'Sin ubicación'),
+                    'marca': qr_data.get('marca', 'Sin marca'),
+                    'modelo': qr_data.get('modelo', 'Sin modelo'),
+                    'no_serie': qr_data.get('no_serie', 'Sin número de serie'),
+                    'fecha_registro': format_local_datetime(registro.fecha_registro)
+                })
+            except (json.JSONDecodeError, AttributeError):
+                # Si no es JSON, usar el código tal como está
+                datos.append({
+                    'id': registro.id,
+                    'codigo': registro.codigo,
+                    'nombre': registro.codigo,
+                    'ubicacion': 'Sin ubicación',
+                    'marca': 'Sin marca',
+                    'modelo': 'Sin modelo',
+                    'no_serie': 'Sin número de serie',
+                    'fecha_registro': format_local_datetime(registro.fecha_registro)
+                })
+        
+# Vista para exportar registros QR a Excel
 @csrf_exempt
 def eliminar_todos_activos(request):
     """Vista para eliminar todos los activos registrados"""
