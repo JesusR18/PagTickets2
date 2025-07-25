@@ -18,14 +18,19 @@
             background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
             min-height: 100vh;
             color: white;
-            padding: 20px;
+            padding: 10px;
+            /* Optimizado para móvil primero */
+            font-size: 16px;
+            line-height: 1.4;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
         
         .header {
             text-align: center;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
             background: rgba(255, 255, 255, 0.1);
-            padding: 20px;
+            padding: 15px 10px;
             border-radius: 15px;
             backdrop-filter: blur(10px);
         }
@@ -49,15 +54,15 @@
             color: white;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             margin: 0;
-            font-size: 2.5em;
+            font-size: 1.8em; /* Más pequeño para móvil */
         }
         
         .container {
-            max-width: 1200px;
+            max-width: 100%; /* Usar todo el ancho en móvil */
             margin: 0 auto;
             background: rgba(255, 255, 255, 0.95);
             border-radius: 15px;
-            padding: 30px;
+            padding: 15px; /* Menos padding para móvil */
             box-shadow: 0 10px 30px rgba(127, 29, 29, 0.3);
             color: #333;
         }
@@ -66,22 +71,25 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 15px;
+            margin-bottom: 20px;
+            flex-direction: column; /* Stack verticalmente en móvil por defecto */
+            gap: 10px;
         }
         
         .btn {
             background: linear-gradient(135deg, #991b1b, #dc2626);
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
+            padding: 18px 25px; /* Más grande para touch */
+            border-radius: 12px; /* Más redondeado para móvil */
             font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
             box-shadow: 0 4px 12px rgba(153, 27, 27, 0.3);
+            width: 100%; /* Botones de ancho completo en móvil */
+            max-width: 300px;
+            min-height: 50px; /* Altura mínima para touch */
         }
         
         .btn:hover {
@@ -98,6 +106,11 @@
         
         .btn-secondary {
             background: linear-gradient(135deg, #059669, #10b981);
+            width: 100%;
+            max-width: 300px;
+            min-height: 50px;
+            padding: 18px 25px;
+            border-radius: 12px;
         }
         
         .btn-secondary:hover {
@@ -124,6 +137,9 @@
             text-transform: uppercase;
             letter-spacing: 1px;
             margin-bottom: 20px;
+            width: 100%; /* Ancho completo para móvil */
+            max-width: 350px;
+            min-height: 60px; /* Altura mínima para touch */
         }
         
         .scanner-toggle:hover {
@@ -140,12 +156,13 @@
         
         .camera-container {
             position: relative;
-            max-width: 320px; /* Más compacto */
-            margin: 15px auto; /* Márgenes reducidos */
+            max-width: 100%; /* Usar todo el ancho disponible en móvil */
+            width: 100%;
+            margin: 10px auto;
             background: #000;
-            border-radius: 12px; /* Radio más pequeño */
+            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4); /* Sombra más sutil */
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
             display: none;
         }
         
@@ -247,20 +264,23 @@
         }
         
         .tabla-container {
-            margin-top: 30px;
+            margin-top: 15px; /* Menos margen para móvil */
             overflow-x: auto;
             border-radius: 10px;
             box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             /* Evitar que interfiera con el swipe en móvil */
             -webkit-overflow-scrolling: touch;
             overscroll-behavior-x: contain;
+            margin-bottom: 80px; /* Espacio para el FAB */
         }
         
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
-            min-width: 800px;
+            min-width: 320px; /* Optimizado para móvil */
+            font-size: 12px; /* Texto más pequeño para pantallas pequeñas */
+            overflow-x: auto;
         }
         
         .celda-swipe {
@@ -269,9 +289,10 @@
         }
         
         th, td {
-            padding: 12px;
+            padding: 8px 4px; /* Padding más compacto para móvil */
             text-align: left;
             border-bottom: 1px solid #e5e7eb;
+            font-size: 12px;
         }
         
         th {
@@ -503,6 +524,9 @@
             <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
                 <span id="time-display">🕒 Cargando...</span>
             </div>
+            <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
+                <span>📱 Optimizado para Móvil</span>
+            </div>
         </div>
     </div>
     
@@ -555,6 +579,9 @@
         <div class="tabla-container">
             <div style="margin-bottom: 15px; padding: 10px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 8px; text-align: center;">
                 <span style="color: #475569; font-weight: bold;">📊 Registro de Activos Escaneados</span>
+                <div style="font-size: 12px; color: #64748b; margin-top: 5px;">
+                    💡 Optimizado para uso móvil - Desliza para eliminar
+                </div>
             </div>
             <table>
                 <thead>
@@ -634,11 +661,20 @@
             checkConnection();
             setInterval(checkConnection, 30000);
             
-            // Mostrar consejos en móviles
-            const esMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-            if (esMobile) {
-                document.getElementById('mobile-tips').style.display = 'block';
-                document.getElementById('fab').style.display = 'block';
+            // Mostrar consejos y características móviles por defecto
+            const esMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0 || window.innerWidth <= 768;
+            
+            // Siempre mostrar FAB y consejos ya que está optimizado para móvil
+            document.getElementById('mobile-tips').style.display = 'block';
+            document.getElementById('fab').style.display = 'block';
+            
+            // Si es escritorio, ajustar algunos elementos
+            if (!esMobile && window.innerWidth > 768) {
+                // En escritorio, hacer los botones un poco más pequeños
+                const buttons = document.querySelectorAll('.btn');
+                buttons.forEach(btn => {
+                    btn.style.maxWidth = '250px';
+                });
             }
         }
         
