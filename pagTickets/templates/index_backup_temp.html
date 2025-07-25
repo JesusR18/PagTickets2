@@ -260,6 +260,11 @@
             min-width: 800px;
         }
         
+        .celda-swipe {
+            padding: 0 !important;
+            position: relative;
+        }
+        
         th, td {
             padding: 12px;
             text-align: left;
@@ -311,6 +316,56 @@
             font-weight: bold;
         }
         
+        /* Estilos para swipe to delete en móvil */
+        .fila-swipe {
+            position: relative;
+            overflow: hidden;
+            background: white;
+        }
+        
+        .contenido-fila {
+            transition: transform 0.3s ease;
+            background: white;
+            position: relative;
+            z-index: 2;
+        }
+        
+        .accion-eliminar {
+            position: absolute;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            width: 100px;
+            background: linear-gradient(135deg, #dc2626, #ef4444);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            z-index: 1;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        
+        .fila-swipe.swiping .accion-eliminar {
+            opacity: 1;
+        }
+        
+        .fila-swipe.delete-ready {
+            background: #fee2e2;
+        }
+        
+        .fila-swipe.delete-ready .accion-eliminar {
+            background: linear-gradient(135deg, #b91c1c, #dc2626);
+            animation: pulse 0.5s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            from { transform: scale(1); }
+            to { transform: scale(1.05); }
+        }
+        
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -358,6 +413,42 @@
                 font-size: 12px;
                 padding: 4px 8px;
                 min-width: 45px;
+            }
+            
+            /* Ocultar botones de eliminar en móvil para usar swipe */
+            .btn-eliminar {
+                display: none;
+            }
+            
+            /* Ajustar tabla para swipe en móvil */
+            .fila-swipe .contenido-fila > div {
+                display: block !important;
+            }
+            
+            .fila-swipe .contenido-fila > div > div {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 5px;
+                padding: 8px !important;
+            }
+            
+            .fila-swipe .contenido-fila > div > div > div {
+                flex: 1 1 45%;
+                min-width: 120px;
+                font-size: 12px;
+                border-bottom: 1px solid #f3f4f6;
+                padding: 4px 0;
+            }
+            
+            /* Instrucciones de swipe */
+            .swipe-hint {
+                text-align: center;
+                color: #6b7280;
+                font-size: 12px;
+                padding: 10px;
+                background: #f9fafb;
+                border-radius: 5px;
+                margin-bottom: 10px;
             }
         }
         
@@ -485,6 +576,13 @@
         let context = null;
         let activosEscaneados = [];
         let zoomTimeout = null; // Para hacer el zoom más fluido
+        
+        // Variables para swipe to delete
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let currentSwipeElement = null;
+        let swipeThreshold = 100; // Píxeles mínimos para activar eliminación
+        let isSwiping = false;
         
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
@@ -808,8 +906,20 @@
                     tbody.innerHTML = '';
                     activosEscaneados = data.activos;
                     
+                    // Agregar hint de swipe solo en móvil
+                    if (window.innerWidth <= 768) {
+                        const hintRow = document.createElement('tr');
+                        hintRow.innerHTML = `
+                            <td colspan="8" class="swipe-hint">
+                                💡 Desliza hacia la izquierda para eliminar activos
+                            </td>
+                        `;
+                        tbody.appendChild(hintRow);
+                    }
+                    
                     data.activos.forEach((activo, index) => {
                         const fila = document.createElement('tr');
+                        fila.classList.add('fila-swipe');
                         
                         // Verificar si es duplicado basado en características similares
                         const esDuplicado = verificarDuplicado(activo, data.activos, index);
@@ -817,20 +927,36 @@
                             fila.classList.add('activo-duplicado');
                         }
                         
+                        // Crear estructura para swipe
                         fila.innerHTML = `
-                            <td>${activo.codigo}</td>
-                            <td>${activo.nombre}${esDuplicado ? ' ⚠️' : ''}</td>
-                            <td>${activo.ubicacion}</td>
-                            <td>${activo.marca}</td>
-                            <td>${activo.modelo}</td>
-                            <td>${activo.no_serie}</td>
-                            <td>${activo.fecha_registro}</td>
-                            <td>
-                                <button class="btn-eliminar" onclick="eliminarActivo(${activo.id || index}, '${activo.nombre.replace(/'/g, "\\'")}')">
-                                    [DEL] Eliminar
-                                </button>
+                            <td colspan="8" class="celda-swipe">
+                                <div class="contenido-fila">
+                                    <div style="display: flex;">
+                                        <div style="flex: 1; padding: 12px;">${activo.codigo}</div>
+                                        <div style="flex: 2; padding: 12px;">${activo.nombre}${esDuplicado ? ' ⚠️' : ''}</div>
+                                        <div style="flex: 1.5; padding: 12px;">${activo.ubicacion}</div>
+                                        <div style="flex: 1; padding: 12px;">${activo.marca}</div>
+                                        <div style="flex: 1; padding: 12px;">${activo.modelo}</div>
+                                        <div style="flex: 1; padding: 12px;">${activo.no_serie}</div>
+                                        <div style="flex: 1.2; padding: 12px;">${activo.fecha_registro}</div>
+                                        <div style="flex: 1; padding: 12px;">
+                                            <button class="btn-eliminar" onclick="eliminarActivo(${activo.id || index}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                                                [DEL] Eliminar
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="accion-eliminar" data-activo-id="${activo.id || index}" data-activo-nombre="${activo.nombre.replace(/"/g, '&quot;')}">
+                                    🗑️ ELIMINAR
+                                </div>
                             </td>
                         `;
+                        
+                        // Agregar eventos touch para móvil
+                        if (window.innerWidth <= 768) {
+                            agregarEventosSwipe(fila);
+                        }
+                        
                         tbody.appendChild(fila);
                     });
                 } else {
@@ -864,6 +990,164 @@
                 }
             }
             return false;
+        }
+        
+        // Funciones para swipe to delete en móvil
+        function agregarEventosSwipe(fila) {
+            const contenidoFila = fila.querySelector('.contenido-fila');
+            const accionEliminar = fila.querySelector('.accion-eliminar');
+            
+            // Eventos touch
+            fila.addEventListener('touchstart', handleTouchStart, { passive: false });
+            fila.addEventListener('touchmove', handleTouchMove, { passive: false });
+            fila.addEventListener('touchend', handleTouchEnd, { passive: false });
+            
+            // También agregar eventos mouse para testing en desktop
+            fila.addEventListener('mousedown', handleMouseStart);
+            fila.addEventListener('mousemove', handleMouseMove);
+            fila.addEventListener('mouseup', handleMouseEnd);
+            fila.addEventListener('mouseleave', handleMouseEnd);
+        }
+        
+        function handleTouchStart(e) {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            currentSwipeElement = e.currentTarget;
+            isSwiping = false;
+        }
+        
+        function handleTouchMove(e) {
+            if (!currentSwipeElement) return;
+            
+            const touchCurrentX = e.touches[0].clientX;
+            const touchCurrentY = e.touches[0].clientY;
+            const diffX = touchStartX - touchCurrentX;
+            const diffY = touchStartY - touchCurrentY;
+            
+            // Solo activar swipe horizontal si el movimiento es más horizontal que vertical
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+                e.preventDefault();
+                isSwiping = true;
+                currentSwipeElement.classList.add('swiping');
+                
+                // Solo permitir swipe hacia la izquierda (diffX positivo)
+                if (diffX > 0) {
+                    const contenidoFila = currentSwipeElement.querySelector('.contenido-fila');
+                    const maxSwipe = Math.min(diffX, 120); // Máximo 120px
+                    
+                    contenidoFila.style.transform = `translateX(-${maxSwipe}px)`;
+                    
+                    // Activar "delete ready" cuando se alcance el threshold
+                    if (diffX >= swipeThreshold) {
+                        currentSwipeElement.classList.add('delete-ready');
+                        // Vibración para feedback
+                        if (navigator.vibrate) {
+                            navigator.vibrate(50);
+                        }
+                    } else {
+                        currentSwipeElement.classList.remove('delete-ready');
+                    }
+                }
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            if (!currentSwipeElement || !isSwiping) {
+                resetSwipe();
+                return;
+            }
+            
+            const diffX = touchStartX - (e.changedTouches[0]?.clientX || touchStartX);
+            
+            if (diffX >= swipeThreshold && currentSwipeElement.classList.contains('delete-ready')) {
+                // Eliminar activo
+                const accionEliminar = currentSwipeElement.querySelector('.accion-eliminar');
+                const activoId = accionEliminar.getAttribute('data-activo-id');
+                const activoNombre = accionEliminar.getAttribute('data-activo-nombre');
+                
+                // Animación de eliminación
+                currentSwipeElement.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+                currentSwipeElement.style.transform = 'translateX(-100%)';
+                currentSwipeElement.style.opacity = '0';
+                
+                setTimeout(() => {
+                    eliminarActivo(activoId, activoNombre);
+                }, 300);
+            } else {
+                // Regresar a posición original
+                resetSwipe();
+            }
+        }
+        
+        // Funciones equivalentes para mouse (testing en desktop)
+        function handleMouseStart(e) {
+            touchStartX = e.clientX;
+            touchStartY = e.clientY;
+            currentSwipeElement = e.currentTarget;
+            isSwiping = false;
+        }
+        
+        function handleMouseMove(e) {
+            if (!currentSwipeElement) return;
+            
+            const diffX = touchStartX - e.clientX;
+            const diffY = touchStartY - e.clientY;
+            
+            if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 10) {
+                e.preventDefault();
+                isSwiping = true;
+                currentSwipeElement.classList.add('swiping');
+                
+                if (diffX > 0) {
+                    const contenidoFila = currentSwipeElement.querySelector('.contenido-fila');
+                    const maxSwipe = Math.min(diffX, 120);
+                    
+                    contenidoFila.style.transform = `translateX(-${maxSwipe}px)`;
+                    
+                    if (diffX >= swipeThreshold) {
+                        currentSwipeElement.classList.add('delete-ready');
+                    } else {
+                        currentSwipeElement.classList.remove('delete-ready');
+                    }
+                }
+            }
+        }
+        
+        function handleMouseEnd(e) {
+            if (!currentSwipeElement || !isSwiping) {
+                resetSwipe();
+                return;
+            }
+            
+            const diffX = touchStartX - e.clientX;
+            
+            if (diffX >= swipeThreshold && currentSwipeElement.classList.contains('delete-ready')) {
+                const accionEliminar = currentSwipeElement.querySelector('.accion-eliminar');
+                const activoId = accionEliminar.getAttribute('data-activo-id');
+                const activoNombre = accionEliminar.getAttribute('data-activo-nombre');
+                
+                currentSwipeElement.style.transition = 'transform 0.3s ease, opacity 0.3s ease';
+                currentSwipeElement.style.transform = 'translateX(-100%)';
+                currentSwipeElement.style.opacity = '0';
+                
+                setTimeout(() => {
+                    eliminarActivo(activoId, activoNombre);
+                }, 300);
+            } else {
+                resetSwipe();
+            }
+        }
+        
+        function resetSwipe() {
+            if (currentSwipeElement) {
+                const contenidoFila = currentSwipeElement.querySelector('.contenido-fila');
+                if (contenidoFila) {
+                    contenidoFila.style.transform = 'translateX(0)';
+                }
+                currentSwipeElement.classList.remove('swiping', 'delete-ready');
+                currentSwipeElement = null;
+            }
+            isSwiping = false;
         }
         
         // Función para eliminar activo
@@ -928,6 +1212,12 @@
         
         // Actualizar activos cada 30 segundos
         setInterval(cargarActivosEscaneados, 30000);
+        
+        // Manejar cambio de tamaño de ventana para reconfigurar eventos
+        window.addEventListener('resize', function() {
+            // Recargar activos para aplicar el layout correcto
+            setTimeout(cargarActivosEscaneados, 100);
+        });
         
         console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
     </script>
