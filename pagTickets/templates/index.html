@@ -344,6 +344,48 @@
             to { transform: scale(1.05); }
         }
         
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+        
+        .loading-text {
+            animation: pulse 1.5s ease-in-out infinite alternate;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        /* Botón flotante para móviles */
+        .fab {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #991b1b, #dc2626);
+            border: none;
+            border-radius: 50%;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            box-shadow: 0 4px 20px rgba(153, 27, 27, 0.4);
+            transition: all 0.3s ease;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .fab:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 25px rgba(153, 27, 27, 0.5);
+        }
+        
+        .fab:active {
+            transform: scale(0.95);
+        }
+        
         @media (max-width: 768px) {
             .controls {
                 flex-direction: column;
@@ -451,19 +493,33 @@
             </div>
         </a>
         <h1>SISEG - Sistema de Activos</h1>
+        <div id="contador-activos" style="margin-top: 10px; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
+            📋 Total de activos: <span id="total-activos">Cargando...</span>
+        </div>
+        <div style="margin-top: 15px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 12px;">
+            <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
+                <span id="connection-status">🟢 Sistema Conectado</span>
+            </div>
+            <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
+                <span id="time-display">🕒 Cargando...</span>
+            </div>
+        </div>
     </div>
     
     <div class="container">
         <div class="controls">
             <button onclick="exportarExcel()" class="btn btn-secondary">
-                [EXCEL] Exportar a Excel
+                📊 Exportar a Excel
+            </button>
+            <button onclick="eliminarTodos()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                🗑️ Eliminar Todos
             </button>
         </div>
         
         <!-- Scanner integrado -->
         <div class="scanner-container">
             <button onclick="toggleScanner()" class="scanner-toggle" id="scanner-toggle-btn">
-                [CAM] INICIAR SCANNER QR
+                📱 INICIAR SCANNER QR
             </button>
             
             <div id="scanner-status" class="scanner-status">
@@ -473,7 +529,7 @@
             <!-- Botón DETENER fuera de la cámara -->
             <div id="stop-button-container" style="display: none; text-align: center; margin: 15px 0;">
                 <button onclick="detenerScanner()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
-                    [STOP] DETENER SCANNER
+                    ⏹️ DETENER SCANNER
                 </button>
             </div>
             
@@ -497,26 +553,45 @@
         </div>
         
         <div class="tabla-container">
+            <div style="margin-bottom: 15px; padding: 10px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 8px; text-align: center;">
+                <span style="color: #475569; font-weight: bold;">📊 Registro de Activos Escaneados</span>
+            </div>
             <table>
                 <thead>
                     <tr>
-                        <th>Código</th>
-                        <th>Nombre</th>
-                        <th>Ubicación</th>
-                        <th>Marca</th>
-                        <th>Modelo</th>
-                        <th>No. Serie</th>
-                        <th>Fecha Registro</th>
-                        <th>Acciones</th>
+                        <th>📝 Código</th>
+                        <th>🏷️ Nombre</th>
+                        <th>📍 Ubicación</th>
+                        <th>🏭 Marca</th>
+                        <th>📱 Modelo</th>
+                        <th>🔢 No. Serie</th>
+                        <th>📅 Fecha Registro</th>
+                        <th>⚡ Acciones</th>
                     </tr>
                 </thead>
                 <tbody id="tabla-activos-body">
                     <tr>
-                        <td colspan="8" class="sin-activos">Cargando activos...</td>
+                        <td colspan="8" class="sin-activos loading-text">🔄 <span class="loading-spinner">⚙️</span> Cargando activos...</td>
                     </tr>
                 </tbody>
             </table>
         </div>
+        
+        <!-- Sección de consejos para móviles -->
+        <div id="mobile-tips" style="margin-top: 20px; padding: 15px; background: linear-gradient(135deg, #fef3c7, #fed7aa); border-radius: 10px; display: none;">
+            <h3 style="color: #92400e; margin-bottom: 10px; text-align: center;">💡 Consejos para Móviles</h3>
+            <ul style="color: #92400e; font-size: 14px; list-style: none; padding: 0;">
+                <li style="margin-bottom: 8px;">👆 <strong>Desliza hacia la izquierda</strong> en cualquier fila para eliminar un activo</li>
+                <li style="margin-bottom: 8px;">📱 <strong>Mantén el dispositivo estable</strong> al escanear códigos QR</li>
+                <li style="margin-bottom: 8px;">🔍 <strong>Usa el zoom</strong> para acercarte a códigos pequeños</li>
+                <li>💾 Los cambios se guardan automáticamente en la base de datos</li>
+            </ul>
+        </div>
+        
+        <!-- Botón flotante para acciones rápidas en móvil -->
+        <button id="fab" class="fab" onclick="toggleScanner()" title="Escáner QR rápido">
+            📱
+        </button>
     </div>
 
     <script>
@@ -546,7 +621,62 @@
         document.addEventListener('DOMContentLoaded', function() {
             console.log('📦 DOM cargado, iniciando aplicación...');
             cargarActivosEscaneados();
+            initializeStatusUpdates();
         });
+        
+        // Función para inicializar actualizaciones de estado
+        function initializeStatusUpdates() {
+            // Actualizar reloj cada segundo
+            updateClock();
+            setInterval(updateClock, 1000);
+            
+            // Verificar conexión cada 30 segundos
+            checkConnection();
+            setInterval(checkConnection, 30000);
+            
+            // Mostrar consejos en móviles
+            const esMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+            if (esMobile) {
+                document.getElementById('mobile-tips').style.display = 'block';
+                document.getElementById('fab').style.display = 'block';
+            }
+        }
+        
+        // Función para actualizar el reloj
+        function updateClock() {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('es-ES', {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            const dateString = now.toLocaleDateString('es-ES', {
+                weekday: 'short',
+                day: '2-digit',
+                month: 'short'
+            });
+            document.getElementById('time-display').textContent = `🕒 ${timeString} - ${dateString}`;
+        }
+        
+        // Función para verificar conexión
+        function checkConnection() {
+            fetch('/cargar_activos/', {
+                method: 'GET',
+                headers: {
+                    'X-CSRFToken': getCookie('csrftoken')
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('connection-status').textContent = '🟢 Sistema Conectado';
+                } else {
+                    document.getElementById('connection-status').textContent = '🟡 Conexión Inestable';
+                }
+            })
+            .catch(error => {
+                document.getElementById('connection-status').textContent = '🔴 Sin Conexión';
+            });
+        }
         
         // Función para mostrar mensajes en la interfaz
         function showMessage(message, type) {
@@ -598,7 +728,7 @@
             
             try {
                 toggleBtn.disabled = true;
-                toggleBtn.textContent = '[INIT] INICIANDO...';
+                toggleBtn.textContent = '⏳ INICIANDO...';
                 actualizarEstado('🚀 Solicitando acceso a la cámara...', null);
                 
                 // Configuración avanzada para solicitar zoom
@@ -657,7 +787,7 @@
                 // Mostrar interfaz de cámara y botón detener
                 cameraContainer.style.display = 'block';
                 document.getElementById('stop-button-container').style.display = 'block';
-                toggleBtn.textContent = '[ACTIVE] SCANNER ACTIVO';
+                toggleBtn.textContent = '⏸️ SCANNER PAUSADO';
                 toggleBtn.disabled = true;
                 scannerActivo = true;
                 
@@ -668,7 +798,7 @@
                 console.error('❌ Error iniciando cámara:', error);
                 actualizarEstado(`❌ Error: ${error.message}`, false);
                 toggleBtn.disabled = false;
-                toggleBtn.textContent = '[CAM] INICIAR SCANNER QR';
+                toggleBtn.textContent = '📱 INICIAR SCANNER QR';
             }
         }
         
@@ -754,7 +884,7 @@
             document.getElementById('camera-container').style.display = 'none';
             document.getElementById('stop-button-container').style.display = 'none';
             const toggleBtn = document.getElementById('scanner-toggle-btn');
-            toggleBtn.textContent = '[CAM] INICIAR SCANNER QR';
+            toggleBtn.textContent = '📱 INICIAR SCANNER QR';
             toggleBtn.disabled = false;
             
             scannerActivo = false;
@@ -864,6 +994,9 @@
                     tbody.innerHTML = '';
                     activosEscaneados = data.activos;
                     
+                    // Actualizar contador de activos
+                    document.getElementById('total-activos').textContent = data.activos.length;
+                    
                     // Agregar hint de swipe solo en móvil
                     const esMobileParaHint = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
                     if (esMobileParaHint) {
@@ -936,7 +1069,7 @@
                                 <td>${activo.fecha_registro}</td>
                                 <td>
                                     <button class="btn-eliminar" onclick="eliminarActivo(${activo.id || index}, '${activo.nombre.replace(/'/g, "\\'")}')">
-                                        [DEL] Eliminar
+                                        🗑️ Eliminar
                                     </button>
                                 </td>
                             `;
@@ -946,8 +1079,11 @@
                     });
                 } else {
                     console.log('⚠️ No hay activos para mostrar');
-                    tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">No hay activos escaneados aún</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">📦 No hay activos escaneados aún - ¡Comienza escaneando un código QR!</td></tr>';
                     activosEscaneados = [];
+                    
+                    // Actualizar contador cuando no hay activos
+                    document.getElementById('total-activos').textContent = '0';
                 }
             })
             .catch(error => {
@@ -1264,6 +1400,40 @@
             setTimeout(() => {
                 window.open('/exportar_activos_excel/', '_blank');
             }, 500);
+        }
+        
+        // Función para eliminar todos los activos
+        function eliminarTodos() {
+            if (!confirm('⚠️ ¿Estás seguro de que quieres eliminar TODOS los activos? Esta acción no se puede deshacer.')) {
+                return;
+            }
+            
+            console.log('🗑️ Eliminando todos los activos...');
+            showMessage('🗑️ Eliminando todos los activos...', 'warning');
+            
+            const csrftoken = getCookie('csrftoken');
+            
+            fetch('/eliminar_todos_activos/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': csrftoken
+                },
+                body: JSON.stringify({})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showMessage(`✅ ${data.message}`, 'success');
+                    cargarActivosEscaneados();
+                } else {
+                    showMessage(`❌ Error: ${data.message}`, 'error');
+                }
+            })
+            .catch(error => {
+                console.error('❌ Error eliminando todos los activos:', error);
+                showMessage('❌ Error de conexión', 'error');
+            });
         }
         
         // Función para obtener cookie CSRF
