@@ -7,6 +7,7 @@
     <title>SISEG - Sistemas de Seguridad Integral | Control de Activos</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         * {
@@ -411,6 +412,110 @@
             color: #991b1b;
         }
         
+        /* Estilos para Generador QR Seguro */
+        .qr-generator-container {
+            margin: 20px 0;
+            text-align: center;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+            border: 2px solid #991b1b;
+        }
+        
+        .qr-generator-header {
+            margin-bottom: 20px;
+        }
+        
+        .qr-generator-header h3 {
+            color: #991b1b;
+            margin-bottom: 10px;
+            font-size: 1.4em;
+        }
+        
+        .qr-generator-header p {
+            color: #6b7280;
+            font-size: 14px;
+            margin-bottom: 15px;
+        }
+        
+        .qr-input-section {
+            margin-bottom: 20px;
+        }
+        
+        .qr-input-section label {
+            display: block;
+            color: #374151;
+            font-weight: bold;
+            margin-bottom: 10px;
+            text-align: left;
+        }
+        
+        #qr-data-input {
+            width: 100%;
+            min-height: 120px;
+            padding: 15px;
+            border: 2px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+            resize: vertical;
+            background: white;
+            color: #374151;
+            margin-bottom: 15px;
+        }
+        
+        #qr-data-input:focus {
+            outline: none;
+            border-color: #991b1b;
+            box-shadow: 0 0 0 3px rgba(153, 27, 27, 0.1);
+        }
+        
+        .qr-controls {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .qr-output-section {
+            border-top: 2px solid #e5e7eb;
+            padding-top: 20px;
+            margin-top: 20px;
+        }
+        
+        .qr-output-section h4 {
+            color: #991b1b;
+            margin-bottom: 15px;
+        }
+        
+        #qr-display-area {
+            background: white;
+            border: 2px dashed #d1d5db;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 15px 0;
+            min-height: 200px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .qr-info {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            text-align: left;
+        }
+        
+        .qr-info p {
+            color: #0369a1;
+            font-size: 13px;
+            margin: 5px 0;
+        }
+        
         .tabla-container {
             margin-top: 15px; /* Menos margen para móvil */
             overflow-x: auto;
@@ -669,6 +774,9 @@
             <button onclick="exportarExcel()" class="btn btn-secondary">
                 📊 Exportar a Excel
             </button>
+            <button onclick="toggleGeneradorQR()" class="btn btn-primary">
+                📱 Generar QR Seguro
+            </button>
             <button onclick="eliminarTodos()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
                 🗑️ Eliminar Todos
             </button>
@@ -710,27 +818,39 @@
             </div>
         </div>
         
-        <!-- Sistema de Seguridad SISEG Exclusivo -->
-        <div style="margin: 20px 0; padding: 15px; background: linear-gradient(135deg, #1e40af, #3b82f6); border-radius: 12px; color: white; text-align: center;">
-            <h3 style="margin-bottom: 10px; font-size: 16px;">🛡️ Sistema de Seguridad SISEG</h3>
-            <div style="font-size: 13px; line-height: 1.4;">
-                <p style="margin-bottom: 8px;">✅ <strong>Solo códigos QR autorizados SISEG</strong></p>
-                <p style="margin-bottom: 8px;">🚫 <strong>Códigos externos son rechazados automáticamente</strong></p>
-                <p style="margin-bottom: 8px;">🔐 <strong>Encriptación AES + Verificación de firma</strong></p>
-                <div id="siseg-status" style="margin-top: 10px; padding: 8px; background: rgba(255, 255, 255, 0.2); border-radius: 6px; font-weight: bold;">
-                    🟢 Sistema de seguridad activo
-                </div>
+        <!-- Generador QR Seguro SISEG -->
+        <div class="qr-generator-container" id="qr-generator-container" style="display: none;">
+            <div class="qr-generator-header">
+                <h3>🔐 Generador QR Seguro SISEG</h3>
+                <p>Genera códigos QR encriptados que solo esta aplicación puede leer</p>
+                <button onclick="toggleGeneradorQR()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
+                    ❌ Cerrar Generador
+                </button>
+            </div>
+            
+            <div class="qr-input-section">
+                <label for="qr-data-input">📝 Información para el QR:</label>
+                <textarea id="qr-data-input" placeholder="Escribe aquí la información que quieres convertir en QR seguro...&#10;Ejemplo: Activo-001|Laptop Dell|Oficina Principal|Dell|Excelente"></textarea>
                 
-                <!-- Demostración del QR exclusivo -->
-                <div style="margin-top: 15px; padding: 10px; background: rgba(255, 255, 255, 0.1); border-radius: 8px;">
-                    <h4 style="margin-bottom: 8px; font-size: 14px;">📱 Tu QR ahora es exclusivo de SISEG</h4>
-                    <p style="font-size: 12px; margin-bottom: 8px;">La imagen que proporcionaste ha sido procesada con encriptación AES</p>
-                    <button onclick="mostrarDetallesQR()" style="background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.3); color: white; padding: 8px 16px; border-radius: 6px; font-size: 12px; cursor: pointer;">
-                        🔍 Ver detalles técnicos
+                <div class="qr-controls">
+                    <button onclick="generarQRSeguro()" class="btn btn-primary">
+                        🔒 Generar QR Seguro
                     </button>
-                    <div id="qr-details" style="display: none; margin-top: 10px; padding: 8px; background: rgba(0, 0, 0, 0.2); border-radius: 6px; font-family: monospace; font-size: 11px; text-align: left; word-break: break-all;">
-                        <!-- Los detalles del QR se mostrarán aquí -->
-                    </div>
+                    <button onclick="limpiarGenerador()" class="btn btn-secondary">
+                        🧹 Limpiar
+                    </button>
+                </div>
+            </div>
+            
+            <div class="qr-output-section" id="qr-output-section" style="display: none;">
+                <h4>📱 Tu QR Seguro:</h4>
+                <div id="qr-display-area"></div>
+                <button onclick="descargarQR()" class="btn btn-success">
+                    💾 Descargar QR
+                </button>
+                <div class="qr-info">
+                    <p>🔐 <strong>Seguridad:</strong> Este QR está encriptado y solo puede ser leído por SISEG</p>
+                    <p>⏰ <strong>Validez:</strong> 24 horas desde su creación</p>
                 </div>
             </div>
         </div>
@@ -802,121 +922,6 @@
         let currentSwipeElement = null;
         let swipeThreshold = 100; // Píxeles mínimos para activar eliminación
         let isSwiping = false;
-        
-        // ============ SISTEMA DE ENCRIPTACIÓN EXCLUSIVO SISEG ============
-        // Constantes de seguridad para SISEG - Solo esta aplicación puede leer los QR
-        const SISEG_SECRET_KEY = 'SISEG_SECURITY_2025_ACTIVOS_CONTROL_EXCLUSIVE';
-        const SISEG_SIGNATURE = 'SISEG_AUTHORIZED_SCANNER_v2.1';
-        
-        // Función para encriptar datos para que solo SISEG pueda leerlos
-        function encriptarParaSISEG(datos) {
-            try {
-                const timestamp = Date.now();
-                const payload = {
-                    data: datos,
-                    signature: SISEG_SIGNATURE,
-                    timestamp: timestamp,
-                    app: 'SISEG_CONTROL_ACTIVOS'
-                };
-                
-                const payloadString = JSON.stringify(payload);
-                const encrypted = CryptoJS.AES.encrypt(payloadString, SISEG_SECRET_KEY).toString();
-                
-                // Añadir verificación adicional
-                const hash = CryptoJS.SHA256(encrypted + SISEG_SIGNATURE).toString();
-                
-                return `SISEG:${encrypted}:${hash}`;
-            } catch (error) {
-                console.error('❌ Error al encriptar datos para SISEG:', error);
-                return null;
-            }
-        }
-        
-        // Función para desencriptar datos SISEG y verificar autenticidad
-        function desencriptarDeSISEG(datosEncriptados) {
-            try {
-                // Verificar formato SISEG
-                if (!datosEncriptados.startsWith('SISEG:')) {
-                    throw new Error('QR no autorizado: No es un código SISEG válido');
-                }
-                
-                const parts = datosEncriptados.split(':');
-                if (parts.length !== 3) {
-                    throw new Error('QR no autorizado: Formato de seguridad inválido');
-                }
-                
-                const [prefix, encrypted, hash] = parts;
-                
-                // Verificar hash de integridad
-                const expectedHash = CryptoJS.SHA256(encrypted + SISEG_SIGNATURE).toString();
-                if (hash !== expectedHash) {
-                    throw new Error('QR no autorizado: Código de integridad inválido');
-                }
-                
-                // Desencriptar
-                const decryptedBytes = CryptoJS.AES.decrypt(encrypted, SISEG_SECRET_KEY);
-                const decryptedString = decryptedBytes.toString(CryptoJS.enc.Utf8);
-                
-                if (!decryptedString) {
-                    throw new Error('QR no autorizado: No se puede desencriptar con clave SISEG');
-                }
-                
-                const payload = JSON.parse(decryptedString);
-                
-                // Verificar firma SISEG
-                if (payload.signature !== SISEG_SIGNATURE) {
-                    throw new Error('QR no autorizado: Firma SISEG inválida');
-                }
-                
-                // Verificar aplicación
-                if (payload.app !== 'SISEG_CONTROL_ACTIVOS') {
-                    throw new Error('QR no autorizado: No pertenece a SISEG Control de Activos');
-                }
-                
-                // Verificar timestamp (válido por 30 días)
-                const now = Date.now();
-                const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 días
-                if (now - payload.timestamp > maxAge) {
-                    throw new Error('QR expirado: Código SISEG vencido');
-                }
-                
-                console.log('✅ QR SISEG válido autenticado correctamente');
-                return payload.data;
-                
-            } catch (error) {
-                console.error('❌ Error de seguridad SISEG:', error.message);
-                
-                // Mostrar alerta de seguridad
-                actualizarEstado(`🚫 SEGURIDAD SISEG: ${error.message}`, false);
-                
-                // Vibración de advertencia si está disponible
-                if (navigator.vibrate) {
-                    navigator.vibrate([200, 100, 200, 100, 200]);
-                }
-                
-                return null;
-            }
-        }
-        
-        // Función para procesar tu imagen QR y hacerla exclusiva de SISEG
-        function procesarQRExclusiveSISEG(codigoOriginal) {
-            // Esta función toma el contenido del QR que me proporcionaste
-            // y lo convierte en un formato que solo SISEG puede leer
-            const datosOriginales = codigoOriginal || "ACTIVO_SISEG_001_SCANNER_TEST";
-            
-            // Encriptar los datos para que sean exclusivos de SISEG
-            const qrExclusivo = encriptarParaSISEG(datosOriginales);
-            
-            if (qrExclusivo) {
-                console.log('🔐 QR convertido a formato exclusivo SISEG');
-                console.log('📊 Datos originales:', datosOriginales);
-                console.log('🛡️ QR encriptado:', qrExclusivo);
-                return qrExclusivo;
-            } else {
-                console.error('❌ Error al procesar QR para SISEG');
-                return null;
-            }
-        }
         
         // Función para inicializar la página
         document.addEventListener('DOMContentLoaded', function() {
@@ -1220,47 +1225,40 @@
         
         // Función para registrar código QR
         function registrarCodigo(codigo) {
-            console.log('📝 Procesando código QR escaneado:', codigo);
+            console.log('📝 Registrando código:', codigo);
             
-            // VALIDACIÓN EXCLUSIVA SISEG - Solo códigos autorizados
-            let codigoValidado;
+            // Intentar desencriptar si es un QR seguro de SISEG
+            let codigoFinal = codigo;
             
-            // Intentar desencriptar como código SISEG exclusivo
-            const datosDesencriptados = desencriptarDeSISEG(codigo);
-            
-            if (datosDesencriptados) {
-                // Es un código SISEG válido
-                codigoValidado = datosDesencriptados;
-                console.log('🛡️ Código SISEG auténtico validado:', codigoValidado);
+            if (codigo.startsWith(SISEG_SIGNATURE)) {
+                console.log('🔐 QR seguro de SISEG detectado, desencriptando...');
                 
-                // Feedback visual positivo
-                actualizarEstado('✅ Código SISEG auténtico - Registrando...', true);
+                const datosDesencriptados = desencriptarDeSISEG(codigo);
                 
-                if (navigator.vibrate) {
-                    navigator.vibrate([100, 50, 100]); // Vibración de éxito
+                if (datosDesencriptados) {
+                    console.log('✅ QR seguro desencriptado exitosamente');
+                    codigoFinal = datosDesencriptados;
+                    
+                    // Vibración especial para QR seguro exitoso
+                    if (navigator.vibrate) {
+                        navigator.vibrate([100, 50, 100, 50, 100]);
+                    }
+                    
+                    showMessage('🔓 QR Seguro SISEG verificado', 'success');
+                } else {
+                    console.error('🚫 QR seguro no válido o expirado');
+                    showMessage('🚫 QR no autorizado o expirado - Solo QR de SISEG permitidos', 'error');
+                    
+                    // Vibración de rechazo
+                    if (navigator.vibrate) {
+                        navigator.vibrate([500, 200, 500]);
+                    }
+                    return; // No procesar QR no válido
                 }
             } else {
-                // No es un código SISEG válido - RECHAZAR
-                console.log('🚫 Código QR rechazado: No es un código SISEG auténtico');
-                
-                // Mostrar alerta de seguridad
-                actualizarEstado('🚫 ACCESO DENEGADO: Solo códigos QR SISEG autorizados', false);
-                
-                // Vibración de rechazo
-                if (navigator.vibrate) {
-                    navigator.vibrate([300, 100, 300, 100, 300]);
-                }
-                
-                // No procesar el código
-                setTimeout(() => {
-                    actualizarEstado('🛡️ Sistema de seguridad SISEG activo - Escaneando...', null);
-                    if (videoStream) {
-                        scannerActivo = true;
-                        iniciarDeteccionQR();
-                    }
-                }, 3000);
-                
-                return; // Salir sin registrar
+                // QR normal, mostrar advertencia si no es de SISEG
+                console.log('⚠️ QR estándar detectado (no encriptado)');
+                showMessage('⚠️ QR estándar - Recomendamos usar QR seguros de SISEG', 'warning');
             }
             
             const csrftoken = getCookie('csrftoken');
@@ -1271,7 +1269,7 @@
                     'Content-Type': 'application/json',
                     'X-CSRFToken': csrftoken
                 },
-                body: JSON.stringify({ codigo_qr: codigoValidado }) // Usar el código validado
+                body: JSON.stringify({ codigo_qr: codigoFinal })
             })
             .then(response => response.json())
             .then(data => {
@@ -1770,121 +1768,201 @@
             console.log('📏 Ventana redimensionada');
         });
         
-        // ============ PROCESAMIENTO DE TU IMAGEN QR EXCLUSIVA ============
-        // Función para convertir tu imagen QR en formato exclusivo SISEG
-        function inicializarQRExclusiveSISEG() {
-            console.log('🔐 Inicializando sistema QR exclusivo SISEG...');
+        // ============================================
+        // SISTEMA DE QR SEGURO SISEG
+        // ============================================
+        
+        // Clave secreta y firma para encriptación SISEG
+        const SISEG_SECRET_KEY = 'SISEG2025_SECURITY_INTEGRAL_SYSTEM_SAFE_QR';
+        const SISEG_SIGNATURE = 'SISEG_ENCRYPTED_QR_';
+        
+        // Estado del generador QR
+        let qrGeneratorActivo = false;
+        let qrActual = null;
+        
+        // Función para alternar el generador QR
+        function toggleGeneradorQR() {
+            const container = document.getElementById('qr-generator-container');
+            qrGeneratorActivo = !qrGeneratorActivo;
             
-            // Datos de tu imagen QR (basado en la imagen que me proporcionaste)
-            // Este es el contenido que extraería de tu imagen QR
-            const contenidoQROriginal = "SISEG_ACTIVO_MUESTRA_001_CONTROL_PATRIMONIO";
-            
-            // Convertir a formato exclusivo SISEG
-            qrExclusivoGenerado = encriptarParaSISEG(contenidoQROriginal);
-            
-            if (qrExclusivoGenerado) {
-                console.log('✅ QR convertido exitosamente a formato exclusivo SISEG');
-                console.log('📝 Contenido original:', contenidoQROriginal);
-                console.log('🔐 QR exclusivo SISEG (longitud):', qrExclusivoGenerado.length, 'caracteres');
-                
-                // Actualizar estado del sistema
-                const statusElement = document.getElementById('siseg-status');
-                if (statusElement) {
-                    statusElement.innerHTML = '🟢 Tu QR es ahora exclusivo de SISEG';
-                }
-                
-                // Simular que el QR fue escaneado para demostrar el sistema
-                console.log('🧪 Modo demostración: Simulando escaneo del QR exclusivo...');
-                
-                // Verificar que solo SISEG puede leerlo
-                setTimeout(() => {
-                    const datosDesencriptados = desencriptarDeSISEG(qrExclusivoGenerado);
-                    if (datosDesencriptados) {
-                        console.log('✅ VERIFICACIÓN EXITOSA: El QR solo puede ser leído por SISEG');
-                        console.log('📊 Datos desencriptados:', datosDesencriptados);
-                        
-                        // Actualizar interfaz con confirmación
-                        const statusElement = document.getElementById('siseg-status');
-                        if (statusElement) {
-                            statusElement.innerHTML = '🟢 QR exclusivo SISEG verificado ✅';
-                        }
-                    }
-                }, 1000);
-                
-                return qrExclusivoGenerado;
+            if (qrGeneratorActivo) {
+                container.style.display = 'block';
+                // Desplazar hacia el generador
+                container.scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else {
-                console.error('❌ Error al generar QR exclusivo SISEG');
+                container.style.display = 'none';
+                limpiarGenerador();
+            }
+        }
+        
+        // Función para encriptar datos específicamente para SISEG
+        function encriptarParaSISEG(datos) {
+            try {
+                // Crear timestamp para validez de 24 horas
+                const timestamp = Date.now();
+                const expiracion = timestamp + (24 * 60 * 60 * 1000); // 24 horas
+                
+                // Preparar objeto con datos y metadatos de seguridad
+                const payload = {
+                    data: datos,
+                    timestamp: timestamp,
+                    expiracion: expiracion,
+                    app: 'SISEG',
+                    version: '1.0'
+                };
+                
+                // Convertir a JSON y encriptar con AES
+                const jsonPayload = JSON.stringify(payload);
+                const encrypted = CryptoJS.AES.encrypt(jsonPayload, SISEG_SECRET_KEY).toString();
+                
+                // Agregar firma SISEG al inicio
+                return SISEG_SIGNATURE + encrypted;
+                
+            } catch (error) {
+                console.error('❌ Error en encriptación SISEG:', error);
                 return null;
             }
         }
         
-        // Función para demostrar que códigos externos son rechazados
-        function demostrarSeguridadSISEG() {
-            console.log('🛡️ Demostrando seguridad SISEG...');
-            
-            // Simular código QR externo (no SISEG)
-            const qrExterno = "Este es un código QR normal externo";
-            console.log('🔍 Probando código externo:', qrExterno);
-            
-            const resultado = desencriptarDeSISEG(qrExterno);
-            if (!resultado) {
-                console.log('✅ SEGURIDAD CONFIRMADA: Código externo rechazado correctamente');
-            }
-            
-            // Probar código SISEG válido
-            console.log('🔍 Probando código SISEG válido...');
-            const qrSISEG = encriptarParaSISEG("ACTIVO_TEST_SISEG");
-            const resultadoSISEG = desencriptarDeSISEG(qrSISEG);
-            if (resultadoSISEG) {
-                console.log('✅ AUTENTICACIÓN EXITOSA: Código SISEG validado correctamente');
-            }
-        }
-        
-        // Variable global para almacenar el QR exclusivo generado
-        let qrExclusivoGenerado = null;
-        
-        // Función para mostrar detalles técnicos del QR exclusivo
-        function mostrarDetallesQR() {
-            const detailsDiv = document.getElementById('qr-details');
-            
-            if (detailsDiv.style.display === 'none') {
-                if (qrExclusivoGenerado) {
-                    const timestamp = new Date().toLocaleString('es-ES');
-                    detailsDiv.innerHTML = `
-                        <strong>📊 Detalles Técnicos del QR Exclusivo SISEG</strong><br><br>
-                        <strong>🔐 Tipo:</strong> AES-256 Encriptado<br>
-                        <strong>🛡️ Firma:</strong> SISEG_AUTHORIZED_SCANNER_v2.1<br>
-                        <strong>📅 Generado:</strong> ${timestamp}<br>
-                        <strong>🎯 Estado:</strong> Válido solo para SISEG<br><br>
-                        <strong>📝 QR Exclusivo (Encriptado):</strong><br>
-                        <div style="background: rgba(0,0,0,0.3); padding: 5px; border-radius: 3px; margin-top: 5px; font-size: 10px;">
-                            ${qrExclusivoGenerado.substring(0, 100)}...<br>
-                            <span style="color: #fbbf24;">[Truncado por seguridad]</span>
-                        </div><br>
-                        <strong>✅ Verificación:</strong> Solo aplicaciones SISEG autenticadas pueden leer este código
-                    `;
-                } else {
-                    detailsDiv.innerHTML = `
-                        <strong>⏳ Generando QR exclusivo...</strong><br>
-                        El sistema está procesando tu imagen QR para hacerla exclusiva de SISEG.
-                    `;
+        // Función para desencriptar datos SISEG (para verificar que funciona)
+        function desencriptarDeSISEG(datosEncriptados) {
+            try {
+                // Verificar firma SISEG
+                if (!datosEncriptados.startsWith(SISEG_SIGNATURE)) {
+                    throw new Error('QR no pertenece a SISEG - Acceso denegado');
                 }
-                detailsDiv.style.display = 'block';
-            } else {
-                detailsDiv.style.display = 'none';
+                
+                // Remover firma y desencriptar
+                const encrypted = datosEncriptados.replace(SISEG_SIGNATURE, '');
+                const decrypted = CryptoJS.AES.decrypt(encrypted, SISEG_SECRET_KEY);
+                const jsonPayload = decrypted.toString(CryptoJS.enc.Utf8);
+                
+                if (!jsonPayload) {
+                    throw new Error('Datos corruptos o clave incorrecta');
+                }
+                
+                const payload = JSON.parse(jsonPayload);
+                
+                // Verificar que es de SISEG
+                if (payload.app !== 'SISEG') {
+                    throw new Error('QR no autorizado para SISEG');
+                }
+                
+                // Verificar expiración
+                if (Date.now() > payload.expiracion) {
+                    throw new Error('QR expirado - Genere uno nuevo');
+                }
+                
+                return payload.data;
+                
+            } catch (error) {
+                console.error('🚫 Error de seguridad SISEG:', error.message);
+                return null;
             }
         }
         
-        // Inicializar sistema QR exclusivo cuando la página carga
-        document.addEventListener('DOMContentLoaded', function() {
-            // Ejecutar después de un breve delay para asegurar que todo esté cargado
-            setTimeout(() => {
-                inicializarQRExclusiveSISEG();
-                demostrarSeguridadSISEG();
-            }, 2000);
-        });
+        // Función para generar QR seguro
+        function generarQRSeguro() {
+            const input = document.getElementById('qr-data-input');
+            const outputSection = document.getElementById('qr-output-section');
+            const displayArea = document.getElementById('qr-display-area');
+            
+            const datos = input.value.trim();
+            if (!datos) {
+                alert('❌ Por favor ingresa la información para el QR');
+                return;
+            }
+            
+            try {
+                // Encriptar datos
+                const datosEncriptados = encriptarParaSISEG(datos);
+                if (!datosEncriptados) {
+                    alert('❌ Error al encriptar los datos');
+                    return;
+                }
+                
+                // Limpiar área de visualización
+                displayArea.innerHTML = '';
+                
+                // Generar QR con datos encriptados
+                QRCode.toCanvas(datosEncriptados, {
+                    width: 256,
+                    height: 256,
+                    color: {
+                        dark: '#991b1b',  // Color rojo SISEG
+                        light: '#ffffff'
+                    },
+                    errorCorrectionLevel: 'M'
+                }, function(error, canvas) {
+                    if (error) {
+                        console.error('❌ Error generando QR:', error);
+                        alert('❌ Error al generar el código QR');
+                        return;
+                    }
+                    
+                    // Agregar el canvas al área de visualización
+                    displayArea.appendChild(canvas);
+                    
+                    // Guardar referencia del QR actual
+                    qrActual = canvas;
+                    
+                    // Mostrar sección de salida
+                    outputSection.style.display = 'block';
+                    
+                    // Añadir vibración de confirmación (si está disponible)
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200]);
+                    }
+                    
+                    console.log('✅ QR seguro generado exitosamente');
+                });
+                
+            } catch (error) {
+                console.error('❌ Error generando QR seguro:', error);
+                alert('❌ Error al generar el QR seguro');
+            }
+        }
         
-        console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos con Seguridad Exclusiva');
+        // Función para descargar el QR
+        function descargarQR() {
+            if (!qrActual) {
+                alert('❌ No hay ningún QR para descargar');
+                return;
+            }
+            
+            try {
+                // Crear enlace de descarga
+                const link = document.createElement('a');
+                link.download = `QR_SISEG_${Date.now()}.png`;
+                link.href = qrActual.toDataURL();
+                
+                // Simular click para descargar
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                console.log('💾 QR descargado exitosamente');
+                
+                // Vibración de confirmación
+                if (navigator.vibrate) {
+                    navigator.vibrate(200);
+                }
+                
+            } catch (error) {
+                console.error('❌ Error descargando QR:', error);
+                alert('❌ Error al descargar el QR');
+            }
+        }
+        
+        // Función para limpiar el generador
+        function limpiarGenerador() {
+            document.getElementById('qr-data-input').value = '';
+            document.getElementById('qr-output-section').style.display = 'none';
+            document.getElementById('qr-display-area').innerHTML = '';
+            qrActual = null;
+        }
+        
+        console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
     </script>
 </body>
 </html>
