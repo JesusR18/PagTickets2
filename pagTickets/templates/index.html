@@ -30,12 +30,13 @@
         .header {
             text-align: center;
             margin-bottom: 15px;
-            background: rgba(255, 255, 255, 0.1);
+            background: rgba(255, 255, 255, 0.95); /* Fondo blanco */
             padding: 60px 10px 15px 10px; /* Más espacio arriba para el logo */
             border-radius: 15px;
             backdrop-filter: blur(10px);
             position: relative;
             min-height: 100px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Sombra sutil */
         }
         
         .logo-container {
@@ -115,10 +116,11 @@
         }
         
         h1 {
-            color: white;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
+            color: #1f2937; /* Color oscuro para fondo blanco */
+            text-shadow: none; /* Sin sombra en fondo blanco */
             margin: 0;
             font-size: 1.5em; /* Responsivo por defecto */
+            font-weight: bold;
         }
         
         /* Tamaños de h1 responsivos */
@@ -171,6 +173,34 @@
             }
             h1 {
                 font-size: 1.2em;
+            }
+        }
+        
+        /* Estilos para elementos del header con fondo blanco */
+        #contador-activos {
+            color: #374151 !important;
+            font-weight: 500;
+        }
+        
+        .status-indicator {
+            background: rgba(55, 65, 81, 0.1) !important;
+            color: #374151 !important;
+            border: 1px solid rgba(55, 65, 81, 0.2);
+        }
+        
+        #time-display {
+            color: #374151 !important;
+            font-weight: 500;
+        }
+        
+        /* Responsividad para elementos del header */
+        @media (max-width: 320px) {
+            #contador-activos {
+                font-size: 12px;
+            }
+            .status-indicator {
+                padding: 3px 10px;
+                font-size: 10px;
             }
         }
         
@@ -623,11 +653,11 @@
             <img src="{% static 'images/logo.png' %}" alt="SISEG - Sistemas de Seguridad Integral">
         </div>
         <h1>Control de Activos</h1>
-        <div id="contador-activos" style="margin-top: 10px; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
+        <div id="contador-activos" style="margin-top: 10px; font-size: 14px; color: #374151; font-weight: 500;">
             📋 Total de activos: <span id="total-activos">Cargando...</span>
         </div>
         <div style="margin-top: 15px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 12px;">
-            <div class="status-indicator" style="background: rgba(255, 255, 255, 0.1); padding: 5px 15px; border-radius: 20px;">
+            <div class="status-indicator" style="background: rgba(55, 65, 81, 0.1); padding: 5px 15px; border-radius: 20px; color: #374151; font-weight: 500;">
                 <span id="time-display">🕒 Cargando...</span>
             </div>
         </div>
