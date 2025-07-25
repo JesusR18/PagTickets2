@@ -31,23 +31,147 @@
             text-align: center;
             margin-bottom: 15px;
             background: rgba(255, 255, 255, 0.1);
-            padding: 15px 10px;
+            padding: 60px 10px 15px 10px; /* Más espacio arriba para el logo */
             border-radius: 15px;
             backdrop-filter: blur(10px);
-            position: relative; /* Para posicionar el logo */
-            min-height: 70px; /* Más compacto */
+            position: relative;
+            min-height: 100px;
         }
         
         .logo-container {
-            display: inline-block;
-            /* Eliminados todos los estilos de marco y hover */
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            z-index: 10;
+            background: none;
+            padding: 0;
+            box-shadow: none;
+        }
+        
+        .logo-container img {
+            width: auto;
+            height: auto;
+            max-width: 35vw; /* 35% del ancho de viewport */
+            max-height: 45px; /* Altura máxima en móviles */
+            object-fit: contain;
+            transition: all 0.3s ease;
+        }
+        
+        /* Media queries para diferentes tamaños de pantalla */
+        @media (max-width: 320px) {
+            /* Pantallas muy pequeñas (iPhone SE, etc.) */
+            .logo-container img {
+                max-width: 30vw;
+                max-height: 35px;
+            }
+            .header {
+                padding-top: 50px;
+                min-height: 85px;
+            }
+        }
+        
+        @media (min-width: 321px) and (max-width: 480px) {
+            /* Móviles estándar */
+            .logo-container img {
+                max-width: 32vw;
+                max-height: 45px;
+            }
+        }
+        
+        @media (min-width: 481px) and (max-width: 768px) {
+            /* Móviles grandes y tablets pequeñas */
+            .logo-container img {
+                max-width: 25vw;
+                max-height: 55px;
+            }
+            .header {
+                padding-top: 70px;
+                min-height: 110px;
+            }
+        }
+        
+        @media (min-width: 769px) and (max-width: 1024px) {
+            /* Tablets */
+            .logo-container img {
+                max-width: 20vw;
+                max-height: 70px;
+            }
+            .header {
+                padding-top: 80px;
+                min-height: 120px;
+            }
+        }
+        
+        @media (min-width: 1025px) {
+            /* Desktop */
+            .logo-container img {
+                max-width: 280px;
+                max-height: 90px;
+            }
+            .header {
+                padding-top: 90px;
+                min-height: 130px;
+            }
         }
         
         h1 {
             color: white;
             text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
             margin: 0;
-            font-size: 1.8em; /* Más pequeño para móvil */
+            font-size: 1.5em; /* Responsivo por defecto */
+        }
+        
+        /* Tamaños de h1 responsivos */
+        @media (max-width: 320px) {
+            h1 {
+                font-size: 1.3em;
+            }
+        }
+        
+        @media (min-width: 481px) and (max-width: 768px) {
+            h1 {
+                font-size: 1.7em;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            h1 {
+                font-size: 2em;
+            }
+        }
+        
+        /* Media queries para orientación landscape en móviles */
+        @media (max-height: 480px) and (orientation: landscape) {
+            .logo-container img {
+                max-height: 30px;
+                max-width: 25vw;
+            }
+            .header {
+                padding-top: 40px;
+                min-height: 70px;
+                margin-bottom: 10px;
+            }
+            h1 {
+                font-size: 1.2em;
+            }
+            body {
+                padding: 5px;
+            }
+        }
+        
+        /* Optimización adicional para pantallas muy pequeñas */
+        @media (max-width: 280px) {
+            .logo-container img {
+                max-width: 28vw;
+                max-height: 30px;
+            }
+            .header {
+                padding-top: 45px;
+                min-height: 75px;
+            }
+            h1 {
+                font-size: 1.2em;
+            }
         }
         
         .container {
@@ -494,12 +618,11 @@
 </head>
 <body>
     <div class="header">
-        <div class="logo-container" style="position: absolute; top: 10px; left: 10px; background: none; padding: 0; box-shadow: none;">
-            <!-- Logo oficial de SISEG limpio sin fondo -->
-            <img src="{% static 'images/logo.png' %}" alt="SISEG - Sistemas de Seguridad Integral" 
-                 style="width: 280px; height: auto; max-height: 90px; object-fit: contain;">
+        <div class="logo-container">
+            <!-- Logo oficial de SISEG responsivo -->
+            <img src="{% static 'images/logo.png' %}" alt="SISEG - Sistemas de Seguridad Integral">
         </div>
-        <h1 style="margin-top: 60px; font-size: 1.6em;">Control de Activos</h1>
+        <h1>Control de Activos</h1>
         <div id="contador-activos" style="margin-top: 10px; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
             📋 Total de activos: <span id="total-activos">Cargando...</span>
         </div>
