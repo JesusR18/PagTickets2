@@ -266,6 +266,48 @@
             box-shadow: 0 6px 16px rgba(5, 150, 105, 0.4);
         }
         
+        .btn-success {
+            background: linear-gradient(135deg, #16a34a, #22c55e);
+            width: 100%;
+            max-width: 300px;
+            min-height: 50px;
+            padding: 18px 25px;
+            border-radius: 12px;
+            color: white;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
+        }
+        
+        .btn-success:hover {
+            box-shadow: 0 6px 16px rgba(22, 163, 74, 0.4);
+            transform: translateY(-2px);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #2563eb, #3b82f6);
+            width: 100%;
+            max-width: 300px;
+            min-height: 50px;
+            padding: 18px 25px;
+            border-radius: 12px;
+            color: white;
+            border: none;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+        
+        .btn-primary:hover {
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+            transform: translateY(-2px);
+        }
+        
         /* Scanner integrado */
         .scanner-container {
             margin: 20px 0;
@@ -833,6 +875,9 @@
                 <textarea id="qr-data-input" placeholder="Escribe aquí la información que quieres convertir en QR seguro...&#10;Ejemplo: Activo-001|Laptop Dell|Oficina Principal|Dell|Excelente"></textarea>
                 
                 <div class="qr-controls">
+                    <button onclick="verificarLibrerias()" class="btn" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); max-width: 200px;">
+                        🔧 Verificar Sistema
+                    </button>
                     <button onclick="generarQRSeguro()" class="btn btn-primary">
                         🔒 Generar QR Seguro
                     </button>
@@ -1863,6 +1908,8 @@
         
         // Función para generar QR seguro
         function generarQRSeguro() {
+            console.log('🔒 Iniciando generación de QR seguro...');
+            
             const input = document.getElementById('qr-data-input');
             const outputSection = document.getElementById('qr-output-section');
             const displayArea = document.getElementById('qr-display-area');
@@ -1873,32 +1920,53 @@
                 return;
             }
             
+            // Verificar que las librerías estén cargadas
+            if (typeof CryptoJS === 'undefined') {
+                console.error('❌ CryptoJS no está cargado');
+                alert('❌ Error: Librería de encriptación no disponible');
+                return;
+            }
+            
+            if (typeof QRCode === 'undefined') {
+                console.error('❌ QRCode no está cargado');
+                alert('❌ Error: Librería de QR no disponible');
+                return;
+            }
+            
             try {
+                console.log('📝 Datos a encriptar:', datos);
+                
                 // Encriptar datos
                 const datosEncriptados = encriptarParaSISEG(datos);
                 if (!datosEncriptados) {
+                    console.error('❌ Error en encriptación');
                     alert('❌ Error al encriptar los datos');
                     return;
                 }
                 
-                // Limpiar área de visualización
-                displayArea.innerHTML = '';
+                console.log('🔐 Datos encriptados exitosamente, longitud:', datosEncriptados.length);
                 
-                // Generar QR con datos encriptados
-                QRCode.toCanvas(datosEncriptados, {
+                // Limpiar área de visualización
+                displayArea.innerHTML = '<p style="color: #991b1b;">⏳ Generando QR seguro...</p>';
+                
+                // Crear un canvas para el QR
+                const canvas = document.createElement('canvas');
+                
+                // Generar QR con datos encriptados usando método alternativo
+                QRCode.toCanvas(canvas, datosEncriptados, {
                     width: 256,
                     height: 256,
+                    margin: 2,
                     color: {
                         dark: '#991b1b',  // Color rojo SISEG
                         light: '#ffffff'
                     },
                     errorCorrectionLevel: 'M'
-                }, function(error, canvas) {
-                    if (error) {
-                        console.error('❌ Error generando QR:', error);
-                        alert('❌ Error al generar el código QR');
-                        return;
-                    }
+                }).then(() => {
+                    console.log('✅ QR generado exitosamente');
+                    
+                    // Limpiar área de visualización
+                    displayArea.innerHTML = '';
                     
                     // Agregar el canvas al área de visualización
                     displayArea.appendChild(canvas);
@@ -1909,17 +1977,26 @@
                     // Mostrar sección de salida
                     outputSection.style.display = 'block';
                     
+                    // Desplazarse hacia el QR generado
+                    outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    
                     // Añadir vibración de confirmación (si está disponible)
                     if (navigator.vibrate) {
                         navigator.vibrate([200, 100, 200]);
                     }
                     
-                    console.log('✅ QR seguro generado exitosamente');
+                    console.log('✅ QR seguro generado y mostrado exitosamente');
+                    
+                }).catch((error) => {
+                    console.error('❌ Error generando QR:', error);
+                    displayArea.innerHTML = '<p style="color: #dc2626;">❌ Error al generar QR</p>';
+                    alert('❌ Error al generar el código QR: ' + error.message);
                 });
                 
             } catch (error) {
-                console.error('❌ Error generando QR seguro:', error);
-                alert('❌ Error al generar el QR seguro');
+                console.error('❌ Error general generando QR seguro:', error);
+                alert('❌ Error al generar el QR seguro: ' + error.message);
+                displayArea.innerHTML = '<p style="color: #dc2626;">❌ Error en generación</p>';
             }
         }
         
@@ -1960,6 +2037,102 @@
             document.getElementById('qr-output-section').style.display = 'none';
             document.getElementById('qr-display-area').innerHTML = '';
             qrActual = null;
+        }
+        
+        // Función para verificar que las librerías estén funcionando
+        function verificarLibrerias() {
+            console.log('🔧 Verificando librerías...');
+            
+            const displayArea = document.getElementById('qr-display-area');
+            let resultados = [];
+            let todoOK = true;
+            
+            // Verificar CryptoJS
+            if (typeof CryptoJS !== 'undefined') {
+                resultados.push('✅ CryptoJS: Disponible');
+                console.log('✅ CryptoJS disponible:', CryptoJS);
+                
+                // Probar encriptación
+                try {
+                    const testData = 'prueba';
+                    const encrypted = CryptoJS.AES.encrypt(testData, 'test-key').toString();
+                    const decrypted = CryptoJS.AES.decrypt(encrypted, 'test-key').toString(CryptoJS.enc.Utf8);
+                    if (decrypted === testData) {
+                        resultados.push('✅ Encriptación AES: Funcionando');
+                    } else {
+                        resultados.push('❌ Encriptación AES: Error en prueba');
+                        todoOK = false;
+                    }
+                } catch (error) {
+                    resultados.push('❌ Encriptación AES: Error - ' + error.message);
+                    todoOK = false;
+                }
+            } else {
+                resultados.push('❌ CryptoJS: No disponible');
+                todoOK = false;
+            }
+            
+            // Verificar QRCode
+            if (typeof QRCode !== 'undefined') {
+                resultados.push('✅ QRCode: Disponible');
+                console.log('✅ QRCode disponible:', QRCode);
+                
+                // Probar generación de QR simple
+                try {
+                    const testCanvas = document.createElement('canvas');
+                    QRCode.toCanvas(testCanvas, 'SISEG_TEST', {
+                        width: 100,
+                        height: 100
+                    }).then(() => {
+                        resultados.push('✅ Generación QR: Funcionando');
+                        mostrarResultadosVerificacion(resultados, true);
+                    }).catch((error) => {
+                        resultados.push('❌ Generación QR: Error - ' + error.message);
+                        mostrarResultadosVerificacion(resultados, false);
+                    });
+                    return; // Salir aquí porque es async
+                } catch (error) {
+                    resultados.push('❌ Generación QR: Error - ' + error.message);
+                    todoOK = false;
+                }
+            } else {
+                resultados.push('❌ QRCode: No disponible');
+                todoOK = false;
+            }
+            
+            // Mostrar resultados (versión sync)
+            mostrarResultadosVerificacion(resultados, todoOK);
+        }
+        
+        // Función para mostrar los resultados de verificación
+        function mostrarResultadosVerificacion(resultados, todoOK) {
+            const displayArea = document.getElementById('qr-display-area');
+            const outputSection = document.getElementById('qr-output-section');
+            
+            let html = '<div style="text-align: left; padding: 20px; background: #f8fafc; border-radius: 8px;">';
+            html += '<h4 style="color: #991b1b; margin-bottom: 15px;">🔧 Diagnóstico del Sistema</h4>';
+            
+            resultados.forEach(resultado => {
+                html += '<p style="margin: 8px 0; font-size: 14px; color: #374151;">' + resultado + '</p>';
+            });
+            
+            if (todoOK) {
+                html += '<div style="margin-top: 15px; padding: 10px; background: #dcfce7; border-radius: 5px; color: #166534;">';
+                html += '<strong>✅ Sistema listo para generar QR seguros</strong>';
+                html += '</div>';
+            } else {
+                html += '<div style="margin-top: 15px; padding: 10px; background: #fee2e2; border-radius: 5px; color: #dc2626;">';
+                html += '<strong>❌ Sistema no está listo. Recarga la página.</strong>';
+                html += '</div>';
+            }
+            
+            html += '</div>';
+            
+            displayArea.innerHTML = html;
+            outputSection.style.display = 'block';
+            
+            // Desplazar hacia los resultados
+            outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
         
         console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
