@@ -7,7 +7,7 @@
     <title>SISEG - Sistemas de Seguridad Integral | Control de Activos</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode/1.5.3/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js"></script>
     <style>
         * {
@@ -1923,13 +1923,13 @@
             // Verificar que las librerías estén cargadas
             if (typeof CryptoJS === 'undefined') {
                 console.error('❌ CryptoJS no está cargado');
-                alert('❌ Error: Librería de encriptación no disponible');
+                alert('❌ Error: Librería de encriptación no disponible. Recarga la página.');
                 return;
             }
             
-            if (typeof QRCode === 'undefined') {
-                console.error('❌ QRCode no está cargado');
-                alert('❌ Error: Librería de QR no disponible');
+            if (typeof QRious === 'undefined') {
+                console.error('❌ QRious no está cargado');
+                alert('❌ Error: Librería de QR no disponible. Recarga la página.');
                 return;
             }
             
@@ -1949,54 +1949,46 @@
                 // Limpiar área de visualización
                 displayArea.innerHTML = '<p style="color: #991b1b;">⏳ Generando QR seguro...</p>';
                 
-                // Crear un canvas para el QR
+                // Crear un canvas para el QR usando QRious
                 const canvas = document.createElement('canvas');
                 
-                // Generar QR con datos encriptados usando método alternativo
-                QRCode.toCanvas(canvas, datosEncriptados, {
-                    width: 256,
-                    height: 256,
-                    margin: 2,
-                    color: {
-                        dark: '#991b1b',  // Color rojo SISEG
-                        light: '#ffffff'
-                    },
-                    errorCorrectionLevel: 'M'
-                }).then(() => {
-                    console.log('✅ QR generado exitosamente');
-                    
-                    // Limpiar área de visualización
-                    displayArea.innerHTML = '';
-                    
-                    // Agregar el canvas al área de visualización
-                    displayArea.appendChild(canvas);
-                    
-                    // Guardar referencia del QR actual
-                    qrActual = canvas;
-                    
-                    // Mostrar sección de salida
-                    outputSection.style.display = 'block';
-                    
-                    // Desplazarse hacia el QR generado
-                    outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                    
-                    // Añadir vibración de confirmación (si está disponible)
-                    if (navigator.vibrate) {
-                        navigator.vibrate([200, 100, 200]);
-                    }
-                    
-                    console.log('✅ QR seguro generado y mostrado exitosamente');
-                    
-                }).catch((error) => {
-                    console.error('❌ Error generando QR:', error);
-                    displayArea.innerHTML = '<p style="color: #dc2626;">❌ Error al generar QR</p>';
-                    alert('❌ Error al generar el código QR: ' + error.message);
+                const qr = new QRious({
+                    element: canvas,
+                    value: datosEncriptados,
+                    size: 256,
+                    background: '#ffffff',
+                    foreground: '#991b1b', // Color rojo SISEG
+                    level: 'M'
                 });
+                
+                console.log('✅ QR generado exitosamente con QRious');
+                
+                // Limpiar área de visualización
+                displayArea.innerHTML = '';
+                
+                // Agregar el canvas al área de visualización
+                displayArea.appendChild(canvas);
+                
+                // Guardar referencia del QR actual
+                qrActual = canvas;
+                
+                // Mostrar sección de salida
+                outputSection.style.display = 'block';
+                
+                // Desplazarse hacia el QR generado
+                outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                // Añadir vibración de confirmación (si está disponible)
+                if (navigator.vibrate) {
+                    navigator.vibrate([200, 100, 200]);
+                }
+                
+                console.log('✅ QR seguro generado y mostrado exitosamente');
                 
             } catch (error) {
                 console.error('❌ Error general generando QR seguro:', error);
                 alert('❌ Error al generar el QR seguro: ' + error.message);
-                displayArea.innerHTML = '<p style="color: #dc2626;">❌ Error en generación</p>';
+                displayArea.innerHTML = '<p style="color: #dc2626;">❌ Error: ' + error.message + '</p>';
             }
         }
         
@@ -2072,31 +2064,27 @@
                 todoOK = false;
             }
             
-            // Verificar QRCode
-            if (typeof QRCode !== 'undefined') {
-                resultados.push('✅ QRCode: Disponible');
-                console.log('✅ QRCode disponible:', QRCode);
+            // Verificar QRious
+            if (typeof QRious !== 'undefined') {
+                resultados.push('✅ QRious: Disponible');
+                console.log('✅ QRious disponible:', QRious);
                 
                 // Probar generación de QR simple
                 try {
                     const testCanvas = document.createElement('canvas');
-                    QRCode.toCanvas(testCanvas, 'SISEG_TEST', {
-                        width: 100,
-                        height: 100
-                    }).then(() => {
-                        resultados.push('✅ Generación QR: Funcionando');
-                        mostrarResultadosVerificacion(resultados, true);
-                    }).catch((error) => {
-                        resultados.push('❌ Generación QR: Error - ' + error.message);
-                        mostrarResultadosVerificacion(resultados, false);
+                    const testQR = new QRious({
+                        element: testCanvas,
+                        value: 'SISEG_TEST',
+                        size: 100
                     });
-                    return; // Salir aquí porque es async
+                    resultados.push('✅ Generación QR: Funcionando');
+                    todoOK = true;
                 } catch (error) {
                     resultados.push('❌ Generación QR: Error - ' + error.message);
                     todoOK = false;
                 }
             } else {
-                resultados.push('❌ QRCode: No disponible');
+                resultados.push('❌ QRious: No disponible');
                 todoOK = false;
             }
             
