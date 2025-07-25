@@ -1033,25 +1033,6 @@
                     // Actualizar contador de activos
                     document.getElementById('total-activos').textContent = data.activos.length;
                     
-                    // Agregar hint de swipe solo en móvil
-                    const esMobileParaHint = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-                    if (esMobileParaHint) {
-                        const hintRow = document.createElement('tr');
-                        hintRow.innerHTML = `
-                            <td class="swipe-hint" style="text-align: center; color: #6b7280; font-size: 12px; padding: 10px; background: #f9fafb; border-radius: 5px;">
-                                � Desliza las filas hacia la izquierda para eliminarlas
-                            </td>
-                            <td style="display: none;"></td>
-                            <td style="display: none;"></td>
-                            <td style="display: none;"></td>
-                            <td style="display: none;"></td>
-                            <td style="display: none;"></td>
-                            <td style="display: none;"></td>
-                            <td style="display: none;"></td>
-                        `;
-                        tbody.appendChild(hintRow);
-                    }
-                    
                     data.activos.forEach((activo, index) => {
                         const fila = document.createElement('tr');
                         fila.classList.add('fila-swipe');
@@ -1489,12 +1470,13 @@
         }
         
         // Actualizar activos cada 30 segundos
-        setInterval(cargarActivosEscaneados, 30000);
+        // Recargar datos periódicamente (comentado para evitar confusión)
+        // setInterval(cargarActivosEscaneados, 30000);
         
         // Manejar cambio de tamaño de ventana para reconfigurar eventos
         window.addEventListener('resize', function() {
-            // Recargar activos para aplicar el layout correcto
-            setTimeout(cargarActivosEscaneados, 100);
+            // Simplemente reconfigurar layout sin recargar datos
+            console.log('📏 Ventana redimensionada');
         });
         
         console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
