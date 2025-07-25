@@ -495,10 +495,9 @@
 <body>
     <div class="header">
         <div class="logo-container" style="position: absolute; top: 20px; left: 20px; background: none; padding: 0; box-shadow: none;">
-            <!-- Logo oficial de SISEG sin enlace y con recorte sutil -->
+            <!-- Logo oficial de SISEG completo sin recortes -->
             <img src="{% static 'images/logo.jpg' %}" alt="SISEG - Sistemas de Seguridad Integral" 
-                 style="width: 200px; height: auto; max-height: 60px; object-fit: cover; 
-                        object-position: center; clip-path: inset(5% 5% 5% 5%);">
+                 style="width: 200px; height: auto; max-height: 60px; object-fit: contain;">
         </div>
         <h1 style="margin-top: 40px; font-size: 1.6em;">Control de Activos</h1>
         <div id="contador-activos" style="margin-top: 10px; font-size: 14px; color: rgba(255, 255, 255, 0.8);">
