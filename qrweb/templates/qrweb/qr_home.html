@@ -108,16 +108,18 @@
         }
         
         .camera-container {
-            position: relative;
-            max-width: 100%;
-            width: 100%;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            width: 100vw;
             height: 100vh;
             margin: 0;
             background: #000;
             overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            z-index: 1000;
+            display: none;
         }
         
         #video {
@@ -125,110 +127,140 @@
             height: 100%;
             object-fit: cover;
             display: block;
+            position: absolute;
+            top: 0;
+            left: 0;
         }
         
         #canvas {
             display: none;
         }
         
-        /* Overlay de escaneo con esquinas redondeadas */
+        /* Overlay completo estilo WhatsApp */
         .scan-overlay {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.7);
             z-index: 10;
             pointer-events: none;
         }
         
-        /* Marco de escaneo central */
+        /* Marco de escaneo central estilo WhatsApp */
         .scan-frame {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            border-radius: 20px;
-            background: transparent;
-            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+            width: 280px;
+            height: 280px;
             z-index: 15;
         }
         
-        /* Esquinas del marco de escaneo */
+        /* Área transparente en el centro */
+        .scan-frame::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: -20px;
+            right: -20px;
+            bottom: -20px;
+            box-shadow: 
+                0 0 0 20px rgba(0, 0, 0, 0.7),
+                0 0 0 9999px rgba(0, 0, 0, 0.7);
+            border-radius: 20px;
+        }
+        
+        /* Marco con esquinas estilo WhatsApp */
+        .scan-frame::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            border: 3px solid #25D366;
+            border-radius: 20px;
+            background: transparent;
+            box-shadow: 0 0 20px rgba(37, 211, 102, 0.5);
+        }
+        
+        /* Esquinas decorativas estilo WhatsApp */
         .scan-corners {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 250px;
-            height: 250px;
+            width: 280px;
+            height: 280px;
             z-index: 20;
         }
         
         .corner {
             position: absolute;
-            width: 30px;
-            height: 30px;
-            border: 3px solid #fff;
+            width: 40px;
+            height: 40px;
+            border: 4px solid #25D366;
+            border-radius: 8px;
         }
         
         .corner.top-left {
-            top: -3px;
-            left: -3px;
+            top: -8px;
+            left: -8px;
             border-right: none;
             border-bottom: none;
             border-top-left-radius: 20px;
         }
         
         .corner.top-right {
-            top: -3px;
-            right: -3px;
+            top: -8px;
+            right: -8px;
             border-left: none;
             border-bottom: none;
             border-top-right-radius: 20px;
         }
         
         .corner.bottom-left {
-            bottom: -3px;
-            left: -3px;
+            bottom: -8px;
+            left: -8px;
             border-right: none;
             border-top: none;
             border-bottom-left-radius: 20px;
         }
         
         .corner.bottom-right {
-            bottom: -3px;
-            right: -3px;
+            bottom: -8px;
+            right: -8px;
             border-left: none;
             border-top: none;
             border-bottom-right-radius: 20px;
         }
         
-        /* Mensaje de instrucción */
+        /* Mensaje de instrucción estilo WhatsApp */
         .scan-instruction {
             position: absolute;
-            top: 30%;
+            top: 20%;
             left: 50%;
             transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(37, 211, 102, 0.95);
             color: white;
-            padding: 12px 20px;
-            border-radius: 25px;
+            padding: 15px 25px;
+            border-radius: 30px;
             font-size: 16px;
-            font-weight: 500;
+            font-weight: 600;
             z-index: 25;
             text-align: center;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
             transition: all 0.3s ease;
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
         }
         
         .scan-instruction.success {
-            background: rgba(16, 185, 129, 0.9);
-            transform: translateX(-50%) scale(1.1);
+            background: rgba(16, 185, 129, 0.95);
+            transform: translateX(-50%) scale(1.05);
+            box-shadow: 0 8px 30px rgba(16, 185, 129, 0.5);
         }
         
         /* Estado de conexión */
@@ -262,61 +294,68 @@
             100% { opacity: 1; }
         }
         
-        /* Línea de escaneo animada */
+        /* Línea de escaneo animada estilo WhatsApp */
         .scan-line {
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, transparent, #00ff00, transparent);
-            animation: scanAnimation 2s ease-in-out infinite;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, #25D366, transparent);
+            border-radius: 2px;
+            animation: scanAnimation 2.5s ease-in-out infinite;
             z-index: 25;
+            box-shadow: 0 0 10px rgba(37, 211, 102, 0.8);
         }
         
         @keyframes scanAnimation {
             0% {
                 transform: translateY(0);
+                opacity: 0;
+            }
+            20% {
                 opacity: 1;
             }
-            50% {
+            80% {
                 opacity: 1;
             }
             100% {
-                transform: translateY(248px);
+                transform: translateY(276px);
                 opacity: 0;
             }
         }
         
+        /* Controles de zoom estilo WhatsApp */
         .zoom-controls-real {
             position: absolute;
-            bottom: 120px;
+            bottom: 140px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 15px;
-            padding: 12px 20px;
-            background: rgba(0, 0, 0, 0.8);
-            border-radius: 25px;
-            backdrop-filter: blur(10px);
+            gap: 20px;
+            padding: 15px 25px;
+            background: rgba(0, 0, 0, 0.85);
+            border-radius: 30px;
+            backdrop-filter: blur(15px);
             z-index: 30;
-            border: 1px solid rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
         
         .zoom-btn-real {
             background: transparent;
             color: white;
-            border: 2px solid rgba(255, 255, 255, 0.8);
-            padding: 8px 12px;
+            border: 2px solid rgba(255, 255, 255, 0.6);
+            padding: 10px;
             border-radius: 50%;
-            font-size: 18px;
+            font-size: 20px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
-            min-width: 45px;
-            height: 45px;
+            width: 50px;
+            height: 50px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -325,17 +364,19 @@
         .zoom-btn-real:hover {
             background: rgba(255, 255, 255, 0.2);
             transform: scale(1.1);
+            border-color: rgba(255, 255, 255, 0.8);
         }
         
         .zoom-display {
             background: transparent;
             color: white;
-            padding: 8px 15px;
-            border-radius: 15px;
+            padding: 10px 20px;
+            border-radius: 20px;
             font-weight: bold;
-            font-size: 16px;
-            min-width: 60px;
+            font-size: 18px;
+            min-width: 70px;
             text-align: center;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         }
         
         .zoom-slider-real {
@@ -382,56 +423,62 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
         
+        /* Botones de control estilo WhatsApp */
         .control-buttons {
             position: absolute;
-            bottom: 20px;
+            bottom: 30px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             justify-content: center;
-            gap: 15px;
+            gap: 20px;
             z-index: 30;
         }
         
         .control-btn {
-            background: rgba(220, 38, 38, 0.9);
+            background: rgba(220, 38, 38, 0.95);
             color: white;
             border: none;
-            padding: 12px 24px;
-            border-radius: 25px;
+            padding: 15px 30px;
+            border-radius: 30px;
             font-size: 16px;
-            font-weight: bold;
+            font-weight: 600;
             cursor: pointer;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
         
         .control-btn:hover {
             background: rgba(220, 38, 38, 1);
             transform: scale(1.05);
+            box-shadow: 0 6px 25px rgba(220, 38, 38, 0.6);
         }
         
-        /* Botón de flash/linterna */
+        /* Botón de flash/linterna estilo WhatsApp */
         .flash-btn {
             position: absolute;
-            bottom: 180px;
+            bottom: 200px;
             right: 30px;
-            background: rgba(0, 0, 0, 0.8);
+            background: rgba(0, 0, 0, 0.85);
             color: white;
             border: none;
-            width: 50px;
-            height: 50px;
+            width: 60px;
+            height: 60px;
             border-radius: 50%;
-            font-size: 20px;
+            font-size: 24px;
             cursor: pointer;
             transition: all 0.3s ease;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
             border: 1px solid rgba(255, 255, 255, 0.2);
             z-index: 30;
             display: flex;
             align-items: center;
             justify-content: center;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
         }
         
         .flash-btn:hover {
@@ -440,8 +487,9 @@
         }
         
         .flash-btn.active {
-            background: rgba(255, 206, 84, 0.9);
+            background: rgba(255, 206, 84, 0.95);
             color: #000;
+            box-shadow: 0 4px 20px rgba(255, 206, 84, 0.5);
         }
         
         h2 {
@@ -637,7 +685,7 @@
                 </div>
                 
                 <!-- Mensaje de instrucción -->
-                <div class="scan-instruction">Find a code to scan</div>
+                <div class="scan-instruction">📱 Coloca el código QR dentro del marco</div>
                 
                 <!-- Botón de flash/linterna -->
                 <button onclick="toggleFlash()" class="flash-btn" id="flash-btn">🔦</button>

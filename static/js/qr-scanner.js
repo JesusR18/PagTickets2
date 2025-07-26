@@ -86,7 +86,9 @@ async function iniciarScanner() {
         video.srcObject = videoStream;
         
         video.onloadedmetadata = async () => {
-            // Ocultar header y mostrar cámara en pantalla completa
+            // Cambiar a pantalla completa estilo WhatsApp
+            document.body.style.overflow = 'hidden';
+            
             const header = document.querySelector('.header');
             const container = document.querySelector('.container');
             
@@ -94,19 +96,23 @@ async function iniciarScanner() {
             if (container) {
                 container.style.padding = '0';
                 container.style.maxWidth = '100%';
+                container.style.margin = '0';
             }
             
-            document.getElementById('camera-container').style.display = 'block';
+            // Mostrar cámara en pantalla completa
+            const cameraContainer = document.getElementById('camera-container');
+            cameraContainer.style.display = 'block';
+            
             document.getElementById('init-btn').style.display = 'none';
             document.getElementById('status-message').style.display = 'none';
             
             scannerActivo = true;
-            console.log('✅ Cámara iniciada en pantalla completa');
+            console.log('✅ Scanner WhatsApp iniciado en pantalla completa');
             
-            // Actualizar mensaje de escaneo
+            // Actualizar mensaje inicial
             const scanInstruction = document.querySelector('.scan-instruction');
             if (scanInstruction) {
-                scanInstruction.textContent = 'Coloca el código QR dentro del marco';
+                scanInstruction.textContent = '📱 Coloca el código QR dentro del marco';
             }
             
             // Aplicar zoom inicial
@@ -267,6 +273,8 @@ function detenerScanner() {
     }
     
     // Restaurar vista normal
+    document.body.style.overflow = 'auto';
+    
     const header = document.querySelector('.header');
     const container = document.querySelector('.container');
     
@@ -274,6 +282,7 @@ function detenerScanner() {
     if (container) {
         container.style.padding = '20px';
         container.style.maxWidth = '600px';
+        container.style.margin = '0 auto';
     }
     
     document.getElementById('camera-container').style.display = 'none';
@@ -283,7 +292,7 @@ function detenerScanner() {
     setEmojiContent(document.getElementById('init-btn'), '📹 INICIAR SCANNER QR');
     
     scannerActivo = false;
-    actualizarEstado('Scanner detenido. Presiona el botón para reiniciar', null);
+    actualizarEstado('✅ Scanner detenido. Presiona el botón para reiniciar', null);
 }
 
 // Función para detectar códigos QR con enfoque en el área central
@@ -306,30 +315,38 @@ function iniciarDeteccionQR() {
                 if (code) {
                     console.log('🎯 Código QR detectado:', code.data);
                     
-                    // Actualizar mensaje de instrucción
+                    // Actualizar mensaje de instrucción con éxito
                     const scanInstruction = document.querySelector('.scan-instruction');
                     if (scanInstruction) {
-                        scanInstruction.textContent = '✅ ¡Código detectado!';
+                        scanInstruction.textContent = '✅ ¡Código QR escaneado exitosamente!';
                         scanInstruction.classList.add('success');
                     }
                     
-                    // Vibración de confirmación
+                    // Vibración de confirmación más intensa
                     if (navigator.vibrate) {
-                        navigator.vibrate([200, 100, 200]);
+                        navigator.vibrate([300, 100, 300]);
                     }
                     
-                    // Parar la línea de escaneo
+                    // Parar la línea de escaneo y cambiar color
                     const scanLine = document.querySelector('.scan-line');
                     if (scanLine) {
                         scanLine.style.animationPlayState = 'paused';
                         scanLine.style.background = 'linear-gradient(90deg, transparent, #10b981, transparent)';
+                        scanLine.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.8)';
                     }
                     
-                    // Esperar un momento antes de procesar para dar feedback visual
+                    // Cambiar color del marco a verde
+                    const scanFrame = document.querySelector('.scan-frame');
+                    if (scanFrame && scanFrame.querySelector) {
+                        const frameAfter = scanFrame;
+                        frameAfter.style.borderColor = '#10b981';
+                    }
+                    
+                    // Esperar un momento para feedback visual antes de procesar
                     setTimeout(() => {
                         registrarCodigo(code.data);
                         detenerScanner();
-                    }, 1500);
+                    }, 2000);
                     
                     return;
                 }
