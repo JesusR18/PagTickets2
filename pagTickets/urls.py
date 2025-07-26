@@ -6,7 +6,7 @@ Para más información ver:
     https://docs.djangoproject.com/en/5.2/topics/http/urls/
 """
 # Importa la función path para definir rutas URL
-from django.urls import path
+from django.urls import path, include
 # Importa las vistas de la aplicación principal
 from . import views
 
@@ -28,4 +28,6 @@ urlpatterns = [
     path('exportar_activos_excel/', views.exportar_activos_excel, name='exportar_activos_excel'),
     # Ruta para eliminar todos los activos
     path('eliminar_todos_activos/', views.eliminar_todos_activos, name='eliminar_todos_activos'),
+    # Ruta para la app qrweb (scanner QR simple)
+    path('qr/', include('qrweb.urls')),
 ]

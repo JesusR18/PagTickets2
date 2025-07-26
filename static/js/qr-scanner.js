@@ -17,6 +17,7 @@ let zoomMin = 1.0;
 let zoomMax = 10.0;
 let zoomTimeout = null;
 let zoomPendiente = null;
+let flashActivo = false;
 
 // Función para manejar emojis de forma segura
 function setEmojiContent(element, content) {
@@ -211,6 +212,52 @@ async function cambiarZoom(valor) {
     }, 100);
 }
 
+// Función para alternar flash/linterna
+async function toggleFlash() {
+    if (!videoTrack) return;
+    
+    const flashBtn = document.getElementById('flash-btn');
+    
+    try {
+        const capabilities = videoTrack.getCapabilities();
+        
+        if (capabilities.torch) {
+            flashActivo = !flashActivo;
+            
+            await videoTrack.applyConstraints({
+                advanced: [{ torch: flashActivo }]
+            });
+            
+            // Actualizar UI del botón
+            if (flashActivo) {
+                flashBtn.classList.add('active');
+                flashBtn.textContent = '🔆';
+            } else {
+                flashBtn.classList.remove('active');
+                flashBtn.textContent = '🔦';
+            }
+            
+            // Vibración de feedback
+            if (navigator.vibrate) {
+                navigator.vibrate(50);
+            }
+            
+            console.log(`🔦 Flash ${flashActivo ? 'activado' : 'desactivado'}`);
+        } else {
+            console.warn('⚠️ Flash no soportado en este dispositivo');
+            
+            // Mostrar feedback visual aunque no funcione
+            flashBtn.style.background = 'rgba(255, 100, 100, 0.8)';
+            setTimeout(() => {
+                flashBtn.style.background = 'rgba(0, 0, 0, 0.8)';
+            }, 1000);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error controlando flash:', error);
+    }
+}
+
 // Función para detener el scanner
 function detenerScanner() {
     if (videoStream) {
@@ -263,7 +310,7 @@ function iniciarDeteccionQR() {
                     const scanInstruction = document.querySelector('.scan-instruction');
                     if (scanInstruction) {
                         scanInstruction.textContent = '✅ ¡Código detectado!';
-                        scanInstruction.style.background = 'rgba(16, 185, 129, 0.9)';
+                        scanInstruction.classList.add('success');
                     }
                     
                     // Vibración de confirmación
@@ -271,11 +318,18 @@ function iniciarDeteccionQR() {
                         navigator.vibrate([200, 100, 200]);
                     }
                     
+                    // Parar la línea de escaneo
+                    const scanLine = document.querySelector('.scan-line');
+                    if (scanLine) {
+                        scanLine.style.animationPlayState = 'paused';
+                        scanLine.style.background = 'linear-gradient(90deg, transparent, #10b981, transparent)';
+                    }
+                    
                     // Esperar un momento antes de procesar para dar feedback visual
                     setTimeout(() => {
                         registrarCodigo(code.data);
                         detenerScanner();
-                    }, 1000);
+                    }, 1500);
                     
                     return;
                 }
@@ -292,20 +346,23 @@ function iniciarDeteccionQR() {
 
 // Función para registrar código QR
 function registrarCodigo(codigo) {
-    fetch('/registrar_qr/', {
+    fetch('/qr/registrar_qr/', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken')
+        },
         body: JSON.stringify({ codigo_qr: codigo })
     })
     .then(response => response.json())
     .then(data => {
         const resultDiv = document.getElementById('result');
-        if (data.success) {
+        if (data.status === 'ok') {
             resultDiv.innerHTML = `✅ <strong>Código registrado:</strong><br>${data.codigo_qr}`;
             resultDiv.style.background = 'rgba(16, 185, 129, 0.9)';
         } else {
-            resultDiv.innerHTML = `⚠️ <strong>${data.message}</strong><br>Código: ${codigo}`;
-            resultDiv.style.background = 'rgba(245, 158, 11, 0.9)';
+            resultDiv.innerHTML = `❌ <strong>Error:</strong> ${data.message}<br>Código: ${codigo}`;
+            resultDiv.style.background = 'rgba(239, 68, 68, 0.9)';
         }
         resultDiv.style.display = 'block';
         actualizarRegistros();
@@ -317,6 +374,22 @@ function registrarCodigo(codigo) {
         resultDiv.style.background = 'rgba(239, 68, 68, 0.9)';
         resultDiv.style.display = 'block';
     });
+}
+
+// Función para obtener cookie CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
 }
 
 // Función para actualizar la lista de registros
