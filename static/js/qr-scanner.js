@@ -56,13 +56,13 @@ async function iniciarScanner() {
         
         document.getElementById('init-btn').disabled = true;
         
-        // Configuración optimizada para móviles
+        // Configuración optimizada para pantalla completa
         const constraints = {
             video: {
                 facingMode: 'environment', // Cámara trasera preferida
-                width: { ideal: 640 },
-                height: { ideal: 480 },
-                aspectRatio: { ideal: 4/3 }
+                width: { ideal: 1280, min: 640 },
+                height: { ideal: 720, min: 480 },
+                aspectRatio: { ideal: 16/9 }
             }
         };
         
@@ -85,11 +85,28 @@ async function iniciarScanner() {
         video.srcObject = videoStream;
         
         video.onloadedmetadata = async () => {
+            // Ocultar header y mostrar cámara en pantalla completa
+            const header = document.querySelector('.header');
+            const container = document.querySelector('.container');
+            
+            if (header) header.style.display = 'none';
+            if (container) {
+                container.style.padding = '0';
+                container.style.maxWidth = '100%';
+            }
+            
             document.getElementById('camera-container').style.display = 'block';
             document.getElementById('init-btn').style.display = 'none';
+            document.getElementById('status-message').style.display = 'none';
             
             scannerActivo = true;
-            actualizarEstado('✅ Cámara iniciada. Enfoca un código QR', 'success');
+            console.log('✅ Cámara iniciada en pantalla completa');
+            
+            // Actualizar mensaje de escaneo
+            const scanInstruction = document.querySelector('.scan-instruction');
+            if (scanInstruction) {
+                scanInstruction.textContent = 'Coloca el código QR dentro del marco';
+            }
             
             // Aplicar zoom inicial
             if (capabilities.zoom) {
@@ -202,16 +219,27 @@ function detenerScanner() {
         videoTrack = null;
     }
     
+    // Restaurar vista normal
+    const header = document.querySelector('.header');
+    const container = document.querySelector('.container');
+    
+    if (header) header.style.display = 'block';
+    if (container) {
+        container.style.padding = '20px';
+        container.style.maxWidth = '600px';
+    }
+    
     document.getElementById('camera-container').style.display = 'none';
     document.getElementById('init-btn').style.display = 'block';
     document.getElementById('init-btn').disabled = false;
+    document.getElementById('status-message').style.display = 'block';
     setEmojiContent(document.getElementById('init-btn'), '📹 INICIAR SCANNER QR');
     
     scannerActivo = false;
     actualizarEstado('Scanner detenido. Presiona el botón para reiniciar', null);
 }
 
-// Función para detectar códigos QR
+// Función para detectar códigos QR con enfoque en el área central
 function iniciarDeteccionQR() {
     if (!scannerActivo || !video || !canvas || !context) return;
     
@@ -224,15 +252,31 @@ function iniciarDeteccionQR() {
                 canvas.height = video.videoHeight;
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
+                // Obtener imagen completa
                 const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
                 const code = jsQR(imageData.data, imageData.width, imageData.height);
                 
                 if (code) {
                     console.log('🎯 Código QR detectado:', code.data);
-                    actualizarEstado('✅ ¡Código detectado! Registrando...', 'success');
                     
-                    registrarCodigo(code.data);
-                    detenerScanner();
+                    // Actualizar mensaje de instrucción
+                    const scanInstruction = document.querySelector('.scan-instruction');
+                    if (scanInstruction) {
+                        scanInstruction.textContent = '✅ ¡Código detectado!';
+                        scanInstruction.style.background = 'rgba(16, 185, 129, 0.9)';
+                    }
+                    
+                    // Vibración de confirmación
+                    if (navigator.vibrate) {
+                        navigator.vibrate([200, 100, 200]);
+                    }
+                    
+                    // Esperar un momento antes de procesar para dar feedback visual
+                    setTimeout(() => {
+                        registrarCodigo(code.data);
+                        detenerScanner();
+                    }, 1000);
+                    
                     return;
                 }
             }

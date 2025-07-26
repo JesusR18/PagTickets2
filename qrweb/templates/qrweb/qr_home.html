@@ -108,17 +108,20 @@
         
         .camera-container {
             position: relative;
-            max-width: 320px;
-            margin: 15px auto;
+            max-width: 100%;
+            width: 100%;
+            height: 100vh;
+            margin: 0;
             background: #000;
-            border-radius: 12px;
             overflow: hidden;
-            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         #video {
             width: 100%;
-            height: 240px;
+            height: 100%;
             object-fit: cover;
             display: block;
         }
@@ -127,41 +130,170 @@
             display: none;
         }
         
+        /* Overlay de escaneo con esquinas redondeadas */
+        .scan-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.6);
+            z-index: 10;
+            pointer-events: none;
+        }
+        
+        /* Marco de escaneo central */
+        .scan-frame {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            border-radius: 20px;
+            background: transparent;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.6);
+            z-index: 15;
+        }
+        
+        /* Esquinas del marco de escaneo */
+        .scan-corners {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 250px;
+            height: 250px;
+            z-index: 20;
+        }
+        
+        .corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 3px solid #fff;
+        }
+        
+        .corner.top-left {
+            top: -3px;
+            left: -3px;
+            border-right: none;
+            border-bottom: none;
+            border-top-left-radius: 20px;
+        }
+        
+        .corner.top-right {
+            top: -3px;
+            right: -3px;
+            border-left: none;
+            border-bottom: none;
+            border-top-right-radius: 20px;
+        }
+        
+        .corner.bottom-left {
+            bottom: -3px;
+            left: -3px;
+            border-right: none;
+            border-top: none;
+            border-bottom-left-radius: 20px;
+        }
+        
+        .corner.bottom-right {
+            bottom: -3px;
+            right: -3px;
+            border-left: none;
+            border-top: none;
+            border-bottom-right-radius: 20px;
+        }
+        
+        /* Mensaje de instrucción */
+        .scan-instruction {
+            position: absolute;
+            top: 30%;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: 500;
+            z-index: 25;
+            text-align: center;
+            backdrop-filter: blur(10px);
+        }
+        
+        /* Línea de escaneo animada */
+        .scan-line {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00ff00, transparent);
+            animation: scanAnimation 2s ease-in-out infinite;
+            z-index: 25;
+        }
+        
+        @keyframes scanAnimation {
+            0% {
+                transform: translateY(0);
+                opacity: 1;
+            }
+            50% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(248px);
+                opacity: 0;
+            }
+        }
+        
         .zoom-controls-real {
+            position: absolute;
+            bottom: 120px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             justify-content: center;
             align-items: center;
             gap: 15px;
-            margin: 10px 0;
-            padding: 10px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 12px;
+            padding: 12px 20px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 25px;
             backdrop-filter: blur(10px);
+            z-index: 30;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .zoom-btn-real {
-            background: linear-gradient(135deg, #059669, #10b981);
+            background: transparent;
             color: white;
-            border: none;
+            border: 2px solid rgba(255, 255, 255, 0.8);
             padding: 8px 12px;
-            border-radius: 8px;
-            font-size: 14px;
+            border-radius: 50%;
+            font-size: 18px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
-            min-width: 90px;
+            min-width: 45px;
+            height: 45px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
         
         .zoom-btn-real:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+            background: rgba(255, 255, 255, 0.2);
+            transform: scale(1.1);
         }
         
         .zoom-display {
-            background: rgba(255, 255, 255, 0.95);
-            color: #991b1b;
+            background: transparent;
+            color: white;
             padding: 8px 15px;
-            border-radius: 8px;
+            border-radius: 15px;
             font-weight: bold;
             font-size: 16px;
             min-width: 60px;
@@ -169,18 +301,26 @@
         }
         
         .zoom-slider-real {
-            margin: 10px 0;
-            padding: 10px;
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 15px 30px;
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 25px;
+            backdrop-filter: blur(10px);
+            z-index: 30;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         #zoom-range {
-            width: 100%;
-            max-width: 280px;
+            width: 200px;
             height: 6px;
             border-radius: 3px;
-            background: #ddd;
+            background: rgba(255, 255, 255, 0.3);
             outline: none;
             -webkit-appearance: none;
+            appearance: none;
         }
         
         #zoom-range::-webkit-slider-thumb {
@@ -189,41 +329,49 @@
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: #991b1b;
+            background: #fff;
             cursor: pointer;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
         
         #zoom-range::-moz-range-thumb {
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: #991b1b;
+            background: #fff;
             cursor: pointer;
             border: none;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
         
         .control-buttons {
-            margin: 10px 0;
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
             display: flex;
             justify-content: center;
-            gap: 10px;
+            gap: 15px;
+            z-index: 30;
         }
         
         .control-btn {
-            background: linear-gradient(135deg, #dc2626, #ef4444);
+            background: rgba(220, 38, 38, 0.9);
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 10px;
-            font-size: 14px;
+            padding: 12px 24px;
+            border-radius: 25px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 16px rgba(220, 38, 38, 0.4);
+            background: rgba(220, 38, 38, 1);
+            transform: scale(1.05);
         }
         
         h2 {
@@ -267,29 +415,83 @@
         /* Responsivo */
         @media (max-width: 768px) {
             .container {
-                padding: 10px;
+                padding: 0;
             }
             
             .camera-container {
-                max-width: 280px;
+                max-width: 100%;
+                height: 100vh;
+                border-radius: 0;
             }
             
-            #video {
+            .scan-frame {
+                width: 200px;
+                height: 200px;
+            }
+            
+            .scan-corners {
+                width: 200px;
                 height: 200px;
             }
             
             .zoom-controls-real {
+                bottom: 100px;
                 gap: 10px;
+                padding: 8px 16px;
             }
             
             .zoom-btn-real {
-                min-width: 70px;
-                font-size: 12px;
+                min-width: 40px;
+                height: 40px;
+                font-size: 16px;
                 padding: 6px 10px;
+            }
+            
+            .zoom-slider-real {
+                bottom: 50px;
+                padding: 10px 20px;
+            }
+            
+            #zoom-range {
+                width: 150px;
+            }
+            
+            .control-buttons {
+                bottom: 10px;
+            }
+            
+            .control-btn {
+                padding: 10px 20px;
+                font-size: 14px;
             }
             
             h1 {
                 font-size: 1.8em;
+            }
+            
+            .header {
+                margin-bottom: 0;
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 50;
+                background: rgba(153, 27, 27, 0.95);
+                backdrop-filter: blur(10px);
+                padding: 10px;
+            }
+            
+            .init-btn {
+                position: fixed;
+                bottom: 50%;
+                left: 50%;
+                transform: translate(-50%, 50%);
+                z-index: 100;
+            }
+            
+            body {
+                padding: 0;
+                margin: 0;
             }
         }
     </style>
@@ -321,19 +523,38 @@
                 <video id="video" autoplay playsinline></video>
                 <canvas id="canvas"></canvas>
                 
-                <!-- Controles de Zoom REAL -->
-                <div class="zoom-controls-real">
-                    <button onclick="aplicarZoom(-1)" class="zoom-btn-real">➖ ZOOM</button>
-                    <span id="zoom-display-real" class="zoom-display">1.0x</span>
-                    <button onclick="aplicarZoom(1)" class="zoom-btn-real">➕ ZOOM</button>
+                <!-- Overlay de escaneo con marco central -->
+                <div class="scan-overlay"></div>
+                
+                <!-- Marco de escaneo central -->
+                <div class="scan-frame">
+                    <div class="scan-line"></div>
                 </div>
                 
-                <!-- Slider de zoom -->
+                <!-- Esquinas del marco -->
+                <div class="scan-corners">
+                    <div class="corner top-left"></div>
+                    <div class="corner top-right"></div>
+                    <div class="corner bottom-left"></div>
+                    <div class="corner bottom-right"></div>
+                </div>
+                
+                <!-- Mensaje de instrucción -->
+                <div class="scan-instruction">Find a code to scan</div>
+                
+                <!-- Controles de Zoom REAL (flotantes) -->
+                <div class="zoom-controls-real">
+                    <button onclick="aplicarZoom(-1)" class="zoom-btn-real">➖</button>
+                    <span id="zoom-display-real" class="zoom-display">1.0x</span>
+                    <button onclick="aplicarZoom(1)" class="zoom-btn-real">➕</button>
+                </div>
+                
+                <!-- Slider de zoom (flotante) -->
                 <div class="zoom-slider-real">
                     <input type="range" id="zoom-range" min="1" max="10" step="0.1" value="1" oninput="cambiarZoom(this.value)">
                 </div>
                 
-                <!-- Botones de control -->
+                <!-- Botones de control (flotantes) -->
                 <div class="control-buttons">
                     <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER</button>
                 </div>
