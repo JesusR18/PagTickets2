@@ -64,6 +64,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',     # Framework de sesiones
     'django.contrib.messages',     # Framework de mensajes
     'django.contrib.staticfiles',  # Manejo de archivos estáticos (CSS, JS, imágenes)
+    'corsheaders',                 # Para CORS en producción
     'pagTickets.apps.PagTicketsConfig',  # Aplicación principal del proyecto
     'qrweb',                      # Nuestra aplicación personalizada para códigos QR
 ]
@@ -72,6 +73,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',           # Seguridad
     'whitenoise.middleware.WhiteNoiseMiddleware',              # Para servir archivos estáticos
+    'corsheaders.middleware.CorsMiddleware',                   # CORS para producción
     'django.contrib.sessions.middleware.SessionMiddleware',    # Sesiones
     'django.middleware.common.CommonMiddleware',               # Funcionalidad común
     'django.middleware.csrf.CsrfViewMiddleware',              # Protección CSRF

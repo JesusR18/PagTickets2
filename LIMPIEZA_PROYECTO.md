@@ -26,13 +26,13 @@
 - ngrok_tunel.bat (script de túnel)
 
 ### 🚀 ARCHIVOS RAILWAY ELIMINADOS (despliegue no usado):
-- manage_railway.py (gestión Railway)
-- railway.toml (configuración Railway)
-- Procfile (despliegue en Railway/Heroku)
+- manage_railway.py (gestión Railway) - RESTAURADO PARA DESPLIEGUE
+- railway.toml (configuración Railway) - RESTAURADO PARA DESPLIEGUE
+- Procfile (despliegue en Railway/Heroku) - RESTAURADO PARA DESPLIEGUE
 - start_railway.sh (script inicio Railway)
 - setup_production.py (setup producción)
-- runtime.txt (versión Python Railway)
-- settings_railway.py (configuración Railway)
+- runtime.txt (versión Python Railway) - RESTAURADO PARA DESPLIEGUE
+- settings_railway.py (configuración Railway) - RESTAURADO PARA DESPLIEGUE
 
 ### 📄 OTROS ARCHIVOS ELIMINADOS:
 - .env.example (ejemplo variables entorno)
@@ -42,8 +42,14 @@
 ### 📋 Configuración Esencial Django:
 - manage.py (Django principal - FUNCIONAL)
 - settings.py (configuración local - FUNCIONAL)
-- requirements.txt (dependencias Python - FUNCIONAL)
+- settings_railway.py (configuración Railway - FUNCIONAL)
+- requirements.txt (dependencias Python actualizadas - FUNCIONAL)
 - db.sqlite3 (base de datos - FUNCIONAL)
+
+### 🚀 Archivos para Railway:
+- Procfile (comandos despliegue - FUNCIONAL)
+- railway.toml (configuración Railway - FUNCIONAL)  
+- runtime.txt (versión Python - FUNCIONAL)
 
 ### 📄 Documentación útil:
 - README.md (documentación principal - FUNCIONAL)

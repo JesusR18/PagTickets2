@@ -1,0 +1,12 @@
+[build]
+builder = "nixpacks"
+
+[deploy]
+healthcheckPath = "/health/"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+
+[variables]
+DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"
+DEBUG = "False"
+RAILWAY_ENVIRONMENT = "production"
