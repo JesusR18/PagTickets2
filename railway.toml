@@ -1,12 +1,21 @@
 [build]
 builder = "nixpacks"
+buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-healthcheckPath = "/health/"
-healthcheckTimeout = 300
+healthcheckPath = "/ping/"
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
+replicas = 1
+startCommand = "python manage_railway.py collectstatic --noinput && python manage_railway.py migrate --noinput && gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"
 DEBUG = "False"
 RAILWAY_ENVIRONMENT = "production"
+PYTHONPATH = "/app"
+PYTHONUNBUFFERED = "1"
+PORT = "8080"
+
+[build.env]
+DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"

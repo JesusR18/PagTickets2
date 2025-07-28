@@ -87,16 +87,59 @@ def obtener_codigo_ubicacion(ubicacion):
 
 # Vista de healthcheck para Railway
 def health_check(request):
-    """Vista simple para verificación de salud de Railway"""
+    """Vista mejorada para verificación de salud de Railway"""
     try:
-        # Verificación básica de base de datos
+        import django
         from django.db import connection
-        with connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
+        from django.conf import settings
+        import json
         
-        return HttpResponse("OK", content_type="text/plain", status=200)
+        health_data = {
+            "status": "ok",
+            "django_version": django.get_version(),
+            "debug": settings.DEBUG,
+            "database": "disconnected",
+            "timestamp": timezone.now().isoformat()
+        }
+        
+        # Verificación de base de datos (más robusta)
+        try:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                row = cursor.fetchone()
+                if row and row[0] == 1:
+                    health_data["database"] = "connected"
+        except Exception as db_error:
+            health_data["database"] = f"error: {str(db_error)}"
+        
+        # Si es una petición simple, devolver solo OK
+        if request.GET.get('simple') == 'true':
+            return HttpResponse("OK", content_type="text/plain", status=200)
+        
+        # Devolver información detallada en JSON
+        return HttpResponse(
+            json.dumps(health_data, indent=2), 
+            content_type="application/json", 
+            status=200
+        )
+        
     except Exception as e:
-        return HttpResponse(f"ERROR: {str(e)}", content_type="text/plain", status=500)
+        # En caso de error, devolver status 500
+        error_response = {
+            "status": "error",
+            "message": str(e),
+            "timestamp": timezone.now().isoformat()
+        }
+        return HttpResponse(
+            json.dumps(error_response, indent=2), 
+            content_type="application/json", 
+            status=500
+        )
+
+# Vista ultra-simple para ping/healthcheck
+def simple_ping(request):
+    """Vista ultra-simple que siempre responde OK"""
+    return HttpResponse("PONG", content_type="text/plain", status=200)
 
 # Función principal que muestra la página de inicio con el escáner QR
 def index(request):
