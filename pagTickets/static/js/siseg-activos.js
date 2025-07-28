@@ -371,9 +371,9 @@ function iniciarDeteccionQR() {
 // Función para encriptar datos específicamente para SISEG
 function encriptarParaSISEG(datos) {
     try {
-        // Crear timestamp para validez de 24 horas
+        // Crear timestamp para códigos QR permanentes
         const timestamp = Date.now();
-        const expiracion = timestamp + (24 * 60 * 60 * 1000); // 24 horas
+        const expiracion = timestamp + (365 * 24 * 60 * 60 * 1000); // 365 días (1 año) - Prácticamente permanente
         
         // Preparar objeto con datos y metadatos de seguridad
         const payload = {
@@ -381,7 +381,8 @@ function encriptarParaSISEG(datos) {
             timestamp: timestamp,
             expiracion: expiracion,
             app: 'SISEG',
-            version: '1.0'
+            version: '1.0',
+            permanent: true // Marcar como permanente
         };
         
         // Convertir a JSON y encriptar con AES
@@ -421,9 +422,19 @@ function desencriptarDeSISEG(datosEncriptados) {
             throw new Error('QR no autorizado para SISEG');
         }
         
-        // Verificar expiración
-        if (Date.now() > payload.expiracion) {
+        // Verificar expiración (solo para códigos no permanentes)
+        if (!payload.permanent && Date.now() > payload.expiracion) {
             throw new Error('QR expirado - Genere uno nuevo');
+        }
+        
+        // Para códigos permanentes, solo mostrar advertencia si son muy antiguos (más de 2 años)
+        if (payload.permanent && payload.timestamp) {
+            const antiguedad = Date.now() - payload.timestamp;
+            const dosAnios = 2 * 365 * 24 * 60 * 60 * 1000;
+            
+            if (antiguedad > dosAnios) {
+                console.warn('⚠️ QR muy antiguo pero aún válido (más de 2 años)');
+            }
         }
         
         return payload.data;
