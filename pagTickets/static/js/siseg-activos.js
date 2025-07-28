@@ -704,8 +704,8 @@ function registrarCodigo(codigo) {
             
             showMessage('🔓 QR Seguro SISEG verificado', 'success');
         } else {
-            console.error('🚫 QR seguro no válido o expirado');
-            showMessage('🚫 QR no autorizado o expirado - Solo QR de SISEG permitidos', 'error');
+            console.error('🚫 QR seguro no válido o corrupto');
+            showMessage('🚫 QR no válido o corrupto - Solo QR seguros de SISEG permitidos', 'error');
             
             // Vibración de rechazo
             if (navigator.vibrate) {
