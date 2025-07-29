@@ -1627,6 +1627,135 @@ function mostrarResultadosVerificacion(resultados, todoOK) {
 // FUNCIONES DE BÚSQUEDA Y FILTROS
 // ============================================
 
+// Función para generar código automático basado en ubicación
+function generarCodigoPorUbicacion(ubicacion) {
+    if (!ubicacion) return '';
+    
+    const ubicacionLower = ubicacion.toLowerCase();
+    
+    // Definir palabras clave y sus códigos correspondientes
+    const codigosUbicacion = {
+        'r.h.': 'RH',
+        'rh': 'RH',
+        'recursos humanos': 'RH',
+        'administracion': 'ADMON',
+        'administrativa': 'ADMON',
+        'administrativo': 'ADMON',
+        'admin': 'ADMON',
+        'admon': 'ADMON',
+        'cuentas por pagar': 'CRED',
+        'credito': 'CRED',
+        'cred': 'CRED',
+        'recepcion': 'REC',
+        'recepcionista': 'REC',
+        'rec': 'REC',
+        'almacen': 'ALM',
+        'bodega': 'ALM',
+        'alm': 'ALM',
+        'gerencia de ventas': 'GV',
+        'gerencia ventas': 'GV',
+        'ger ventas': 'GV',
+        'ventas': 'VEN',
+        'venta': 'VEN',
+        'vendedor': 'VEN',
+        'ven': 'VEN',
+        'mercadotecnia': 'PROY',
+        'marketing': 'PROY',
+        'proyectos': 'PROY',
+        'proyecto': 'PROY',
+        'proy': 'PROY',
+        'direccion': 'DIR',
+        'director': 'DIR',
+        'directora': 'DIR',
+        'dir': 'DIR',
+        'sala de juntas': 'SJ',
+        'sala juntas': 'SJ',
+        'junta': 'SJ',
+        'juntas': 'SJ',
+        'sj': 'SJ',
+        'gerencia general': 'GER',
+        'gerencia gral': 'GER',
+        'ger general': 'GER',
+        'gerente general': 'GER',
+        'ger': 'GER',
+        'sistemas': 'ARC',
+        'sistema': 'ARC',
+        'it': 'ARC',
+        'monitoreo': 'MON',
+        'monitor': 'MON',
+        'site': 'MON',
+        'mon': 'MON',
+        'cocina': 'ARC',
+        'comedor': 'ARC',
+        'roof garden': 'ARC',
+        'roof': 'ARC',
+        'garden': 'ARC',
+        'azotea': 'ARC',
+        'arc': 'ARC'
+    };
+    
+    // Buscar coincidencias en orden de prioridad (más específicas primero)
+    const palabrasOrdenadas = Object.keys(codigosUbicacion).sort((a, b) => b.length - a.length);
+    
+    for (const palabra of palabrasOrdenadas) {
+        if (ubicacionLower.includes(palabra)) {
+            console.log(`🏷️ Código generado: ${codigosUbicacion[palabra]} para ubicación: ${ubicacion}`);
+            return codigosUbicacion[palabra];
+        }
+    }
+    
+    // Si no encuentra coincidencia, generar código genérico
+    const primeraPalabra = ubicacion.split(' ')[0].toUpperCase().substring(0, 3);
+    console.log(`🏷️ Código genérico generado: ${primeraPalabra} para ubicación: ${ubicacion}`);
+    return primeraPalabra;
+}
+
+// Función para actualizar códigos de todos los activos
+function actualizarCodigosActivos() {
+    if (activosOriginales && activosOriginales.length > 0) {
+        console.log('🔄 Actualizando códigos de activos...');
+        
+        activosOriginales.forEach(activo => {
+            if (activo.ubicacion) {
+                const codigoGenerado = generarCodigoPorUbicacion(activo.ubicacion);
+                activo.codigo = codigoGenerado;
+            }
+        });
+        
+        console.log('✅ Códigos actualizados para todos los activos');
+        
+        // Refrescar la tabla si está visible
+        const busqueda = document.getElementById('busqueda-input')?.value || '';
+        const filtro = document.getElementById('filtro-select')?.value || 'todos';
+        
+        let activosFiltrados = activosOriginales;
+        if (busqueda) {
+            activosFiltrados = activosOriginales.filter(activo => {
+                switch (filtro) {
+                    case 'nombre':
+                        return activo.nombre.toLowerCase().includes(busqueda.toLowerCase());
+                    case 'ubicacion':
+                        return activo.ubicacion.toLowerCase().includes(busqueda.toLowerCase());
+                    case 'marca':
+                        return activo.marca.toLowerCase().includes(busqueda.toLowerCase());
+                    case 'modelo':
+                        return activo.modelo.toLowerCase().includes(busqueda.toLowerCase());
+                    case 'codigo':
+                        return activo.codigo.toLowerCase().includes(busqueda.toLowerCase());
+                    default: // 'todos'
+                        return activo.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
+                               activo.ubicacion.toLowerCase().includes(busqueda.toLowerCase()) ||
+                               activo.marca.toLowerCase().includes(busqueda.toLowerCase()) ||
+                               activo.modelo.toLowerCase().includes(busqueda.toLowerCase()) ||
+                               activo.codigo.toLowerCase().includes(busqueda.toLowerCase());
+                }
+            });
+        }
+        
+        mostrarActivosFiltrados(activosFiltrados);
+    }
+}
+
 // Función para filtrar activos en tiempo real
 function filtrarActivos() {
     const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
@@ -1685,6 +1814,13 @@ function mostrarActivosFiltrados(activos) {
     }
     
     activos.forEach((activo, index) => {
+        // Asegurar que cada activo tenga código generado
+        if (!activo.codigo && activo.ubicacion) {
+            activo.codigo = generarCodigoPorUbicacion(activo.ubicacion);
+        } else if (!activo.codigo) {
+            activo.codigo = 'GEN';
+        }
+        
         const fila = document.createElement('tr');
         fila.classList.add('fila-swipe');
         
@@ -1701,11 +1837,12 @@ function mostrarActivosFiltrados(activos) {
             const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
             const nombreResaltado = resaltarTexto(activo.nombre, busqueda);
             const ubicacionResaltada = resaltarTexto(activo.ubicacion, busqueda);
+            const codigoResaltado = resaltarTexto(activo.codigo, busqueda);
             
             fila.innerHTML = `
                 <td style="padding: 0; position: relative;">
                     <div class="fila-deslizable" style="position: relative; background: white; transition: transform 0.2s ease; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-                        <div style="margin-bottom: 8px;"><strong>📋 ${resaltarTexto(activo.codigo, busqueda)}</strong></div>
+                        <div style="margin-bottom: 8px;"><strong>🏷️ ${codigoResaltado}</strong></div>
                         <div style="margin-bottom: 8px; font-size: 16px;">${nombreResaltado}${esDuplicado ? ' ⚠️' : ''}</div>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; color: #666;">
                             <div>📍 ${ubicacionResaltada}</div>
@@ -1719,6 +1856,41 @@ function mostrarActivosFiltrados(activos) {
                 <td style="display: none;"></td>
                 <td style="display: none;"></td>
                 <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+            `;
+            
+            configurarDeslizadoDirecto(fila, activo.id || index, activo.nombre);
+        } else {
+            // Vista desktop con todas las columnas
+            const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
+            const codigoResaltado = resaltarTexto(activo.codigo, busqueda);
+            const nombreResaltado = resaltarTexto(activo.nombre, busqueda);
+            const ubicacionResaltada = resaltarTexto(activo.ubicacion, busqueda);
+            const marcaResaltada = resaltarTexto(activo.marca, busqueda);
+            const modeloResaltado = resaltarTexto(activo.modelo, busqueda);
+            
+            fila.innerHTML = `
+                <td style="padding: 12px; font-weight: bold; color: #991b1b;">${codigoResaltado}</td>
+                <td style="padding: 12px;">${nombreResaltado}${esDuplicado ? ' ⚠️' : ''}</td>
+                <td style="padding: 12px;">${ubicacionResaltada}</td>
+                <td style="padding: 12px;">${marcaResaltada}</td>
+                <td style="padding: 12px;">${modeloResaltado}</td>
+                <td style="padding: 12px;">${activo.no_serie}</td>
+                <td style="padding: 12px;">${activo.fecha_registro}</td>
+                <td style="padding: 12px;">
+                    <button onclick="eliminarActivo(${activo.id || index})" class="btn-eliminar" style="background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
+                        🗑️ Eliminar
+                    </button>
+                </td>
+            `;
+        }
+        
+        tbody.appendChild(fila);
+    });
+}
                 <td style="display: none;"></td>
                 <td style="display: none;"></td>
                 <td style="display: none;"></td>
@@ -1769,7 +1941,7 @@ function limpiarBusqueda() {
     }
 }
 
-// Función para filtros rápidos
+// Función para aplicar filtros rápidos
 function aplicarFiltroRapido(tipo) {
     document.getElementById('filtro-select').value = tipo;
     filtrarActivos();
@@ -1781,6 +1953,32 @@ function aplicarFiltroRapido(tipo) {
     
     if (navigator.vibrate) {
         navigator.vibrate(40);
+    }
+}
+
+// Función para actualizar códigos manualmente (botón de recarga)
+function actualizarCodigosManualment() {
+    console.log('🔄 Actualizando códigos manualmente...');
+    actualizarCodigosActivos();
+    
+    // Mostrar mensaje de confirmación
+    const statusEl = document.getElementById('scanner-status');
+    if (statusEl) {
+        const mensajeOriginal = statusEl.textContent;
+        statusEl.textContent = '✅ Códigos actualizados correctamente';
+        statusEl.style.backgroundColor = '#dcfce7';
+        statusEl.style.color = '#166534';
+        
+        setTimeout(() => {
+            statusEl.textContent = mensajeOriginal;
+            statusEl.style.backgroundColor = 'rgba(255, 255, 255, 0.9)';
+            statusEl.style.color = '#991b1b';
+        }, 3000);
+    }
+    
+    // Vibración de confirmación
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
     }
 }
 
@@ -2008,8 +2206,20 @@ function cargarActivosEscaneados() {
         if (data.activos && data.activos.length > 0) {
             console.log(`✅ Mostrando ${data.activos.length} activos`);
             tbody.innerHTML = '';
+            
+            // GENERAR CÓDIGOS AUTOMÁTICAMENTE basados en ubicación
+            data.activos.forEach(activo => {
+                if (activo.ubicacion) {
+                    activo.codigo = generarCodigoPorUbicacion(activo.ubicacion);
+                } else {
+                    activo.codigo = 'GEN'; // Código genérico si no hay ubicación
+                }
+            });
+            
             activosEscaneados = data.activos;
             activosOriginales = [...data.activos]; // Copia para filtros
+            
+            console.log('🏷️ Códigos generados automáticamente para todos los activos');
             
             // Actualizar contador de activos
             document.getElementById('total-activos').textContent = data.activos.length;
