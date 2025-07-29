@@ -168,7 +168,7 @@ function toggleScanner() {
     }
 }
 
-// Función para iniciar la cámara con zoom
+// Función para iniciar la cámara con zoom y configuración de ALTA PRECISIÓN
 async function iniciarScanner() {
     const toggleBtn = document.getElementById('scanner-toggle-btn');
     const cameraContainer = document.getElementById('camera-container');
@@ -176,23 +176,27 @@ async function iniciarScanner() {
     try {
         toggleBtn.disabled = true;
         toggleBtn.textContent = '⏳ INICIANDO...';
-        actualizarEstado('🚀 Solicitando acceso a la cámara...', null);
+        actualizarEstado('🚀 Configurando cámara de alta precisión...', null);
         
-        // Configuración avanzada para solicitar zoom
+        // Configuración AVANZADA para máxima calidad de detección
         const constraints = {
             video: {
                 facingMode: 'environment',
-                width: { ideal: 1280, min: 640 },
-                height: { ideal: 720, min: 480 },
-                // Solicitar explícitamente capacidades de zoom
+                width: { ideal: 1920, min: 1280 }, // Resolución más alta
+                height: { ideal: 1080, min: 720 },
+                frameRate: { ideal: 30, min: 15 }, // FPS consistente
+                // Configuraciones avanzadas para mejor calidad
                 advanced: [
                     { zoom: { min: 1, max: 10 } },
-                    { focusMode: 'continuous' }
+                    { focusMode: 'continuous' }, // Enfoque continuo
+                    { exposureMode: 'continuous' }, // Exposición automática
+                    { whiteBalanceMode: 'continuous' }, // Balance de blancos automático
+                    { torch: false } // Flash apagado por defecto
                 ]
             }
         };
         
-        // Obtener stream de video
+        // Obtener stream de video con configuración optimizada
         videoStream = await navigator.mediaDevices.getUserMedia(constraints);
         videoTrack = videoStream.getVideoTracks()[0];
         
@@ -203,49 +207,183 @@ async function iniciarScanner() {
         
         video.srcObject = videoStream;
         
-        // Verificar capacidades de zoom
+        // Configurar video para máxima calidad
+        video.setAttribute('playsinline', true);
+        video.setAttribute('autoplay', true);
+        video.setAttribute('muted', true);
+        
+        // Esperar a que el video esté listo
+        await new Promise(resolve => {
+            video.onloadedmetadata = () => {
+                console.log('📹 Video cargado:', video.videoWidth + 'x' + video.videoHeight);
+                resolve();
+            };
+        });
+        
+        // Configurar capacidades avanzadas de la cámara
         if (videoTrack.getCapabilities) {
             const capabilities = videoTrack.getCapabilities();
-            console.log('📱 Capacidades de la cámara:', capabilities);
+            console.log('🎥 Capacidades completas de la cámara:', capabilities);
             
+            // Configurar zoom si está disponible
             if (capabilities.zoom) {
                 zoomMin = capabilities.zoom.min || 1;
                 zoomMax = capabilities.zoom.max || 10;
-                zoomActual = zoomMin;
+                zoomActual = Math.min(2, zoomMax); // Iniciar con zoom 2x si es posible
                 
-                // Configurar slider
                 const zoomRange = document.getElementById('zoom-range');
                 zoomRange.min = zoomMin;
                 zoomRange.max = zoomMax;
                 zoomRange.value = zoomActual;
                 zoomRange.step = (zoomMax - zoomMin) / 20;
                 
-                actualizarEstado(`✅ Cámara iniciada con ZOOM REAL: ${zoomMin}x - ${zoomMax}x`, true);
-                
-                // Aplicar zoom inicial
                 await aplicarZoomReal(zoomActual);
-            } else {
-                actualizarEstado('⚠️ Cámara iniciada - Zoom no soportado por el dispositivo', false);
+                actualizarEstado(`✅ Cámara HD iniciada - Zoom: ${zoomMin}x a ${zoomMax}x`, true);
             }
-        } else {
-            actualizarEstado('⚠️ Cámara iniciada - API de zoom no disponible', false);
+            
+            // Configurar enfoque si está disponible
+            if (capabilities.focusMode && capabilities.focusMode.includes('continuous')) {
+                await videoTrack.applyConstraints({
+                    advanced: [{ focusMode: 'continuous' }]
+                });
+                console.log('🎯 Enfoque continuo activado');
+            }
+            
+            // Configurar exposición automática si está disponible
+            if (capabilities.exposureMode && capabilities.exposureMode.includes('continuous')) {
+                await videoTrack.applyConstraints({
+                    advanced: [{ exposureMode: 'continuous' }]
+                });
+                console.log('☀️ Exposición automática activada');
+            }
         }
         
-        // Mostrar interfaz de cámara y botón detener
+        // Mostrar interfaz de cámara
         cameraContainer.style.display = 'block';
         document.getElementById('stop-button-container').style.display = 'block';
-        toggleBtn.textContent = '⏸️ SCANNER PAUSADO';
+        toggleBtn.textContent = '⏸️ SCANNER ACTIVO';
         toggleBtn.disabled = true;
         scannerActivo = true;
         
-        // Iniciar detección de QR
+        // Iniciar detección de QR de alta precisión
         iniciarDeteccionQR();
         
+        // Configurar indicador visual de detección
+        mostrarIndicadorDeteccion();
+        
     } catch (error) {
-        console.error('❌ Error iniciando cámara:', error);
+        console.error('❌ Error iniciando cámara HD:', error);
         actualizarEstado(`❌ Error: ${error.message}`, false);
         toggleBtn.disabled = false;
         toggleBtn.textContent = '📱 INICIAR SCANNER QR';
+    }
+}
+
+// Función para mostrar indicador visual de detección activa
+function mostrarIndicadorDeteccion() {
+    const cameraContainer = document.getElementById('camera-container');
+    
+    // Crear overlay de detección si no existe
+    let overlay = document.getElementById('detection-overlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'detection-overlay';
+        overlay.style.cssText = `
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 200px;
+            border: 3px solid #10b981;
+            border-radius: 20px;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            pointer-events: none;
+            z-index: 10;
+            animation: pulse-scanner 2s infinite;
+        `;
+        
+        // Agregar animación CSS si no existe
+        if (!document.getElementById('scanner-styles')) {
+            const style = document.createElement('style');
+            style.id = 'scanner-styles';
+            style.textContent = `
+                @keyframes pulse-scanner {
+                    0% { 
+                        border-color: #10b981; 
+                        box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+                    }
+                    50% { 
+                        border-color: #059669; 
+                        box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+                    }
+                    100% { 
+                        border-color: #10b981; 
+                        box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+        
+        cameraContainer.appendChild(overlay);
+    }
+    
+    overlay.style.display = 'block';
+}
+
+// Función para actualizar indicador visual de detección
+function actualizarIndicadorDeteccion(codigoDetectado, intentos) {
+    const overlay = document.getElementById('detection-overlay');
+    if (!overlay) return;
+    
+    if (codigoDetectado) {
+        // QR detectado - color verde brillante
+        overlay.style.borderColor = '#10b981';
+        overlay.style.boxShadow = '0 0 30px rgba(16, 185, 129, 0.8)';
+        overlay.style.animation = 'pulse-scanner-success 1s infinite';
+        
+        // Agregar animación de éxito si no existe
+        if (!document.getElementById('success-animation')) {
+            const style = document.createElement('style');
+            style.id = 'success-animation';
+            style.textContent = `
+                @keyframes pulse-scanner-success {
+                    0% { 
+                        border-color: #10b981; 
+                        box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+                        transform: translate(-50%, -50%) scale(1);
+                    }
+                    50% { 
+                        border-color: #059669; 
+                        box-shadow: 0 0 40px rgba(16, 185, 129, 1);
+                        transform: translate(-50%, -50%) scale(1.05);
+                    }
+                    100% { 
+                        border-color: #10b981; 
+                        box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+                        transform: translate(-50%, -50%) scale(1);
+                    }
+                }
+            `;
+            document.head.appendChild(style);
+        }
+    } else {
+        // Sin detección - cambiar color según intentos
+        if (intentos < 30) {
+            // Primeros intentos - azul
+            overlay.style.borderColor = '#3b82f6';
+            overlay.style.boxShadow = '0 0 20px rgba(59, 130, 246, 0.5)';
+        } else if (intentos < 120) {
+            // Más intentos - amarillo (precaución)
+            overlay.style.borderColor = '#f59e0b';
+            overlay.style.boxShadow = '0 0 20px rgba(245, 158, 11, 0.5)';
+        } else {
+            // Muchos intentos - rojo (advertencia)
+            overlay.style.borderColor = '#ef4444';
+            overlay.style.boxShadow = '0 0 20px rgba(239, 68, 68, 0.5)';
+        }
+        overlay.style.animation = 'pulse-scanner 2s infinite';
     }
 }
 
@@ -318,14 +456,20 @@ async function aplicarZoom(direccion) {
     await aplicarZoomRapido(incremento);
 }
 
-// Función para detener el scanner
+// Función para detener el scanner con limpieza completa
 function detenerScanner() {
-    console.log('⏹️ Deteniendo scanner...');
+    console.log('⏹️ Deteniendo scanner de alta precisión...');
     
     if (videoStream) {
         videoStream.getTracks().forEach(track => track.stop());
         videoStream = null;
         videoTrack = null;
+    }
+    
+    // Limpiar overlay de detección
+    const overlay = document.getElementById('detection-overlay');
+    if (overlay) {
+        overlay.style.display = 'none';
     }
     
     document.getElementById('camera-container').style.display = 'none';
@@ -338,45 +482,342 @@ function detenerScanner() {
     actualizarEstado('🔒 Scanner detenido - Solo acepta QR SISEG', null);
 }
 
-// Función para detectar códigos QR
+// Función para optimización automática de imagen según condiciones
+function optimizarImagenAutomaticamente(imageData) {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    
+    // Calcular brillo promedio de la imagen
+    let totalBrillo = 0;
+    let pixelCount = 0;
+    
+    for (let i = 0; i < data.length; i += 4) {
+        const r = data[i];
+        const g = data[i + 1];
+        const b = data[i + 2];
+        const brillo = (r + g + b) / 3;
+        totalBrillo += brillo;
+        pixelCount++;
+    }
+    
+    const brilloPromedio = totalBrillo / pixelCount;
+    console.log('💡 Brillo promedio detectado:', brilloPromedio.toFixed(1));
+    
+    // Crear nueva imagen optimizada
+    const newData = new Uint8ClampedArray(data);
+    
+    // Aplicar diferentes optimizaciones según el brillo
+    if (brilloPromedio < 80) {
+        // Imagen muy oscura - aumentar brillo y contraste
+        console.log('🌙 Aplicando filtro para poca luz...');
+        for (let i = 0; i < newData.length; i += 4) {
+            // Aumentar brillo
+            newData[i] = Math.min(255, newData[i] * 1.5 + 30);     // R
+            newData[i + 1] = Math.min(255, newData[i + 1] * 1.5 + 30); // G
+            newData[i + 2] = Math.min(255, newData[i + 2] * 1.5 + 30); // B
+        }
+    } else if (brilloPromedio > 180) {
+        // Imagen muy clara - reducir brillo y aumentar contraste
+        console.log('☀️ Aplicando filtro para mucha luz...');
+        for (let i = 0; i < newData.length; i += 4) {
+            // Reducir brillo pero mantener contraste
+            newData[i] = Math.max(0, newData[i] * 0.8 - 20);     // R
+            newData[i + 1] = Math.max(0, newData[i + 1] * 0.8 - 20); // G
+            newData[i + 2] = Math.max(0, newData[i + 2] * 0.8 - 20); // B
+        }
+    } else {
+        // Iluminación normal - solo mejorar contraste
+        console.log('🌤️ Aplicando mejora de contraste normal...');
+        for (let i = 0; i < newData.length; i += 4) {
+            // Mejorar contraste suavemente
+            const factor = 1.2;
+            newData[i] = Math.max(0, Math.min(255, (newData[i] - 128) * factor + 128));
+            newData[i + 1] = Math.max(0, Math.min(255, (newData[i + 1] - 128) * factor + 128));
+            newData[i + 2] = Math.max(0, Math.min(255, (newData[i + 2] - 128) * factor + 128));
+        }
+    }
+    
+    return new ImageData(newData, width, height);
+}
+
+// Función para aplicar filtro Gaussiano (suavizar ruido)
+function aplicarFiltroGaussiano(imageData) {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+    const newData = new Uint8ClampedArray(data);
+    
+    // Kernel Gaussiano 3x3 simplificado
+    const kernel = [
+        [1, 2, 1],
+        [2, 4, 2],
+        [1, 2, 1]
+    ];
+    const kernelSum = 16;
+    
+    // Aplicar filtro solo en el área central (más eficiente)
+    const margin = 1;
+    for (let y = margin; y < height - margin; y++) {
+        for (let x = margin; x < width - margin; x++) {
+            let r = 0, g = 0, b = 0;
+            
+            // Aplicar kernel
+            for (let ky = -1; ky <= 1; ky++) {
+                for (let kx = -1; kx <= 1; kx++) {
+                    const pixelIndex = ((y + ky) * width + (x + kx)) * 4;
+                    const weight = kernel[ky + 1][kx + 1];
+                    
+                    r += data[pixelIndex] * weight;
+                    g += data[pixelIndex + 1] * weight;
+                    b += data[pixelIndex + 2] * weight;
+                }
+            }
+            
+            const currentIndex = (y * width + x) * 4;
+            newData[currentIndex] = Math.round(r / kernelSum);
+            newData[currentIndex + 1] = Math.round(g / kernelSum);
+            newData[currentIndex + 2] = Math.round(b / kernelSum);
+        }
+    }
+    
+    return new ImageData(newData, width, height);
+}
+
+// Función para detectar códigos QR con MÁXIMA PRECISIÓN
 function iniciarDeteccionQR() {
     if (!scannerActivo || !video || !canvas || !context) return;
+    
+    let intentosConsecutivos = 0;
+    let ultimoCodigoDetectado = null;
+    let contadorConfirmacion = 0;
     
     const detectar = () => {
         if (!scannerActivo) return;
         
         try {
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
-                canvas.width = video.videoWidth;
-                canvas.height = video.videoHeight;
+                // Configurar canvas con alta resolución
+                const scale = 2; // Factor de escala para mejor calidad
+                canvas.width = video.videoWidth * scale;
+                canvas.height = video.videoHeight * scale;
+                
+                // Configurar contexto para máxima calidad de imagen
+                context.imageSmoothingEnabled = true;
+                context.imageSmoothingQuality = 'high';
+                
+                // Dibujar imagen escalada
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                const code = jsQR(imageData.data, imageData.width, imageData.height);
+                // TÉCNICA 1: Detección en imagen original
+                let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                let code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    inversionAttempts: "dontInvert", // Más rápido
+                });
                 
-                if (code) {
-                    console.log('🎯 Código QR detectado:', code.data);
-                    registrarCodigo(code.data);
+                // TÉCNICA 2: Si no detecta, intentar con inversión completa
+                if (!code) {
+                    code = jsQR(imageData.data, imageData.width, imageData.height, {
+                        inversionAttempts: "attemptBoth", // Probar imagen normal e invertida
+                    });
+                }
+                
+                // TÉCNICA 3: Si aún no detecta, aplicar filtros de mejora
+                if (!code) {
+                    // Aplicar filtro de contraste y brillo
+                    const imageDataMejorada = mejorarImagenParaQR(imageData);
+                    code = jsQR(imageDataMejorada.data, imageDataMejorada.width, imageDataMejorada.height, {
+                        inversionAttempts: "attemptBoth",
+                    });
+                }
+                
+                // TÉCNICA 4: Detección en área central (más probable)
+                if (!code) {
+                    const centerSize = Math.min(canvas.width, canvas.height) * 0.8;
+                    const centerX = (canvas.width - centerSize) / 2;
+                    const centerY = (canvas.height - centerSize) / 2;
                     
-                    // Pausar detección por 3 segundos para evitar registros múltiples
-                    scannerActivo = false;
-                    setTimeout(() => {
-                        if (videoStream) { // Solo reactivar si el stream sigue activo
-                            scannerActivo = true;
-                            iniciarDeteccionQR();
+                    const centerImageData = context.getImageData(centerX, centerY, centerSize, centerSize);
+                    code = jsQR(centerImageData.data, centerImageData.width, centerImageData.height, {
+                        inversionAttempts: "attemptBoth",
+                    });
+                }
+                
+                // TÉCNICA 5: Múltiples intentos con diferentes configuraciones de jsQR
+                if (!code) {
+                    // Intentar con diferentes configuraciones de jsQR
+                    const configuraciones = [
+                        { inversionAttempts: "onlyInvert" },
+                        { inversionAttempts: "invertFirst" },
+                        { inversionAttempts: "dontInvert" }
+                    ];
+                    
+                    for (const config of configuraciones) {
+                        code = jsQR(imageData.data, imageData.width, imageData.height, config);
+                        if (code && code.data) {
+                            console.log('✅ QR detectado con configuración:', config);
+                            break;
                         }
-                    }, 3000);
-                    return;
+                    }
+                }
+                
+                // TÉCNICA 6: Detección en múltiples escalas
+                if (!code) {
+                    // Probar con imagen más pequeña (a veces funciona mejor)
+                    const smallScale = 0.5;
+                    const smallCanvas = document.createElement('canvas');
+                    const smallContext = smallCanvas.getContext('2d');
+                    
+                    smallCanvas.width = canvas.width * smallScale;
+                    smallCanvas.height = canvas.height * smallScale;
+                    
+                    smallContext.drawImage(canvas, 0, 0, smallCanvas.width, smallCanvas.height);
+                    const smallImageData = smallContext.getImageData(0, 0, smallCanvas.width, smallCanvas.height);
+                    
+                    code = jsQR(smallImageData.data, smallImageData.width, smallImageData.height, {
+                        inversionAttempts: "attemptBoth",
+                    });
+                    
+                    if (code) {
+                        console.log('✅ QR detectado en escala reducida');
+                    }
+                }
+                
+                // Actualizar indicador visual de detección
+                actualizarIndicadorDeteccion(!!code, intentosConsecutivos);
+                
+                if (code && code.data) {
+                    console.log('🎯 Código QR detectado (intento ' + intentosConsecutivos + '):', code.data);
+                    
+                    // VERIFICACIÓN DE CONSISTENCIA: Confirmar el mismo código 2 veces seguidas
+                    if (ultimoCodigoDetectado === code.data) {
+                        contadorConfirmacion++;
+                        
+                        if (contadorConfirmacion >= 2) {
+                            // Código confirmado, procesar
+                            console.log('✅ Código QR CONFIRMADO después de ' + contadorConfirmacion + ' detecciones');
+                            
+                            // Vibración de éxito
+                            if (navigator.vibrate) {
+                                navigator.vibrate([100, 50, 100]);
+                            }
+                            
+                            registrarCodigo(code.data);
+                            
+                            // Reset variables
+                            ultimoCodigoDetectado = null;
+                            contadorConfirmacion = 0;
+                            intentosConsecutivos = 0;
+                            
+                            // Pausar detección por 3 segundos
+                            scannerActivo = false;
+                            actualizarEstado('✅ QR procesado exitosamente - Reiniciando en 3s...', true);
+                            
+                            setTimeout(() => {
+                                if (videoStream) {
+                                    scannerActivo = true;
+                                    actualizarEstado('🔍 Escaneando códigos QR SISEG...', null);
+                                    iniciarDeteccionQR();
+                                }
+                            }, 3000);
+                            return;
+                        }
+                    } else {
+                        // Nuevo código detectado
+                        ultimoCodigoDetectado = code.data;
+                        contadorConfirmacion = 1;
+                        console.log('🔄 Nuevo código detectado, esperando confirmación...');
+                        
+                        // Feedback visual sutil
+                        actualizarEstado('🔄 QR detectado, confirmando...', null);
+                    }
+                } else {
+                    // No se detectó código
+                    intentosConsecutivos++;
+                    
+                    // Reset si no hay detección por mucho tiempo
+                    if (intentosConsecutivos % 60 === 0) { // Cada 2 segundos aprox
+                        ultimoCodigoDetectado = null;
+                        contadorConfirmacion = 0;
+                        console.log('🔄 Reset detector después de ' + intentosConsecutivos + ' intentos');
+                    }
                 }
             }
         } catch (error) {
-            console.error('Error en detección QR:', error);
+            console.error('❌ Error en detección QR:', error);
+            intentosConsecutivos++;
         }
         
+        // Continuar detección más frecuente para mayor precisión
         requestAnimationFrame(detectar);
     };
     
+    console.log('🚀 Iniciando detección QR de ALTA PRECISIÓN...');
+    actualizarEstado('🔍 Escaneando códigos QR SISEG con alta precisión...', null);
     detectar();
+}
+
+// Función para mejorar imagen antes de detección QR (versión avanzada)
+function mejorarImagenParaQR(imageData) {
+    console.log('🔧 Aplicando mejoras avanzadas de imagen...');
+    
+    // PASO 1: Optimización automática según condiciones de luz
+    let imagenMejorada = optimizarImagenAutomaticamente(imageData);
+    
+    // PASO 2: Aplicar filtro Gaussiano para reducir ruido (solo si es necesario)
+    imagenMejorada = aplicarFiltroGaussiano(imagenMejorada);
+    
+    // PASO 3: Umbralización adaptativa mejorada
+    const data = imagenMejorada.data;
+    const width = imagenMejorada.width;
+    const height = imagenMejorada.height;
+    const finalData = new Uint8ClampedArray(data);
+    
+    // Calcular umbral adaptativo por regiones
+    const blockSize = 16; // Tamaño de bloque para análisis local
+    
+    for (let y = 0; y < height; y += blockSize) {
+        for (let x = 0; x < width; x += blockSize) {
+            // Calcular brillo promedio del bloque local
+            let sumaLocal = 0;
+            let contadorLocal = 0;
+            
+            for (let by = y; by < Math.min(y + blockSize, height); by++) {
+                for (let bx = x; bx < Math.min(x + blockSize, width); bx++) {
+                    const pixelIndex = (by * width + bx) * 4;
+                    const gray = Math.round(0.299 * data[pixelIndex] + 0.587 * data[pixelIndex + 1] + 0.114 * data[pixelIndex + 2]);
+                    sumaLocal += gray;
+                    contadorLocal++;
+                }
+            }
+            
+            const umbralLocal = sumaLocal / contadorLocal;
+            
+            // Aplicar umbralización al bloque
+            for (let by = y; by < Math.min(y + blockSize, height); by++) {
+                for (let bx = x; bx < Math.min(x + blockSize, width); bx++) {
+                    const pixelIndex = (by * width + bx) * 4;
+                    const r = data[pixelIndex];
+                    const g = data[pixelIndex + 1];
+                    const b = data[pixelIndex + 2];
+                    
+                    const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
+                    
+                    // Umbralización con margen adaptativo
+                    const margen = 20; // Margen para evitar pérdida de detalles
+                    const valorFinal = gray > (umbralLocal - margen) ? 255 : 0;
+                    
+                    finalData[pixelIndex] = valorFinal;     // R
+                    finalData[pixelIndex + 1] = valorFinal; // G
+                    finalData[pixelIndex + 2] = valorFinal; // B
+                    // Alpha permanece igual
+                }
+            }
+        }
+    }
+    
+    console.log('✅ Imagen mejorada con técnicas avanzadas');
+    return new ImageData(finalData, width, height);
 }
 
 // ============================================
