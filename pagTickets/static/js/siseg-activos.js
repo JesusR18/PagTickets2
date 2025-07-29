@@ -2194,17 +2194,27 @@ function registrarCodigo(codigo) {
 function cargarActivosEscaneados() {
     console.log('📦 Cargando activos escaneados...');
     
+    const tbody = document.getElementById('tabla-activos-body');
+    
+    // Mostrar indicador de carga inmediatamente
+    tbody.innerHTML = '<tr><td colspan="8" class="sin-activos loading-text">🔄 <span class="loading-spinner">⚙️</span> Cargando activos...</td></tr>';
+    
     fetch('/obtener_activos_escaneados/')
     .then(response => {
         console.log('📡 Respuesta recibida:', response.status);
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
+        }
         return response.json();
     })
     .then(data => {
         console.log('📋 Datos recibidos:', data);
-        const tbody = document.getElementById('tabla-activos-body');
+        
+        // SIEMPRE limpiar el mensaje de carga primero
+        tbody.innerHTML = '';
         
         if (data.activos && data.activos.length > 0) {
-            console.log(`✅ Mostrando ${data.activos.length} activos`);
+            console.log('✅ Mostrando ' + data.activos.length + ' activos');
             tbody.innerHTML = '';
             
             // GENERAR CÓDIGOS AUTOMÁTICAMENTE basados en ubicación
@@ -2298,8 +2308,17 @@ function cargarActivosEscaneados() {
     })
     .catch(error => {
         console.error('❌ Error cargando activos:', error);
-        document.getElementById('tabla-activos-body').innerHTML = 
-            '<tr><td colspan="8" class="sin-activos">❌ Error al cargar activos</td></tr>';
+        
+        // SIEMPRE limpiar el mensaje de carga en caso de error también
+        tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">❌ Error al cargar activos - ' + error.message + '</td></tr>';
+        
+        // Limpiar arrays en caso de error
+        activosEscaneados = [];
+        activosOriginales = [];
+        
+        // Actualizar contador en caso de error
+        document.getElementById('total-activos').textContent = '0';
+        document.getElementById('total-filtrados').textContent = '';
     });
 }
 
