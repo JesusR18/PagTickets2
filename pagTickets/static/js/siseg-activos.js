@@ -1699,14 +1699,14 @@ function generarCodigoPorUbicacion(ubicacion) {
     
     for (const palabra of palabrasOrdenadas) {
         if (ubicacionLower.includes(palabra)) {
-            console.log(`🏷️ Código generado: ${codigosUbicacion[palabra]} para ubicación: ${ubicacion}`);
+            console.log('🏷️ Código generado: ' + codigosUbicacion[palabra] + ' para ubicación: ' + ubicacion);
             return codigosUbicacion[palabra];
         }
     }
     
     // Si no encuentra coincidencia, generar código genérico
     const primeraPalabra = ubicacion.split(' ')[0].toUpperCase().substring(0, 3);
-    console.log(`🏷️ Código genérico generado: ${primeraPalabra} para ubicación: ${ubicacion}`);
+    console.log('🏷️ Código genérico generado: ' + primeraPalabra + ' para ubicación: ' + ubicacion);
     return primeraPalabra;
 }
 
@@ -1761,7 +1761,7 @@ function filtrarActivos() {
     const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
     const filtro = document.getElementById('filtro-select').value;
     
-    console.log(`🔍 Filtrando: "${busqueda}" por ${filtro}`);
+    console.log('🔍 Filtrando: "' + busqueda + '" por ' + filtro);
     
     let activosFiltrados = activosOriginales;
     
@@ -1831,90 +1831,58 @@ function mostrarActivosFiltrados(activos) {
         }
         
         const esMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
         
         if (esMobile) {
             // Vista móvil con resaltado de búsqueda
-            const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
             const nombreResaltado = resaltarTexto(activo.nombre, busqueda);
             const ubicacionResaltada = resaltarTexto(activo.ubicacion, busqueda);
             const codigoResaltado = resaltarTexto(activo.codigo, busqueda);
             
-            fila.innerHTML = `
-                <td style="padding: 0; position: relative;">
-                    <div class="fila-deslizable" style="position: relative; background: white; transition: transform 0.2s ease; padding: 15px; border-bottom: 1px solid #e5e7eb;">
-                        <div style="margin-bottom: 8px;"><strong>🏷️ ${codigoResaltado}</strong></div>
-                        <div style="margin-bottom: 8px; font-size: 16px;">${nombreResaltado}${esDuplicado ? ' ⚠️' : ''}</div>
-                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; color: #666;">
-                            <div>📍 ${ubicacionResaltada}</div>
-                            <div>🏷️ ${resaltarTexto(activo.marca, busqueda)}</div>
-                            <div>📦 ${resaltarTexto(activo.modelo, busqueda)}</div>
-                            <div>🔢 ${activo.no_serie}</div>
-                            <div style="grid-column: 1 / -1;">📅 ${activo.fecha_registro}</div>
-                        </div>
-                    </div>
-                </td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-            `;
+            fila.innerHTML = 
+                '<td style="padding: 0; position: relative;">' +
+                    '<div class="fila-deslizable" style="position: relative; background: white; transition: transform 0.2s ease; padding: 15px; border-bottom: 1px solid #e5e7eb;">' +
+                        '<div style="margin-bottom: 8px;"><strong>🏷️ ' + codigoResaltado + '</strong></div>' +
+                        '<div style="margin-bottom: 8px; font-size: 16px;">' + nombreResaltado + (esDuplicado ? ' ⚠️' : '') + '</div>' +
+                        '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; color: #666;">' +
+                            '<div>📍 ' + ubicacionResaltada + '</div>' +
+                            '<div>🏷️ ' + resaltarTexto(activo.marca, busqueda) + '</div>' +
+                            '<div>📦 ' + resaltarTexto(activo.modelo, busqueda) + '</div>' +
+                            '<div>🔢 ' + activo.no_serie + '</div>' +
+                            '<div style="grid-column: 1 / -1;">📅 ' + activo.fecha_registro + '</div>' +
+                        '</div>' +
+                    '</div>' +
+                '</td>' +
+                '<td style="display: none;"></td>' +
+                '<td style="display: none;"></td>' +
+                '<td style="display: none;"></td>' +
+                '<td style="display: none;"></td>' +
+                '<td style="display: none;"></td>' +
+                '<td style="display: none;"></td>' +
+                '<td style="display: none;"></td>';
             
             configurarDeslizadoDirecto(fila, activo.id || index, activo.nombre);
         } else {
             // Vista desktop con todas las columnas
-            const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
             const codigoResaltado = resaltarTexto(activo.codigo, busqueda);
             const nombreResaltado = resaltarTexto(activo.nombre, busqueda);
             const ubicacionResaltada = resaltarTexto(activo.ubicacion, busqueda);
             const marcaResaltada = resaltarTexto(activo.marca, busqueda);
             const modeloResaltado = resaltarTexto(activo.modelo, busqueda);
             
-            fila.innerHTML = `
-                <td style="padding: 12px; font-weight: bold; color: #991b1b;">${codigoResaltado}</td>
-                <td style="padding: 12px;">${nombreResaltado}${esDuplicado ? ' ⚠️' : ''}</td>
-                <td style="padding: 12px;">${ubicacionResaltada}</td>
-                <td style="padding: 12px;">${marcaResaltada}</td>
-                <td style="padding: 12px;">${modeloResaltado}</td>
-                <td style="padding: 12px;">${activo.no_serie}</td>
-                <td style="padding: 12px;">${activo.fecha_registro}</td>
-                <td style="padding: 12px;">
-                    <button onclick="eliminarActivo(${activo.id || index})" class="btn-eliminar" style="background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">
-                        🗑️ Eliminar
-                    </button>
-                </td>
-            `;
-        }
-        
-        tbody.appendChild(fila);
-    });
-}
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-                <td style="display: none;"></td>
-            `;
-            
-            configurarDeslizadoDirecto(fila, activo.id || index, activo.nombre);
-        } else {
-            // Vista desktop
-            const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
-            fila.innerHTML = `
-                <td>${resaltarTexto(activo.codigo, busqueda)}</td>
-                <td>${resaltarTexto(activo.nombre, busqueda)}${esDuplicado ? ' ⚠️' : ''}</td>
-                <td>${resaltarTexto(activo.ubicacion, busqueda)}</td>
-                <td>${resaltarTexto(activo.marca, busqueda)}</td>
-                <td>${resaltarTexto(activo.modelo, busqueda)}</td>
-                <td>${activo.no_serie}</td>
-                <td>${activo.fecha_registro}</td>
-                <td>
-                    <button class="btn-eliminar" onclick="eliminarActivo(${activo.id || index}, '${activo.nombre.replace(/'/g, "\\'")}')">
-                        🗑️ Eliminar
-                    </button>
-                </td>
-            `;
+            fila.innerHTML = 
+                '<td style="padding: 12px; font-weight: bold; color: #991b1b;">' + codigoResaltado + '</td>' +
+                '<td style="padding: 12px;">' + nombreResaltado + (esDuplicado ? ' ⚠️' : '') + '</td>' +
+                '<td style="padding: 12px;">' + ubicacionResaltada + '</td>' +
+                '<td style="padding: 12px;">' + marcaResaltada + '</td>' +
+                '<td style="padding: 12px;">' + modeloResaltado + '</td>' +
+                '<td style="padding: 12px;">' + activo.no_serie + '</td>' +
+                '<td style="padding: 12px;">' + activo.fecha_registro + '</td>' +
+                '<td style="padding: 12px;">' +
+                    '<button onclick="eliminarActivo(' + (activo.id || index) + ')" class="btn-eliminar" style="background: #dc2626; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer;">' +
+                        '🗑️ Eliminar' +
+                    '</button>' +
+                '</td>';
         }
         
         tbody.appendChild(fila);
@@ -1925,7 +1893,7 @@ function mostrarActivosFiltrados(activos) {
 function resaltarTexto(texto, busqueda) {
     if (!busqueda || !texto) return texto;
     
-    const regex = new RegExp(`(${busqueda})`, 'gi');
+    const regex = new RegExp('(' + busqueda + ')', 'gi');
     return texto.replace(regex, '<mark style="background: #fef08a; padding: 1px 2px; border-radius: 2px;">$1</mark>');
 }
 
@@ -2156,11 +2124,11 @@ function registrarCodigo(codigo) {
         
         if (data.success) {
             if (data.already_registered) {
-                showMessage(`⚠️ ${data.mensaje}`, 'warning');
+                showMessage('⚠️ ' + data.mensaje, 'warning');
                 // Sonido para QR duplicado
                 reproducirSonido('duplicado');
             } else {
-                showMessage(`✅ ${data.mensaje}`, 'success');
+                showMessage('✅ ' + data.mensaje, 'success');
                 // Sonido para QR nuevo
                 reproducirSonido('nuevo');
             }
@@ -2175,7 +2143,7 @@ function registrarCodigo(codigo) {
                 cargarActivosEscaneados();
             }, 1000);
         } else {
-            showMessage(`❌ Error: ${data.error}`, 'error');
+            showMessage('❌ Error: ' + data.error, 'error');
             // Sonido de error
             reproducirSonido('error');
         }
@@ -2494,10 +2462,10 @@ function eliminarActivo(id, nombre) {
     .then(response => response.json())
     .then(data => {
         if (data.success) {
-            showMessage(`✅ Activo "${nombre}" eliminado correctamente`, 'success');
+            showMessage('✅ Activo "' + nombre + '" eliminado correctamente', 'success');
             cargarActivosEscaneados();
         } else {
-            showMessage(`❌ Error eliminando activo: ${data.error}`, 'error');
+            showMessage('❌ Error eliminando activo: ' + data.error, 'error');
         }
     })
     .catch(error => {
