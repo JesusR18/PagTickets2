@@ -598,6 +598,28 @@
             top: 0;
         }
         
+        /* Estilos para filtros rápidos */
+        .filtro-rapido.activo {
+            background: #991b1b !important;
+            color: white !important;
+            border-color: #991b1b !important;
+            transform: scale(1.05);
+        }
+        
+        .filtro-rapido:hover {
+            background: #e2e8f0 !important;
+            border-color: #991b1b !important;
+        }
+        
+        /* Estilos para resaltado de búsqueda */
+        mark {
+            background: #fef08a;
+            padding: 1px 2px;
+            border-radius: 2px;
+            color: #92400e;
+            font-weight: bold;
+        }
+        
         tr:hover {
             background-color: #f9fafb;
         }
@@ -801,9 +823,6 @@
             <img src="{% static 'images/logo.png' %}" alt="SISEG - Sistemas de Seguridad Integral">
         </div>
         <h1>Control de Activos</h1>
-        <div id="contador-activos" style="margin-top: 10px; font-size: 14px; color: #374151; font-weight: 500;">
-            📋 Total de activos: <span id="total-activos">Cargando...</span>
-        </div>
         <div style="margin-top: 15px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 12px;">
             <div class="status-indicator" style="background: rgba(55, 65, 81, 0.1); padding: 5px 15px; border-radius: 20px; color: #374151; font-weight: 500;">
                 <span id="time-display">🕒 Cargando...</span>
@@ -903,10 +922,75 @@
         <div class="tabla-container">
             <div style="margin-bottom: 15px; padding: 10px; background: linear-gradient(135deg, #f8fafc, #e2e8f0); border-radius: 8px; text-align: center;">
                 <span style="color: #475569; font-weight: bold;">📊 Registro de Activos Escaneados</span>
+                <span id="total-activos" style="color: #991b1b; font-weight: bold; margin-left: 8px;">0</span>
+                <span id="total-filtrados" style="color: #64748b; font-size: 12px;"></span>
                 <div style="font-size: 12px; color: #64748b; margin-top: 5px;">
                     💡 Optimizado para uso móvil - Desliza para eliminar
                 </div>
             </div>
+            
+            <!-- Interfaz de Búsqueda y Filtros -->
+            <div style="background: rgba(255, 255, 255, 0.95); border-radius: 12px; padding: 15px; margin-bottom: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                <div style="display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <input 
+                            type="text" 
+                            id="busqueda-input" 
+                            placeholder="🔍 Buscar activos..." 
+                            oninput="filtrarActivos()"
+                            style="width: 100%; padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; color: #374151; outline: none; transition: border-color 0.2s;"
+                            onfocus="this.style.borderColor='#991b1b'"
+                            onblur="this.style.borderColor='#e2e8f0'"
+                        >
+                    </div>
+                    <select 
+                        id="filtro-select" 
+                        onchange="filtrarActivos()"
+                        style="padding: 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 16px; color: #374151; background: white; min-width: 120px;"
+                    >
+                        <option value="todos">🔍 Todos</option>
+                        <option value="nombre">🏷️ Nombre</option>
+                        <option value="ubicacion">📍 Ubicación</option>
+                        <option value="marca">🏭 Marca</option>
+                        <option value="modelo">📱 Modelo</option>
+                        <option value="codigo">📝 Código</option>
+                    </select>
+                    <button 
+                        onclick="limpiarBusqueda()" 
+                        style="padding: 12px 16px; background: #991b1b; color: white; border: none; border-radius: 8px; font-size: 16px; cursor: pointer; transition: background 0.2s;"
+                        onmouseover="this.style.background='#7f1d1d'"
+                        onmouseout="this.style.background='#991b1b'"
+                    >
+                        🗑️
+                    </button>
+                </div>
+                
+                <!-- Filtros Rápidos -->
+                <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button 
+                        class="filtro-rapido activo" 
+                        onclick="aplicarFiltroRapido('todos')"
+                        style="padding: 6px 12px; background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 20px; font-size: 13px; color: #475569; cursor: pointer; transition: all 0.2s;"
+                    >
+                        📊 Todos
+                    </button>
+                    <button 
+                        class="filtro-rapido" 
+                        onclick="aplicarFiltroRapido('nombre')"
+                        style="padding: 6px 12px; background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 20px; font-size: 13px; color: #475569; cursor: pointer; transition: all 0.2s;"
+                    >
+                        🏷️ Nombres
+                    </button>
+                    <button 
+                        class="filtro-rapido" 
+                        onclick="aplicarFiltroRapido('ubicacion')"
+                        style="padding: 6px 12px; background: #f1f5f9; border: 2px solid #e2e8f0; border-radius: 20px; font-size: 13px; color: #475569; cursor: pointer; transition: all 0.2s;"
+                    >
+                        📍 Ubicaciones
+                    </button>
+                </div>
+            </div>
+            
             <table>
                 <thead>
                     <tr>

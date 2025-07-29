@@ -30,6 +30,10 @@ let currentSwipeElement = null;
 let swipeThreshold = 100; // Píxeles mínimos para activar eliminación
 let isSwiping = false;
 
+// Variables para búsqueda y filtros
+let activosOriginales = []; // Copia de todos los activos sin filtrar
+let filtroActual = 'todos'; // 'todos', 'nombre', 'ubicacion', 'marca'
+
 // Sistema de QR seguro SISEG
 const SISEG_SECRET_KEY = 'SISEG2025_SECURITY_INTEGRAL_SYSTEM_SAFE_QR';
 const SISEG_SIGNATURE = 'SISEG_ENCRYPTED_QR_';
@@ -45,6 +49,17 @@ document.addEventListener('DOMContentLoaded', function() {
     console.log('📦 DOM cargado, iniciando aplicación...');
     cargarActivosEscaneados();
     initializeStatusUpdates();
+    
+    // Configurar búsqueda con Enter
+    const busquedaInput = document.getElementById('busqueda-input');
+    if (busquedaInput) {
+        busquedaInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                filtrarActivos();
+                busquedaInput.blur(); // Ocultar teclado móvil
+            }
+        });
+    }
 });
 
 // Función para inicializar actualizaciones de estado
@@ -784,6 +799,274 @@ function mostrarResultadosVerificacion(resultados, todoOK) {
 }
 
 // ============================================
+// FUNCIONES DE BÚSQUEDA Y FILTROS
+// ============================================
+
+// Función para filtrar activos en tiempo real
+function filtrarActivos() {
+    const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
+    const filtro = document.getElementById('filtro-select').value;
+    
+    console.log(`🔍 Filtrando: "${busqueda}" por ${filtro}`);
+    
+    let activosFiltrados = activosOriginales;
+    
+    // Aplicar filtro de búsqueda si hay texto
+    if (busqueda) {
+        activosFiltrados = activosOriginales.filter(activo => {
+            switch (filtro) {
+                case 'nombre':
+                    return activo.nombre.toLowerCase().includes(busqueda);
+                case 'ubicacion':
+                    return activo.ubicacion.toLowerCase().includes(busqueda);
+                case 'marca':
+                    return activo.marca.toLowerCase().includes(busqueda);
+                case 'modelo':
+                    return activo.modelo.toLowerCase().includes(busqueda);
+                case 'codigo':
+                    return activo.codigo.toLowerCase().includes(busqueda);
+                default: // 'todos'
+                    return activo.nombre.toLowerCase().includes(busqueda) ||
+                           activo.ubicacion.toLowerCase().includes(busqueda) ||
+                           activo.marca.toLowerCase().includes(busqueda) ||
+                           activo.modelo.toLowerCase().includes(busqueda) ||
+                           activo.codigo.toLowerCase().includes(busqueda);
+            }
+        });
+    }
+    
+    // Mostrar los activos filtrados
+    mostrarActivosFiltrados(activosFiltrados);
+    
+    // Actualizar contador
+    document.getElementById('total-activos').textContent = activosFiltrados.length;
+    document.getElementById('total-filtrados').textContent = 
+        busqueda ? ` (${activosFiltrados.length} de ${activosOriginales.length})` : '';
+    
+    // Vibración suave para feedback
+    if (navigator.vibrate && busqueda) {
+        navigator.vibrate(30);
+    }
+}
+
+// Función para mostrar activos filtrados
+function mostrarActivosFiltrados(activos) {
+    const tbody = document.getElementById('tabla-activos-body');
+    tbody.innerHTML = '';
+    
+    if (activos.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">🔍 No se encontraron activos con esos criterios</td></tr>';
+        return;
+    }
+    
+    activos.forEach((activo, index) => {
+        const fila = document.createElement('tr');
+        fila.classList.add('fila-swipe');
+        
+        // Verificar duplicados
+        const esDuplicado = verificarDuplicado(activo, activos, index);
+        if (esDuplicado) {
+            fila.classList.add('activo-duplicado');
+        }
+        
+        const esMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+        
+        if (esMobile) {
+            // Vista móvil con resaltado de búsqueda
+            const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
+            const nombreResaltado = resaltarTexto(activo.nombre, busqueda);
+            const ubicacionResaltada = resaltarTexto(activo.ubicacion, busqueda);
+            
+            fila.innerHTML = `
+                <td style="padding: 0; position: relative;">
+                    <div class="fila-deslizable" style="position: relative; background: white; transition: transform 0.2s ease; padding: 15px; border-bottom: 1px solid #e5e7eb;">
+                        <div style="margin-bottom: 8px;"><strong>📋 ${resaltarTexto(activo.codigo, busqueda)}</strong></div>
+                        <div style="margin-bottom: 8px; font-size: 16px;">${nombreResaltado}${esDuplicado ? ' ⚠️' : ''}</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px; font-size: 13px; color: #666;">
+                            <div>📍 ${ubicacionResaltada}</div>
+                            <div>🏷️ ${resaltarTexto(activo.marca, busqueda)}</div>
+                            <div>📦 ${resaltarTexto(activo.modelo, busqueda)}</div>
+                            <div>🔢 ${activo.no_serie}</div>
+                            <div style="grid-column: 1 / -1;">📅 ${activo.fecha_registro}</div>
+                        </div>
+                    </div>
+                </td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+                <td style="display: none;"></td>
+            `;
+            
+            configurarDeslizadoDirecto(fila, activo.id || index, activo.nombre);
+        } else {
+            // Vista desktop
+            const busqueda = document.getElementById('busqueda-input').value.toLowerCase().trim();
+            fila.innerHTML = `
+                <td>${resaltarTexto(activo.codigo, busqueda)}</td>
+                <td>${resaltarTexto(activo.nombre, busqueda)}${esDuplicado ? ' ⚠️' : ''}</td>
+                <td>${resaltarTexto(activo.ubicacion, busqueda)}</td>
+                <td>${resaltarTexto(activo.marca, busqueda)}</td>
+                <td>${resaltarTexto(activo.modelo, busqueda)}</td>
+                <td>${activo.no_serie}</td>
+                <td>${activo.fecha_registro}</td>
+                <td>
+                    <button class="btn-eliminar" onclick="eliminarActivo(${activo.id || index}, '${activo.nombre.replace(/'/g, "\\'")}')">
+                        🗑️ Eliminar
+                    </button>
+                </td>
+            `;
+        }
+        
+        tbody.appendChild(fila);
+    });
+}
+
+// Función para resaltar texto en las búsquedas
+function resaltarTexto(texto, busqueda) {
+    if (!busqueda || !texto) return texto;
+    
+    const regex = new RegExp(`(${busqueda})`, 'gi');
+    return texto.replace(regex, '<mark style="background: #fef08a; padding: 1px 2px; border-radius: 2px;">$1</mark>');
+}
+
+// Función para limpiar la búsqueda
+function limpiarBusqueda() {
+    document.getElementById('busqueda-input').value = '';
+    document.getElementById('filtro-select').value = 'todos';
+    filtrarActivos();
+    
+    // Vibración de confirmación
+    if (navigator.vibrate) {
+        navigator.vibrate(50);
+    }
+}
+
+// Función para filtros rápidos
+function aplicarFiltroRapido(tipo) {
+    document.getElementById('filtro-select').value = tipo;
+    filtrarActivos();
+    
+    // Feedback visual
+    const botones = document.querySelectorAll('.filtro-rapido');
+    botones.forEach(btn => btn.classList.remove('activo'));
+    document.querySelector(`[onclick="aplicarFiltroRapido('${tipo}')"]`).classList.add('activo');
+    
+    if (navigator.vibrate) {
+        navigator.vibrate(40);
+    }
+}
+
+// ============================================
+// FUNCIONES DE SONIDO
+// ============================================
+
+// Función para reproducir sonidos
+function reproducirSonido(tipo) {
+    // Crear contexto de audio si no existe
+    if (!window.audioContext) {
+        try {
+            window.audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (error) {
+            console.log('⚠️ Audio no soportado:', error);
+            return;
+        }
+    }
+    
+    const ctx = window.audioContext;
+    
+    if (tipo === 'nuevo') {
+        // Sonido para QR nuevo - Dos tonos ascendentes (exitoso)
+        reproducirTonoDoble(ctx, 800, 1000, 0.1, 200);
+    } else if (tipo === 'duplicado') {
+        // Sonido para QR duplicado - Tono grave descendente (advertencia)
+        reproducirTonoDescendente(ctx, 400, 300, 0.15, 300);
+    } else if (tipo === 'error') {
+        // Sonido para error - Tres tonos graves rápidos
+        reproducirTonoError(ctx, 200, 0.1, 100);
+    }
+}
+
+// Función para reproducir tono doble (QR nuevo)
+function reproducirTonoDoble(ctx, freq1, freq2, volumen, duracion) {
+    // Primer tono
+    setTimeout(() => {
+        const osc1 = ctx.createOscillator();
+        const gain1 = ctx.createGain();
+        
+        osc1.connect(gain1);
+        gain1.connect(ctx.destination);
+        
+        osc1.frequency.setValueAtTime(freq1, ctx.currentTime);
+        gain1.gain.setValueAtTime(0, ctx.currentTime);
+        gain1.gain.linearRampToValueAtTime(volumen, ctx.currentTime + 0.01);
+        gain1.gain.linearRampToValueAtTime(0, ctx.currentTime + duracion/1000);
+        
+        osc1.start(ctx.currentTime);
+        osc1.stop(ctx.currentTime + duracion/1000);
+    }, 0);
+    
+    // Segundo tono (más agudo)
+    setTimeout(() => {
+        const osc2 = ctx.createOscillator();
+        const gain2 = ctx.createGain();
+        
+        osc2.connect(gain2);
+        gain2.connect(ctx.destination);
+        
+        osc2.frequency.setValueAtTime(freq2, ctx.currentTime);
+        gain2.gain.setValueAtTime(0, ctx.currentTime);
+        gain2.gain.linearRampToValueAtTime(volumen, ctx.currentTime + 0.01);
+        gain2.gain.linearRampToValueAtTime(0, ctx.currentTime + duracion/1000);
+        
+        osc2.start(ctx.currentTime);
+        osc2.stop(ctx.currentTime + duracion/1000);
+    }, 100);
+}
+
+// Función para reproducir tono descendente (QR duplicado)
+function reproducirTonoDescendente(ctx, freqInicio, freqFin, volumen, duracion) {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    
+    osc.frequency.setValueAtTime(freqInicio, ctx.currentTime);
+    osc.frequency.linearRampToValueAtTime(freqFin, ctx.currentTime + duracion/1000);
+    
+    gain.gain.setValueAtTime(0, ctx.currentTime);
+    gain.gain.linearRampToValueAtTime(volumen, ctx.currentTime + 0.01);
+    gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duracion/1000);
+    
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duracion/1000);
+}
+
+// Función para reproducir tono de error
+function reproducirTonoError(ctx, freq, volumen, duracion) {
+    for (let i = 0; i < 3; i++) {
+        setTimeout(() => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            
+            osc.frequency.setValueAtTime(freq, ctx.currentTime);
+            gain.gain.setValueAtTime(0, ctx.currentTime);
+            gain.gain.linearRampToValueAtTime(volumen, ctx.currentTime + 0.01);
+            gain.gain.linearRampToValueAtTime(0, ctx.currentTime + duracion/1000);
+            
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duracion/1000);
+        }, i * 150);
+    }
+}
+
+// ============================================
 // FUNCIONES DE PROCESAMIENTO DE QR
 // ============================================
 
@@ -842,8 +1125,12 @@ function registrarCodigo(codigo) {
         if (data.success) {
             if (data.already_registered) {
                 showMessage(`⚠️ ${data.mensaje}`, 'warning');
+                // Sonido para QR duplicado
+                reproducirSonido('duplicado');
             } else {
                 showMessage(`✅ ${data.mensaje}`, 'success');
+                // Sonido para QR nuevo
+                reproducirSonido('nuevo');
             }
             
             // Vibración para feedback
@@ -857,6 +1144,8 @@ function registrarCodigo(codigo) {
             }, 1000);
         } else {
             showMessage(`❌ Error: ${data.error}`, 'error');
+            // Sonido de error
+            reproducirSonido('error');
         }
     })
     .catch(error => {
@@ -886,6 +1175,7 @@ function cargarActivosEscaneados() {
             console.log(`✅ Mostrando ${data.activos.length} activos`);
             tbody.innerHTML = '';
             activosEscaneados = data.activos;
+            activosOriginales = [...data.activos]; // Copia para filtros
             
             // Actualizar contador de activos
             document.getElementById('total-activos').textContent = data.activos.length;
@@ -955,9 +1245,11 @@ function cargarActivosEscaneados() {
             console.log('⚠️ No hay activos para mostrar');
             tbody.innerHTML = '<tr><td colspan="8" class="sin-activos">📦 No hay activos escaneados aún - ¡Comienza escaneando un código QR!</td></tr>';
             activosEscaneados = [];
+            activosOriginales = []; // Limpiar también los originales
             
             // Actualizar contador cuando no hay activos
             document.getElementById('total-activos').textContent = '0';
+            document.getElementById('total-filtrados').textContent = '';
         }
     })
     .catch(error => {
