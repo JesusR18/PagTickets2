@@ -470,14 +470,15 @@ async function crearQRConLogo(datos, displayArea) {
             canvas.width = size;
             canvas.height = size;
             
-            // Generar QR base con QRious en color negro
+            // Generar QR base con QRious en color negro SIN BORDES
             const qrTemp = new QRious({
                 element: canvas,
                 value: datos,
                 size: size,
                 background: '#ffffff',
                 foreground: '#000000', // Negro como solicitaste
-                level: 'H' // Nivel alto para mejor tolerancia con logo
+                level: 'H', // Nivel alto para mejor tolerancia con logo
+                padding: 0  // ELIMINAR bordes blancos completamente
             });
             
             const ctx = canvas.getContext('2d');
@@ -526,14 +527,15 @@ async function crearQRConLogo(datos, displayArea) {
             logo.onerror = function() {
                 console.warn('⚠️ No se pudo cargar el logo, generando QR sin logo');
                 
-                // Si no se puede cargar el logo, crear QR simple negro
+                // Si no se puede cargar el logo, crear QR simple negro SIN BORDES
                 const qrSimple = new QRious({
                     element: canvas,
                     value: datos,
                     size: size,
                     background: '#ffffff',
                     foreground: '#000000',
-                    level: 'M'
+                    level: 'M',
+                    padding: 0  // ELIMINAR bordes blancos completamente
                 });
                 
                 displayArea.innerHTML = '';
@@ -617,16 +619,17 @@ async function generarQRSeguro() {
         } catch (logoError) {
             console.warn('⚠️ Error con logo, generando QR simple:', logoError);
             
-            // Si falla el logo, crear QR simple negro
+            // Si falla el logo, crear QR simple negro SIN BORDES
             const canvas = document.createElement('canvas');
             
             const qr = new QRious({
                 element: canvas,
                 value: datosEncriptados,
-                size: 256,
+                size: 300, // Mismo tamaño que el QR con logo
                 background: '#ffffff',
                 foreground: '#000000', // Color negro
-                level: 'M'
+                level: 'M',
+                padding: 0  // ELIMINAR bordes blancos completamente
             });
             
             // Limpiar área de visualización
