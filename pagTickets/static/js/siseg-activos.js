@@ -470,35 +470,49 @@ async function crearQRConLogo(datos, displayArea) {
             canvas.width = size;
             canvas.height = size;
             
-            // Generar QR base con QRious en color negro
+            // Crear un canvas temporal para generar el QR sin bordes
+            const tempCanvas = document.createElement('canvas');
+            tempCanvas.width = size;
+            tempCanvas.height = size;
+            
+            // Generar QR base con QRious sin bordes
             const qrTemp = new QRious({
-                element: canvas,
+                element: tempCanvas,
                 value: datos,
                 size: size,
                 background: '#ffffff',
-                foreground: '#000000', // Negro como solicitaste
-                level: 'H' // Nivel alto para mejor tolerancia con logo
+                foreground: '#000000',
+                level: 'H',
+                padding: 0 // Sin padding para eliminar bordes blancos
             });
             
             const ctx = canvas.getContext('2d');
+            const tempCtx = tempCanvas.getContext('2d');
+            
+            // Llenar todo el canvas de blanco primero
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            
+            // Copiar el QR sin bordes al canvas principal, escalándolo para llenar todo el espacio
+            ctx.drawImage(tempCanvas, 0, 0, size, size);
             
             // Cargar y agregar el logo
             const logo = new Image();
             logo.onload = function() {
-                // Calcular posición y tamaño del logo (15% del QR)
-                const logoSize = size * 0.15;
+                // Calcular posición y tamaño del logo (12% del QR para mejor proporción)
+                const logoSize = size * 0.12;
                 const logoX = (size - logoSize) / 2;
                 const logoY = (size - logoSize) / 2;
                 
-                // Crear área blanca circular para el logo
+                // Crear área blanca circular para el logo (más pequeña)
                 ctx.fillStyle = '#ffffff';
                 ctx.beginPath();
-                ctx.arc(size/2, size/2, logoSize/2 + 8, 0, 2 * Math.PI);
+                ctx.arc(size/2, size/2, logoSize/2 + 6, 0, 2 * Math.PI);
                 ctx.fill();
                 
-                // Agregar borde al círculo
+                // Agregar borde negro al círculo
                 ctx.strokeStyle = '#000000';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1;
                 ctx.stroke();
                 
                 // Dibujar el logo circular
@@ -526,14 +540,15 @@ async function crearQRConLogo(datos, displayArea) {
             logo.onerror = function() {
                 console.warn('⚠️ No se pudo cargar el logo, generando QR sin logo');
                 
-                // Si no se puede cargar el logo, crear QR simple negro
+                // Si no se puede cargar el logo, crear QR simple negro sin bordes
                 const qrSimple = new QRious({
                     element: canvas,
                     value: datos,
                     size: size,
                     background: '#ffffff',
                     foreground: '#000000',
-                    level: 'M'
+                    level: 'M',
+                    padding: 0 // Sin padding para eliminar bordes blancos
                 });
                 
                 displayArea.innerHTML = '';
@@ -617,16 +632,17 @@ async function generarQRSeguro() {
         } catch (logoError) {
             console.warn('⚠️ Error con logo, generando QR simple:', logoError);
             
-            // Si falla el logo, crear QR simple negro
+            // Si falla el logo, crear QR simple negro sin bordes
             const canvas = document.createElement('canvas');
             
             const qr = new QRious({
                 element: canvas,
                 value: datosEncriptados,
-                size: 256,
+                size: 300, // Mismo tamaño que el QR con logo
                 background: '#ffffff',
                 foreground: '#000000', // Color negro
-                level: 'M'
+                level: 'M',
+                padding: 0 // Sin padding para eliminar bordes blancos
             });
             
             // Limpiar área de visualización
