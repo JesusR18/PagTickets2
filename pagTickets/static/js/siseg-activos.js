@@ -477,8 +477,7 @@ async function crearQRConLogo(datos, displayArea) {
                 size: size,
                 background: '#ffffff',
                 foreground: '#000000', // Negro como solicitaste
-                level: 'H', // Nivel alto para mejor tolerancia con logo
-                padding: 0 // Sin bordes blancos
+                level: 'H' // Nivel alto para mejor tolerancia con logo
             });
             
             const ctx = canvas.getContext('2d');
@@ -534,8 +533,7 @@ async function crearQRConLogo(datos, displayArea) {
                     size: size,
                     background: '#ffffff',
                     foreground: '#000000',
-                    level: 'M',
-                    padding: 0 // Sin bordes blancos
+                    level: 'M'
                 });
                 
                 displayArea.innerHTML = '';
@@ -628,8 +626,7 @@ async function generarQRSeguro() {
                 size: 256,
                 background: '#ffffff',
                 foreground: '#000000', // Color negro
-                level: 'M',
-                padding: 0 // Sin bordes blancos
+                level: 'M'
             });
             
             // Limpiar área de visualización
