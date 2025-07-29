@@ -460,6 +460,99 @@ function toggleGeneradorQR() {
     }
 }
 
+// Función para crear QR personalizado con logo SISEG
+async function crearQRConLogo(datos, displayArea) {
+    return new Promise((resolve, reject) => {
+        try {
+            // Crear canvas principal para el QR
+            const canvas = document.createElement('canvas');
+            const size = 300;
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Generar QR base con QRious en color negro
+            const qrTemp = new QRious({
+                element: canvas,
+                value: datos,
+                size: size,
+                background: '#ffffff',
+                foreground: '#000000', // Negro como solicitaste
+                level: 'H' // Nivel alto para mejor tolerancia con logo
+            });
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Cargar y agregar el logo
+            const logo = new Image();
+            logo.onload = function() {
+                // Calcular posición y tamaño del logo (15% del QR)
+                const logoSize = size * 0.15;
+                const logoX = (size - logoSize) / 2;
+                const logoY = (size - logoSize) / 2;
+                
+                // Crear área blanca circular para el logo
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(size/2, size/2, logoSize/2 + 8, 0, 2 * Math.PI);
+                ctx.fill();
+                
+                // Agregar borde al círculo
+                ctx.strokeStyle = '#000000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Dibujar el logo circular
+                ctx.save();
+                ctx.beginPath();
+                ctx.arc(size/2, size/2, logoSize/2, 0, 2 * Math.PI);
+                ctx.clip();
+                
+                ctx.drawImage(logo, logoX, logoY, logoSize, logoSize);
+                ctx.restore();
+                
+                // Limpiar área de visualización
+                displayArea.innerHTML = '';
+                
+                // Agregar el canvas final
+                displayArea.appendChild(canvas);
+                
+                // Guardar referencia global
+                window.qrActual = canvas;
+                
+                console.log('✅ QR con logo SISEG creado exitosamente');
+                resolve(canvas);
+            };
+            
+            logo.onerror = function() {
+                console.warn('⚠️ No se pudo cargar el logo, generando QR sin logo');
+                
+                // Si no se puede cargar el logo, crear QR simple negro
+                const qrSimple = new QRious({
+                    element: canvas,
+                    value: datos,
+                    size: size,
+                    background: '#ffffff',
+                    foreground: '#000000',
+                    level: 'M'
+                });
+                
+                displayArea.innerHTML = '';
+                displayArea.appendChild(canvas);
+                window.qrActual = canvas;
+                
+                resolve(canvas);
+            };
+            
+            // Intentar cargar el logo
+            logo.src = '/static/images/logo-qr.jpg';
+            
+        } catch (error) {
+            console.error('❌ Error creando QR con logo:', error);
+            reject(error);
+        }
+    });
+}
+
 // Función para generar QR seguro
 function generarQRSeguro() {
     console.log('🔒 Iniciando generación de QR seguro...');

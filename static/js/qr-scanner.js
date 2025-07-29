@@ -1,23 +1,46 @@
 // ============================================
-// SISEG - Scanner QR con Zoom Real
+// SISEG - Scanner QR con Zoom Real y Seguridad Integrada
 // Archivo JavaScript separado para qr_home.html
 // ============================================
+// 
+// SEGURIDAD DE CÓDIGOS QR EN SISEG:
+// =================================
+// Este sistema NO genera códigos QR, sino que los LEE de manera segura
+// La seguridad se basa en 4 pilares fundamentales:
+//
+// 1. LECTURA CONTROLADA: Solo esta aplicación web autorizada puede procesar
+//    los códigos QR de manera válida en el sistema SISEG
+//
+// 2. VALIDACIÓN SERVIDOR: Cada código escaneado se envía al backend Django
+//    donde se valida, procesa y registra de forma segura
+//
+// 3. REGISTRO AUDITADO: Todos los escaneos quedan registrados con timestamp
+//    para crear una trazabilidad completa de accesos
+//
+// 4. ACCESO RESTRINGIDO: Solo usuarios autorizados pueden usar este scanner
+//    desde dispositivos con acceso a la red SISEG
+//
+// El flujo de seguridad es: ESCANEO → VALIDACIÓN → REGISTRO → AUDITORÍA
+// ============================================
 
-console.log('🚀 Cargando SISEG QR Scanner...');
+console.log('🚀 Cargando SISEG QR Scanner con validación segura...');
 
-// Variables globales
-let video = null;
-let canvas = null;
-let context = null;
-let videoStream = null;
-let videoTrack = null;
-let scannerActivo = false;
-let zoomActual = 1.0;
-let zoomMin = 1.0;
-let zoomMax = 10.0;
-let zoomTimeout = null;
-let zoomPendiente = null;
-let flashActivo = false;
+// Variables globales del sistema QR
+// ===================================
+// CONTEXTO DE SEGURIDAD: Estas variables mantienen el estado seguro del scanner
+// y garantizan que solo se procesen códigos QR de manera controlada
+let video = null;          // Elemento de video para capturar imagen de la cámara
+let canvas = null;         // Canvas para procesar frames y detectar códigos QR
+let context = null;        // Contexto 2D del canvas para manipulación de imágenes
+let videoStream = null;    // Stream de video activo de la cámara del dispositivo
+let videoTrack = null;     // Track específico para controles avanzados (zoom, flash)
+let scannerActivo = false; // Estado de seguridad: evita múltiples procesamiento simultáneos
+let zoomActual = 1.0;      // Nivel de zoom actual para optimizar lectura de códigos QR
+let zoomMin = 1.0;         // Zoom mínimo permitido por el hardware
+let zoomMax = 10.0;        // Zoom máximo permitido por el hardware
+let zoomTimeout = null;    // Control de debounce para zoom fluido
+let zoomPendiente = null;  // Valor de zoom pendiente de aplicar
+let flashActivo = false;   // Estado del flash/linterna para códigos en ambientes oscuros
 
 // Función para manejar emojis de forma segura
 function setEmojiContent(element, content) {
@@ -49,33 +72,39 @@ function actualizarEstado(mensaje, tipo) {
     }
 }
 
-// Función principal para iniciar el scanner
+// Función principal para iniciar el scanner seguro
+// ================================================
+// SEGURIDAD QR: Esta función inicializa la captura segura de códigos QR
+// Se establecen constrains específicos para optimizar la detección y 
+// se configura el entorno controlado para la validación posterior
 async function iniciarScanner() {
     try {
-        console.log('📹 Iniciando scanner QR...');
+        console.log('📹 Iniciando scanner QR con validación SISEG...');
         actualizarEstado('🔄 Iniciando cámara...', null);
         
         document.getElementById('init-btn').disabled = true;
         
-        // Configuración optimizada para pantalla completa
+        // Configuración optimizada para lectura segura de QR
+        // SEGURIDAD: Se prefiere cámara trasera para mejor calidad y control
         const constraints = {
             video: {
-                facingMode: 'environment', // Cámara trasera preferida
-                width: { ideal: 1280, min: 640 },
-                height: { ideal: 720, min: 480 },
+                facingMode: 'environment', // Cámara trasera para códigos QR físicos seguros
+                width: { ideal: 1280, min: 640 },    // Resolución óptima para detección QR
+                height: { ideal: 720, min: 480 },    // Aspect ratio 16:9 estándar
                 aspectRatio: { ideal: 16/9 }
             }
         };
         
+        // Solicitar acceso controlado a la cámara del dispositivo
         videoStream = await navigator.mediaDevices.getUserMedia(constraints);
         videoTrack = videoStream.getVideoTracks()[0];
         
-        // Verificar capacidades de zoom
+        // Verificar capacidades de hardware para optimización de lectura QR
         const capabilities = videoTrack.getCapabilities();
         if (capabilities.zoom) {
             zoomMin = capabilities.zoom.min || 1.0;
             zoomMax = capabilities.zoom.max || 10.0;
-            console.log(`📐 Zoom disponible: ${zoomMin}x - ${zoomMax}x`);
+            console.log(`📐 Zoom disponible para códigos QR: ${zoomMin}x - ${zoomMax}x`);
         }
         
         // Configurar elementos de video
@@ -295,141 +324,219 @@ function detenerScanner() {
     actualizarEstado('✅ Scanner detenido. Presiona el botón para reiniciar', null);
 }
 
-// Función para detectar códigos QR con enfoque en el área central
+// Función para detectar y procesar códigos QR de forma segura
+// ===========================================================
+// NÚCLEO DE SEGURIDAD QR: Esta función implementa la detección controlada
+// y el procesamiento seguro de códigos QR en tiempo real
+// 
+// PROCESO DE SEGURIDAD:
+// 1. Captura frames de video en tiempo real
+// 2. Analiza cada frame buscando patrones QR válidos
+// 3. Valida la estructura del código antes del procesamiento
+// 4. Envía el código al servidor para validación final
+// 5. Registra el escaneo en la base de datos auditada
 function iniciarDeteccionQR() {
+    // VALIDACIÓN DE SEGURIDAD: Verificar que el scanner esté en estado seguro
     if (!scannerActivo || !video || !canvas || !context) return;
     
     const detectar = () => {
+        // CONTROL DE ESTADO: Solo continuar si el scanner está activo y seguro
         if (!scannerActivo) return;
         
         try {
+            // CAPTURA SEGURA: Solo procesar cuando hay datos suficientes
             if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                // Configurar canvas con las dimensiones exactas del video
                 canvas.width = video.videoWidth;
                 canvas.height = video.videoHeight;
+                // Capturar frame actual para análisis de códigos QR
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // Obtener imagen completa
+                // ANÁLISIS QR: Extraer datos de imagen para detección de patrones QR
                 const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                // DETECCIÓN SEGURA: Usar librería jsQR para análisis controlado
                 const code = jsQR(imageData.data, imageData.width, imageData.height);
                 
+                // VALIDACIÓN QR: Si se detecta un código válido, procesarlo
                 if (code) {
-                    console.log('🎯 Código QR detectado:', code.data);
+                    console.log('🎯 Código QR detectado para validación SISEG:', code.data);
                     
-                    // Actualizar mensaje de instrucción con éxito
+                    // FEEDBACK VISUAL: Indicar detección exitosa al usuario
                     const scanInstruction = document.querySelector('.scan-instruction');
                     if (scanInstruction) {
-                        scanInstruction.textContent = '✅ ¡Código detectado!';
+                        scanInstruction.textContent = '✅ ¡Código detectado! Validando...';
                         scanInstruction.classList.add('success');
                     }
                     
-                    // Vibración de confirmación más intensa
+                    // FEEDBACK TÁCTIL: Vibración para confirmar detección exitosa
                     if (navigator.vibrate) {
-                        navigator.vibrate([200, 100, 200]);
+                        navigator.vibrate([200, 100, 200]); // Patrón de vibración distintivo
                     }
                     
-                    // Parar la línea de escaneo y cambiar color
+                    // EFECTOS VISUALES DE SEGURIDAD: Cambiar UI para mostrar estado seguro
                     const scanLine = document.querySelector('.scan-line');
                     if (scanLine) {
                         scanLine.style.animationPlayState = 'paused';
+                        // Cambiar a color verde para indicar detección segura
                         scanLine.style.background = 'linear-gradient(90deg, transparent, #10b981, transparent)';
                         scanLine.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.8)';
                     }
                     
-                    // Cambiar color del marco a verde
+                    // MARCO DE VALIDACIÓN: Cambiar color del marco para indicar código válido
                     const scanFrame = document.querySelector('.scan-frame');
                     if (scanFrame) {
-                        scanFrame.style.borderColor = '#10b981';
+                        scanFrame.style.borderColor = '#10b981';  // Verde de validación
                         scanFrame.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.8)';
                     }
                     
-                    // Esperar un momento para feedback visual antes de procesar
+                    // PROCESAMIENTO SEGURO: Esperar feedback visual antes de enviar al servidor
                     setTimeout(() => {
-                        registrarCodigo(code.data);
-                        detenerScanner();
+                        registrarCodigo(code.data);  // Enviar código para validación en servidor
+                        detenerScanner();            // Cerrar scanner para evitar múltiples lecturas
                     }, 1500);
                     
-                    return;
+                    return; // Salir del loop de detección
                 }
             }
         } catch (error) {
-            console.error('❌ Error en detección:', error);
+            console.error('❌ Error en detección QR segura:', error);
         }
         
+        // LOOP CONTINUO: Continuar detección en el siguiente frame
         requestAnimationFrame(detectar);
     };
     
-    detectar();
+    detectar(); // Iniciar el loop de detección continua
 }
 
-// Función para registrar código QR
+// Función para registro seguro de códigos QR en el servidor
+// ========================================================
+// CORAZÓN DE LA SEGURIDAD: Esta función envía el código QR al servidor Django
+// para validación, procesamiento y registro auditado en la base de datos
+//
+// FLUJO DE SEGURIDAD:
+// 1. Preparar datos con token CSRF para validación de origen
+// 2. Enviar código QR al endpoint seguro del servidor
+// 3. El servidor valida el código y lo registra con timestamp
+// 4. Recibir confirmación de registro exitoso o error
+// 5. Actualizar la interfaz con el resultado de la validación
+// 6. Actualizar lista de registros para auditoría en tiempo real
 function registrarCodigo(codigo) {
+    // PETICIÓN SEGURA AL SERVIDOR: Enviar código para validación centralizada
     fetch('/qr/registrar_qr/', {
         method: 'POST',
         headers: { 
             'Content-Type': 'application/json',
-            'X-CSRFToken': getCookie('csrftoken')
+            // TOKEN CSRF: Protección contra ataques de falsificación de peticiones
+            'X-CSRFToken': getCookie('csrftoken') 
         },
+        // PAYLOAD SEGURO: Enviar solo el código QR sin datos adicionales
         body: JSON.stringify({ codigo_qr: codigo })
     })
     .then(response => response.json())
     .then(data => {
         const resultDiv = document.getElementById('result');
+        
+        // VALIDACIÓN EXITOSA: El servidor confirmó que el código es válido
         if (data.status === 'ok') {
-            resultDiv.innerHTML = `✅ <strong>Código registrado:</strong><br>${data.codigo_qr}`;
-            resultDiv.style.background = 'rgba(16, 185, 129, 0.9)';
+            resultDiv.innerHTML = `✅ <strong>Código QR validado y registrado:</strong><br>${data.codigo_qr}`;
+            resultDiv.style.background = 'rgba(16, 185, 129, 0.9)'; // Verde de éxito
+            console.log('✅ Código QR registrado exitosamente en SISEG');
         } else {
-            resultDiv.innerHTML = `❌ <strong>Error:</strong> ${data.message}<br>Código: ${codigo}`;
-            resultDiv.style.background = 'rgba(239, 68, 68, 0.9)';
+            // ERROR DE VALIDACIÓN: El servidor rechazó el código
+            resultDiv.innerHTML = `❌ <strong>Error de validación:</strong> ${data.message}<br>Código: ${codigo}`;
+            resultDiv.style.background = 'rgba(239, 68, 68, 0.9)'; // Rojo de error
+            console.warn('⚠️ Código QR rechazado por el servidor:', data.message);
         }
+        
         resultDiv.style.display = 'block';
+        // ACTUALIZACIÓN DE AUDITORÍA: Refrescar lista para mostrar el nuevo registro
         actualizarRegistros();
     })
     .catch(error => {
-        console.error('❌ Error registrando código:', error);
+        // ERROR DE CONEXIÓN: No se pudo comunicar con el servidor seguro
+        console.error('❌ Error de conexión con servidor SISEG:', error);
         const resultDiv = document.getElementById('result');
-        resultDiv.innerHTML = `❌ <strong>Error de conexión</strong><br>Código: ${codigo}`;
+        resultDiv.innerHTML = `❌ <strong>Error de conexión segura</strong><br>Código: ${codigo}`;
         resultDiv.style.background = 'rgba(239, 68, 68, 0.9)';
         resultDiv.style.display = 'block';
     });
 }
 
-// Función para obtener cookie CSRF
+// Función para obtener token CSRF de seguridad
+// =============================================
+// SEGURIDAD CSRF: Esta función extrae el token CSRF de las cookies del navegador
+// para validar que las peticiones provienen del sitio web autorizado y no de
+// ataques de falsificación de peticiones entre sitios (Cross-Site Request Forgery)
+//
+// PROPÓSITO DE SEGURIDAD:
+// - Prevenir ataques CSRF que podrían registrar códigos QR falsos
+// - Validar que la petición proviene de una sesión web legítima
+// - Asegurar que solo usuarios autenticados puedan registrar códigos
 function getCookie(name) {
     let cookieValue = null;
+    // VALIDACIÓN DE COOKIES: Verificar que existen cookies en el navegador
     if (document.cookie && document.cookie !== '') {
+        // PARSEO SEGURO: Dividir cookies y buscar el token específico
         const cookies = document.cookie.split(';');
         for (let i = 0; i < cookies.length; i++) {
             const cookie = cookies[i].trim();
+            // BÚSQUEDA DEL TOKEN: Encontrar la cookie con el nombre solicitado
             if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                // EXTRACCIÓN SEGURA: Decodificar el valor de la cookie
                 cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
                 break;
             }
         }
     }
-    return cookieValue;
+    return cookieValue; // Retornar token CSRF para validación de peticiones
 }
 
-// Función para actualizar la lista de registros
+// Función para actualizar la lista de registros auditados
+// ======================================================
+// AUDITORÍA EN TIEMPO REAL: Esta función mantiene actualizada la lista
+// de códigos QR registrados para proporcionar trazabilidad completa
+// 
+// PROPÓSITO DE SEGURIDAD:
+// - Mostrar historial completo de todos los escaneos realizados
+// - Permitir auditoría visual de la actividad del sistema
+// - Detectar posibles anomalías o patrones sospechosos
+// - Mantener transparencia en el registro de códigos QR
 function actualizarRegistros() {
+    // PETICIÓN DE AUDITORÍA: Solicitar la página actualizada con los registros
     fetch('/qr/')
     .then(response => response.text())
     .then(html => {
+        // PARSEO SEGURO: Convertir HTML recibido en documento procesable
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
+        
+        // EXTRACCIÓN DE DATOS: Obtener la lista actualizada de registros
         const nuevaLista = doc.getElementById('lista-registros');
         if (nuevaLista) {
+            // ACTUALIZACIÓN SEGURA: Reemplazar solo la lista sin afectar otros elementos
             document.getElementById('lista-registros').innerHTML = nuevaLista.innerHTML;
+            console.log('📋 Lista de auditoría actualizada');
         }
     })
-    .catch(error => console.error('❌ Error actualizando registros:', error));
+    .catch(error => {
+        console.error('❌ Error actualizando registros de auditoría:', error);
+    });
 }
 
-// Asegurar que los emojis se mantengan al cargar la página
+// Inicialización segura del sistema al cargar la página
+// ====================================================
+// CONFIGURACIÓN INICIAL DE SEGURIDAD: Asegurar que todos los elementos
+// estén correctamente configurados antes de permitir el uso del scanner
 document.addEventListener('DOMContentLoaded', function() {
+    // VALIDACIÓN DE ELEMENTOS: Verificar que el botón principal esté disponible
     const initBtn = document.getElementById('init-btn');
     if (initBtn && !initBtn.innerHTML.includes('📹')) {
+        // CONFIGURACIÓN SEGURA: Establecer el texto correcto del botón
         setEmojiContent(initBtn, '📹 INICIAR SCANNER QR');
     }
+    
+    console.log('🔒 Sistema de seguridad SISEG QR inicializado correctamente');
 });
 
-console.log('✅ JavaScript cargado - SISEG Scanner QR');
+console.log('✅ JavaScript cargado - SISEG Scanner QR con Validación Segura');

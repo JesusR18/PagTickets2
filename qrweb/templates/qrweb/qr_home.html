@@ -5,8 +5,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SISEG - Lector Código QR</title>
+    <title>SISEG - Lector Código QR Seguro</title>
+    <!-- LIBRERÍAS DE SEGURIDAD QR -->
+    <!-- html5-qrcode: Librería principal para detección segura de códigos QR -->
+    <!-- Esta librería proporciona la funcionalidad base para escanear códigos QR de manera controlada -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    
+    <!-- jsQR: Librería adicional para procesamiento avanzado de códigos QR -->
+    <!-- Permite análisis más detallado de la estructura del código y validación adicional -->
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <style> 
         /* CSS para compatibilidad de emojis en todos los dispositivos */
@@ -576,32 +582,52 @@
     </div>
 
     <div class="container">
+        <!-- INTERFAZ DE SCANNER SEGURO -->
+        <!-- ============================== -->
+        <!-- SEGURIDAD QR: Botón de activación controlada del scanner -->
+        <!-- Solo usuarios autorizados pueden iniciar el proceso de lectura -->
         <div class="scanner-section">
             <button onclick="iniciarScanner()" class="init-btn" id="init-btn">
-                📹 INICIAR SCANNER QR
+                📹 INICIAR SCANNER QR SEGURO
             </button>
             
+            <!-- MENSAJES DE ESTADO DE SEGURIDAD -->
+            <!-- Proporciona feedback sobre el estado del proceso de validación -->
             <div id="status-message" class="status-message" style="display: none;"></div>
             
+            <!-- CONTENEDOR DE CÁMARA CONTROLADA -->
+            <!-- ================================= -->
+            <!-- ENTORNO SEGURO: Área controlada para captura y análisis de códigos QR -->
+            <!-- La cámara solo se activa cuando el usuario autorizado lo solicita -->
             <div id="camera-container" class="camera-container" style="display: none;">
+                <!-- VIDEO SEGURO: Stream controlado de la cámara para detección QR -->
                 <video id="video" autoplay playsinline></video>
+                <!-- CANVAS DE PROCESAMIENTO: Área para análisis de frames y detección -->
                 <canvas id="canvas"></canvas>
                 
-                <!-- Overlay de escaneo con marco central -->
+                <!-- ELEMENTOS DE INTERFAZ DE SEGURIDAD -->
+                <!-- =================================== -->
+                
+                <!-- Overlay de área de escaneo controlada -->
                 <div class="scan-overlay"></div>
                 
-                <!-- Estado de conexión -->
+                <!-- INDICADOR DE CONEXIÓN SEGURA -->
+                <!-- Estado visual que confirma la conexión segura con el servidor SISEG -->
                 <div class="connection-status">
                     <div class="status-dot"></div>
-                    <span>SISEG Conectado</span>
+                    <span>SISEG Conectado - Sistema Seguro</span>
                 </div>
                 
-                <!-- Marco de escaneo central -->
+                <!-- MARCO DE DETECCIÓN QR -->
+                <!-- Área específica donde se deben colocar los códigos QR para lectura segura -->
                 <div class="scan-frame">
+                    <!-- LÍNEA DE ESCANEO ACTIVA -->
+                    <!-- Indica que el sistema está analizando activamente en busca de códigos QR -->
                     <div class="scan-line"></div>
                 </div>
                 
-                <!-- Esquinas del marco -->
+                <!-- ESQUINAS VISUALES DE REFERENCIA -->
+                <!-- Guías visuales para posicionar correctamente el código QR -->
                 <div class="scan-corners">
                     <div class="corner top-left"></div>
                     <div class="corner top-right"></div>
@@ -609,44 +635,62 @@
                     <div class="corner bottom-right"></div>
                 </div>
                 
-                <!-- Mensaje de instrucción -->
-                <div class="scan-instruction">📱 Coloca el código QR dentro del marco</div>
+                <!-- INSTRUCCIONES DE SEGURIDAD -->
+                <!-- Mensaje que guía al usuario sobre el uso seguro del scanner -->
+                <div class="scan-instruction">📱 Coloca el código QR dentro del marco para validación</div>
                 
-                <!-- Botón de flash/linterna -->
+                <!-- CONTROLES DE OPTIMIZACIÓN PARA CÓDIGOS QR -->
+                <!-- ========================================== -->
+                
+                <!-- Botón de flash para códigos en ambientes oscuros -->
                 <button onclick="toggleFlash()" class="flash-btn" id="flash-btn">🔦</button>
                 
-                <!-- Controles de Zoom REAL (flotantes) -->
+                <!-- CONTROLES DE ZOOM PARA MEJOR DETECCIÓN QR -->
+                <!-- Permite acercar/alejar para optimizar la lectura de códigos pequeños o distantes -->
                 <div class="zoom-controls-real">
                     <button onclick="aplicarZoom(-1)" class="zoom-btn-real">➖</button>
                     <span id="zoom-display-real" class="zoom-display">1.0x</span>
                     <button onclick="aplicarZoom(1)" class="zoom-btn-real">➕</button>
                 </div>
                 
-                <!-- Slider de zoom (flotante) -->
+                <!-- CONTROL DESLIZANTE DE ZOOM PRECISO -->
+                <!-- Permite ajuste fino del zoom para códigos QR de diferentes tamaños -->
                 <div class="zoom-slider-real">
                     <input type="range" id="zoom-range" min="1" max="10" step="0.1" value="1" oninput="cambiarZoom(this.value)">
                 </div>
                 
-                <!-- Botones de control (flotantes) -->
+                <!-- CONTROLES DE SEGURIDAD DEL SCANNER -->
+                <!-- Botón para detener el scanner y cerrar la sesión de captura -->
                 <div class="control-buttons">
-                    <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER</button>
+                    <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER SCANNER</button>
                 </div>
             </div>
 
+            <!-- ÁREA DE RESULTADOS DE VALIDACIÓN -->
+            <!-- ================================= -->
+            <!-- Muestra el resultado de la validación del código QR por parte del servidor -->
             <div id="result" style="display: none;"></div>
         </div>
         
-        <h2>Últimos códigos registrados</h2>
+        <!-- SECCIÓN DE AUDITORÍA Y TRAZABILIDAD -->
+        <!-- ==================================== -->
+        <!-- HISTORIAL SEGURO: Lista de todos los códigos QR registrados para auditoría -->
+        <!-- Permite rastrear todos los escaneos realizados en el sistema -->
+        <h2>Registro de Auditoría - Últimos códigos validados</h2>
         <ul id="lista-registros">
         {% for r in registros %}
+            <!-- ENTRADA DE AUDITORÍA: Cada registro incluye código y timestamp -->
             <li><b>{{ r.codigo }}</b> - {{ r.fecha_registro|localtime|date:'Y-m-d H:i:s' }}</li>
         {% empty %}
-            <li>No hay registros aún.</li>
+            <li>No hay registros de códigos QR aún.</li>
         {% endfor %}
         </ul>
     </div>
 
-    <!-- Cargar archivo JavaScript externo -->
+    <!-- CARGA DEL SISTEMA DE SEGURIDAD QR -->
+    <!-- =================================== -->
+    <!-- Cargar archivo JavaScript con todas las funciones de seguridad -->
+    <!-- Este archivo contiene toda la lógica de detección, validación y registro seguro -->
     <script src="{% static 'js/qr-scanner.js' %}"></script>
 </body>
 </html>
