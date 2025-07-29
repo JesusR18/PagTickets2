@@ -454,6 +454,16 @@
             color: #991b1b;
         }
         
+        .security-notice {
+            animation: pulse-security 2s infinite;
+        }
+        
+        @keyframes pulse-security {
+            0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.4); }
+            70% { box-shadow: 0 0 0 10px rgba(16, 185, 129, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+        }
+        
         /* Estilos para Generador QR Seguro */
         .qr-generator-container {
             margin: 20px 0;
@@ -850,6 +860,11 @@
             </button>
             
             <div id="scanner-status" class="scanner-status">
+                <i class="fas fa-shield-alt" style="color: #4CAF50; margin-right: 5px;"></i>
+                <span style="font-weight: bold;">Solo acepta códigos QR de SISEG</span>
+            </div>
+            
+            <div id="scanner-instructions" class="scanner-status" style="font-size: 0.9em; color: #666; margin-top: 5px;">
                 Presiona el botón para iniciar la cámara con zoom de hardware
             </div>
             
@@ -908,6 +923,11 @@
             
             <div class="qr-output-section" id="qr-output-section" style="display: none;">
                 <h4>📱 Tu QR Seguro:</h4>
+                <div class="security-notice" style="background: linear-gradient(135deg, #10b981, #059669); color: white; padding: 10px; border-radius: 8px; margin: 10px 0; text-align: center; font-size: 0.9em;">
+                    <i class="fas fa-shield-check"></i>
+                    <strong>Código único del sistema SISEG</strong><br>
+                    Solo puede ser leído por esta aplicación
+                </div>
                 <div id="qr-display-area"></div>
                 <button onclick="descargarQR()" class="btn btn-success">
                     💾 Descargar QR

@@ -113,7 +113,7 @@ function showMessage(message, type) {
         
         setTimeout(() => {
             if (!scannerActivo) {
-                statusDiv.innerHTML = 'Presiona el botón para iniciar la cámara con zoom de hardware';
+                statusDiv.innerHTML = 'Solo acepta códigos QR generados por SISEG - Presiona el botón para iniciar';
             }
         }, 4000);
     }
@@ -335,7 +335,7 @@ function detenerScanner() {
     toggleBtn.disabled = false;
     
     scannerActivo = false;
-    actualizarEstado('Scanner detenido. Presiona el botón para reiniciar', null);
+    actualizarEstado('🔒 Scanner detenido - Solo acepta QR SISEG', null);
 }
 
 // Función para detectar códigos QR
@@ -1075,41 +1075,50 @@ function reproducirTonoError(ctx, freq, volumen, duracion) {
 
 // Función para registrar código QR
 function registrarCodigo(codigo) {
-    console.log('📝 Registrando código:', codigo);
+    console.log('📝 Analizando código QR:', codigo);
     
-    // Intentar desencriptar si es un QR seguro de SISEG
-    let codigoFinal = codigo;
-    
-    if (codigo.startsWith(SISEG_SIGNATURE)) {
-        console.log('🔐 QR seguro de SISEG detectado, desencriptando...');
+    // VERIFICACIÓN ESTRICTA: Solo aceptar códigos QR de SISEG
+    if (!codigo.startsWith(SISEG_SIGNATURE)) {
+        console.error('� ACCESO DENEGADO: QR no generado por SISEG');
+        showMessage('🚫 CÓDIGO RECHAZADO - Solo se aceptan códigos QR generados por SISEG', 'error');
         
-        const datosDesencriptados = desencriptarDeSISEG(codigo);
-        
-        if (datosDesencriptados) {
-            console.log('✅ QR seguro desencriptado exitosamente');
-            codigoFinal = datosDesencriptados;
-            
-            // Vibración especial para QR seguro exitoso
-            if (navigator.vibrate) {
-                navigator.vibrate([100, 50, 100, 50, 100]);
-            }
-            
-            showMessage('🔓 QR Seguro SISEG verificado', 'success');
-        } else {
-            console.error('🚫 QR seguro no válido o corrupto');
-            showMessage('🚫 QR no válido o corrupto - Solo QR seguros de SISEG permitidos', 'error');
-            
-            // Vibración de rechazo
-            if (navigator.vibrate) {
-                navigator.vibrate([500, 200, 500]);
-            }
-            return; // No procesar QR no válido
+        // Vibración de rechazo fuerte
+        if (navigator.vibrate) {
+            navigator.vibrate([300, 100, 300, 100, 300]);
         }
-    } else {
-        // QR normal, mostrar advertencia si no es de SISEG
-        console.log('⚠️ QR estándar detectado (no encriptado)');
-        showMessage('⚠️ QR estándar - Recomendamos usar QR seguros de SISEG', 'warning');
+        
+        // Sonido de error
+        reproducirSonido('error');
+        return; // BLOQUEAR completamente códigos externos
     }
+    
+    console.log('� QR seguro de SISEG detectado, desencriptando...');
+    
+    // Intentar desencriptar el código SISEG
+    const datosDesencriptados = desencriptarDeSISEG(codigo);
+    
+    if (!datosDesencriptados) {
+        console.error('🚫 QR seguro no válido o corrupto');
+        showMessage('🚫 QR SISEG corrupto o con clave incorrecta', 'error');
+        
+        // Vibración de rechazo
+        if (navigator.vibrate) {
+            navigator.vibrate([500, 200, 500]);
+        }
+        
+        // Sonido de error
+        reproducirSonido('error');
+        return; // No procesar QR corrupto
+    }
+    
+    console.log('✅ QR seguro SISEG desencriptado exitosamente');
+    
+    // Vibración especial para QR seguro exitoso
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100, 50, 100]);
+    }
+    
+    showMessage('🔓 QR Seguro SISEG verificado y aceptado', 'success');
     
     const csrftoken = getCookie('csrftoken');
     
@@ -1119,7 +1128,7 @@ function registrarCodigo(codigo) {
             'Content-Type': 'application/json',
             'X-CSRFToken': csrftoken
         },
-        body: JSON.stringify({ codigo_qr: codigoFinal })
+        body: JSON.stringify({ codigo_qr: datosDesencriptados })
     })
     .then(response => response.json())
     .then(data => {
