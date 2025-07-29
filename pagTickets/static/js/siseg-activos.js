@@ -470,18 +470,28 @@ async function crearQRConLogo(datos, displayArea) {
             canvas.width = size;
             canvas.height = size;
             
-            // Generar QR base con QRious en color negro SIN BORDES
+            // Crear canvas temporal para generar el QR
+            const tempCanvas = document.createElement('canvas');
+            
+            // Generar QR base en canvas temporal SIN BORDES
             const qrTemp = new QRious({
-                element: canvas,
+                element: tempCanvas,
                 value: datos,
-                size: size,
+                size: 200, // Tamaño temporal más pequeño
                 background: '#ffffff',
-                foreground: '#000000', // Negro como solicitaste
-                level: 'H', // Nivel alto para mejor tolerancia con logo
-                padding: 0  // ELIMINAR bordes blancos completamente
+                foreground: '#000000',
+                level: 'H',
+                padding: 0  // CLAVE: Sin padding para eliminar bordes
             });
             
             const ctx = canvas.getContext('2d');
+            
+            // Llenar todo el canvas final de blanco
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+            
+            // CLAVE: Escalar el QR temporal para llenar TODO el canvas final
+            ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, size, size);
             
             // Cargar y agregar el logo
             const logo = new Image();
@@ -527,16 +537,8 @@ async function crearQRConLogo(datos, displayArea) {
             logo.onerror = function() {
                 console.warn('⚠️ No se pudo cargar el logo, generando QR sin logo');
                 
-                // Si no se puede cargar el logo, crear QR simple negro SIN BORDES
-                const qrSimple = new QRious({
-                    element: canvas,
-                    value: datos,
-                    size: size,
-                    background: '#ffffff',
-                    foreground: '#000000',
-                    level: 'M',
-                    padding: 0  // ELIMINAR bordes blancos completamente
-                });
+                // El QR ya está escalado en el canvas final desde el tempCanvas
+                // No necesitamos hacer nada más, ya ocupa todo el espacio
                 
                 displayArea.innerHTML = '';
                 displayArea.appendChild(canvas);
@@ -619,18 +621,32 @@ async function generarQRSeguro() {
         } catch (logoError) {
             console.warn('⚠️ Error con logo, generando QR simple:', logoError);
             
-            // Si falla el logo, crear QR simple negro SIN BORDES
+            // Si falla el logo, crear QR simple negro que ocupe TODO el espacio
             const canvas = document.createElement('canvas');
+            canvas.width = 300;
+            canvas.height = 300;
+            
+            // Crear canvas temporal para el QR
+            const tempCanvas = document.createElement('canvas');
             
             const qr = new QRious({
-                element: canvas,
+                element: tempCanvas,
                 value: datosEncriptados,
-                size: 300, // Mismo tamaño que el QR con logo
+                size: 200, // Tamaño temporal
                 background: '#ffffff',
-                foreground: '#000000', // Color negro
+                foreground: '#000000',
                 level: 'M',
-                padding: 0  // ELIMINAR bordes blancos completamente
+                padding: 0
             });
+            
+            const ctx = canvas.getContext('2d');
+            
+            // Llenar de blanco
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, 300, 300);
+            
+            // Escalar QR para ocupar TODO el canvas
+            ctx.drawImage(tempCanvas, 0, 0, tempCanvas.width, tempCanvas.height, 0, 0, 300, 300);
             
             // Limpiar área de visualización
             displayArea.innerHTML = '';
