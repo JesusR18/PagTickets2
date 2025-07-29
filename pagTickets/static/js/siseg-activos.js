@@ -554,7 +554,7 @@ async function crearQRConLogo(datos, displayArea) {
 }
 
 // Función para generar QR seguro
-function generarQRSeguro() {
+async function generarQRSeguro() {
     console.log('🔒 Iniciando generación de QR seguro...');
     
     const input = document.getElementById('qr-data-input');
@@ -594,43 +594,56 @@ function generarQRSeguro() {
         console.log('🔐 Datos encriptados exitosamente, longitud:', datosEncriptados.length);
         
         // Limpiar área de visualización
-        displayArea.innerHTML = '<p style="color: #991b1b;">⏳ Generando QR seguro...</p>';
+        displayArea.innerHTML = '<p style="color: #991b1b;">⏳ Generando QR seguro con logo...</p>';
         
-        // Crear un canvas para el QR usando QRious
-        const canvas = document.createElement('canvas');
-        
-        const qr = new QRious({
-            element: canvas,
-            value: datosEncriptados,
-            size: 256,
-            background: '#ffffff',
-            foreground: '#991b1b', // Color rojo SISEG
-            level: 'M'
-        });
-        
-        console.log('✅ QR generado exitosamente con QRious');
-        
-        // Limpiar área de visualización
-        displayArea.innerHTML = '';
-        
-        // Agregar el canvas al área de visualización
-        displayArea.appendChild(canvas);
-        
-        // Guardar referencia del QR actual
-        qrActual = canvas;
-        
-        // Mostrar sección de salida
-        outputSection.style.display = 'block';
-        
-        // Desplazarse hacia el QR generado
-        outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        
-        // Añadir vibración de confirmación (si está disponible)
-        if (navigator.vibrate) {
-            navigator.vibrate([200, 100, 200]);
+        // Crear QR con logo usando la función especializada
+        try {
+            const canvas = await crearQRConLogo(datosEncriptados, displayArea);
+            qrActual = canvas;
+            
+            // Mostrar sección de salida
+            outputSection.style.display = 'block';
+            
+            // Desplazarse hacia el QR generado
+            outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            // Añadir vibración de confirmación (si está disponible)
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
+            console.log('✅ QR seguro con logo generado y mostrado exitosamente');
+            
+        } catch (logoError) {
+            console.warn('⚠️ Error con logo, generando QR simple:', logoError);
+            
+            // Si falla el logo, crear QR simple negro
+            const canvas = document.createElement('canvas');
+            
+            const qr = new QRious({
+                element: canvas,
+                value: datosEncriptados,
+                size: 256,
+                background: '#ffffff',
+                foreground: '#000000', // Color negro
+                level: 'M'
+            });
+            
+            // Limpiar área de visualización
+            displayArea.innerHTML = '';
+            displayArea.appendChild(canvas);
+            qrActual = canvas;
+            
+            // Mostrar sección de salida
+            outputSection.style.display = 'block';
+            outputSection.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+            if (navigator.vibrate) {
+                navigator.vibrate([200, 100, 200]);
+            }
+            
+            console.log('✅ QR seguro simple generado exitosamente');
         }
-        
-        console.log('✅ QR seguro generado y mostrado exitosamente');
         
     } catch (error) {
         console.error('❌ Error general generando QR seguro:', error);
