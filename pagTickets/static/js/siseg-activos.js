@@ -282,6 +282,13 @@ async function iniciarScanner() {
         // Mostrar interfaz de cámara
         cameraContainer.style.display = 'block';
         document.getElementById('stop-button-container').style.display = 'block';
+        
+        // Mostrar controles externos
+        const externalControls = document.getElementById('external-controls');
+        if (externalControls) {
+            externalControls.classList.add('active');
+        }
+        
         toggleBtn.textContent = '⏸️ SCANNER PREMIUM ACTIVO';
         toggleBtn.disabled = true;
         scannerActivo = true;
@@ -338,6 +345,13 @@ async function iniciarScanner() {
             // Mostrar interfaz
             cameraContainer.style.display = 'block';
             document.getElementById('stop-button-container').style.display = 'block';
+            
+            // Mostrar controles externos
+            const externalControls = document.getElementById('external-controls');
+            if (externalControls) {
+                externalControls.classList.add('active');
+            }
+            
             toggleBtn.textContent = '⏸️ SCANNER BÁSICO ACTIVO';
             toggleBtn.disabled = true;
             scannerActivo = true;
@@ -517,6 +531,13 @@ function detenerScanner() {
     
     document.getElementById('camera-container').style.display = 'none';
     document.getElementById('stop-button-container').style.display = 'none';
+    
+    // Ocultar controles externos
+    const externalControls = document.getElementById('external-controls');
+    if (externalControls) {
+        externalControls.classList.remove('active');
+    }
+    
     const toggleBtn = document.getElementById('scanner-toggle-btn');
     toggleBtn.textContent = '📱 INICIAR SCANNER QR';
     toggleBtn.disabled = false;

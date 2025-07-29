@@ -116,30 +116,33 @@
         /* CÁMARA COMPACTA CON BORDES REDONDEADOS */
         .camera-container {
             position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            width: 100vw;
-            height: 100vh;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 90vw;
+            max-width: 400px;
+            height: 60vh;
+            max-height: 500px;
+            min-height: 300px;
             margin: 0;
             background: #000;
             overflow: hidden;
             z-index: 1000;
             display: none;
+            border-radius: 20px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
         }
         
         /* Video compacto con esquinas redondeadas */
         #video {
-            width: 85%;
-            height: 65%;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
             display: block;
             position: absolute;
-            top: 17.5%;
-            left: 7.5%;
+            top: 0;
+            left: 0;
             border-radius: 20px;
-            box-shadow: 0 8px 30px rgba(0, 0, 0, 0.7);
         }
         
         #canvas {
@@ -149,10 +152,10 @@
         /* Overlay solo en el área del video */
         .scan-overlay {
             position: absolute;
-            top: 17.5%;
-            left: 7.5%;
-            right: 7.5%;
-            bottom: 17.5%;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
             background: rgba(0, 0, 0, 0.2);
             border-radius: 20px;
             z-index: 10;
@@ -165,8 +168,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 220px;
-            height: 220px;
+            width: 180px;
+            height: 180px;
             z-index: 15;
             border: 3px solid #25D366;
             border-radius: 15px;
@@ -180,8 +183,8 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 220px;
-            height: 220px;
+            width: 180px;
+            height: 180px;
             z-index: 20;
         }
         
@@ -228,20 +231,21 @@
         /* Mensaje de instrucción WhatsApp */
         .scan-instruction {
             position: absolute;
-            top: 10%;
+            top: 15px;
             left: 50%;
             transform: translateX(-50%);
             background: rgba(37, 211, 102, 0.95);
             color: white;
-            padding: 15px 25px;
-            border-radius: 30px;
-            font-size: 16px;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-size: 14px;
             font-weight: 600;
             z-index: 25;
             text-align: center;
             backdrop-filter: blur(15px);
             transition: all 0.3s ease;
             box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
+            max-width: 90%;
         }
         
         .scan-instruction.success {
@@ -315,16 +319,16 @@
         /* Controles de zoom WhatsApp */
         .zoom-controls-real {
             position: absolute;
-            bottom: 140px;
+            bottom: 15px;
             left: 50%;
             transform: translateX(-50%);
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 20px;
-            padding: 15px 25px;
+            gap: 15px;
+            padding: 10px 20px;
             background: rgba(0, 0, 0, 0.85);
-            border-radius: 30px;
+            border-radius: 25px;
             backdrop-filter: blur(15px);
             z-index: 30;
             border: 1px solid rgba(255, 255, 255, 0.1);
@@ -335,14 +339,14 @@
             background: transparent;
             color: white;
             border: 2px solid rgba(255, 255, 255, 0.6);
-            padding: 10px;
+            padding: 8px;
             border-radius: 50%;
-            font-size: 20px;
+            font-size: 16px;
             font-weight: bold;
             cursor: pointer;
             transition: all 0.2s ease;
-            width: 50px;
-            height: 50px;
+            width: 38px;
+            height: 38px;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -357,32 +361,32 @@
         .zoom-display {
             background: transparent;
             color: white;
-            padding: 10px 20px;
-            border-radius: 20px;
+            padding: 6px 15px;
+            border-radius: 15px;
             font-weight: bold;
-            font-size: 18px;
-            min-width: 70px;
+            font-size: 14px;
+            min-width: 50px;
             text-align: center;
             text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
         }
         
         .zoom-slider-real {
             position: absolute;
-            bottom: 60px;
+            bottom: 70px;
             left: 50%;
             transform: translateX(-50%);
-            padding: 15px 30px;
+            padding: 8px 20px;
             background: rgba(0, 0, 0, 0.8);
-            border-radius: 25px;
+            border-radius: 20px;
             backdrop-filter: blur(10px);
             z-index: 30;
             border: 1px solid rgba(255, 255, 255, 0.2);
         }
         
         #zoom-range {
-            width: 200px;
-            height: 6px;
-            border-radius: 3px;
+            width: 150px;
+            height: 4px;
+            border-radius: 2px;
             background: rgba(255, 255, 255, 0.3);
             outline: none;
             -webkit-appearance: none;
@@ -392,25 +396,42 @@
         #zoom-range::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: #fff;
             cursor: pointer;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
         }
-        
+
         #zoom-range::-moz-range-thumb {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
             border-radius: 50%;
             background: #fff;
             cursor: pointer;
             border: none;
             box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+        }        /* Botones de control externos (fuera de la cámara compacta) */
+        .external-controls {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            z-index: 1001;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s ease;
         }
         
-        /* Botones de control */
+        .external-controls.active {
+            opacity: 1;
+            visibility: visible;
+        }
+        
         .control-buttons {
             position: absolute;
             bottom: 30px;
@@ -522,15 +543,15 @@
             }
             
             .zoom-controls-real {
-                bottom: 100px;
-                gap: 15px;
-                padding: 12px 20px;
+                bottom: 12px;
+                gap: 12px;
+                padding: 8px 18px;
             }
             
             .zoom-btn-real {
-                width: 45px;
-                height: 45px;
-                font-size: 18px;
+                width: 35px;
+                height: 35px;
+                font-size: 14px;
             }
             
             .connection-status {
@@ -664,6 +685,11 @@
                 <div class="control-buttons">
                     <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER SCANNER</button>
                 </div>
+            </div>
+
+            <!-- CONTROLES EXTERNOS (fuera de la cámara compacta) -->
+            <div id="external-controls" class="external-controls">
+                <button onclick="detenerScanner()" class="control-btn stop-btn">⏹️ DETENER SCANNER</button>
             </div>
 
             <!-- ÁREA DE RESULTADOS DE VALIDACIÓN -->
