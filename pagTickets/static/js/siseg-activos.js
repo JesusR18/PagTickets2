@@ -40,6 +40,23 @@ const SISEG_SIGNATURE = 'SISEG_ENCRYPTED_QR_';
 let qrGeneratorActivo = false;
 let qrActual = null;
 
+// Variables para detección por región (cuadrado verde)
+const SCAN_REGION = {
+    // Tamaño del cuadrado verde (debe coincidir con el CSS)
+    width: 180,   // 180px como definimos en el CSS
+    height: 180,  // 180px como definimos en el CSS
+    
+    // Se calculará dinámicamente basado en el tamaño del video
+    x: 0,         // Coordenada X del centro
+    y: 0,         // Coordenada Y del centro
+    
+    // Coordenadas finales del rectángulo
+    left: 0,
+    top: 0,
+    right: 0,
+    bottom: 0
+};
+
 // ============================================
 // INICIALIZACIÓN
 // ============================================
@@ -156,6 +173,92 @@ function getCookie(name) {
 // ============================================
 // FUNCIONES DEL SCANNER QR
 // ============================================
+
+// Función para calcular la región del cuadrado verde en coordenadas del video
+function calcularRegionEscaneo() {
+    if (!video || !canvas) return false;
+    
+    const videoWidth = canvas.width;
+    const videoHeight = canvas.height;
+    
+    // El cuadrado verde está centrado en el video
+    const centerX = videoWidth / 2;
+    const centerY = videoHeight / 2;
+    
+    // Calcular el tamaño del cuadrado en coordenadas del video
+    // El cuadrado verde es de 180px en la pantalla, pero necesitamos convertirlo
+    // a coordenadas del video que pueden ser diferentes
+    const scaleX = videoWidth / video.offsetWidth;
+    const scaleY = videoHeight / video.offsetHeight;
+    
+    // Usar la escala promedio para mantener proporciones
+    const scale = Math.min(scaleX, scaleY);
+    
+    const regionWidth = SCAN_REGION.width * scale;
+    const regionHeight = SCAN_REGION.height * scale;
+    
+    // Calcular coordenadas del rectángulo
+    SCAN_REGION.x = centerX;
+    SCAN_REGION.y = centerY;
+    SCAN_REGION.left = Math.max(0, centerX - regionWidth / 2);
+    SCAN_REGION.top = Math.max(0, centerY - regionHeight / 2);
+    SCAN_REGION.right = Math.min(videoWidth, centerX + regionWidth / 2);
+    SCAN_REGION.bottom = Math.min(videoHeight, centerY + regionHeight / 2);
+    
+    // Actualizar dimensiones reales
+    SCAN_REGION.width = SCAN_REGION.right - SCAN_REGION.left;
+    SCAN_REGION.height = SCAN_REGION.bottom - SCAN_REGION.top;
+    
+    console.log('🎯 Región de escaneo calculada:', {
+        video: { width: videoWidth, height: videoHeight },
+        region: {
+            x: Math.round(SCAN_REGION.left),
+            y: Math.round(SCAN_REGION.top),
+            width: Math.round(SCAN_REGION.width),
+            height: Math.round(SCAN_REGION.height)
+        }
+    });
+    
+    return true;
+}
+
+// Función para extraer solo la región del cuadrado verde
+function extraerRegionEscaneo(imageData) {
+    if (!calcularRegionEscaneo()) {
+        console.warn('⚠️ No se pudo calcular la región de escaneo, usando imagen completa');
+        return imageData;
+    }
+    
+    const sourceWidth = imageData.width;
+    const sourceHeight = imageData.height;
+    const sourceData = imageData.data;
+    
+    // Coordenadas de la región (redondeadas)
+    const x = Math.round(SCAN_REGION.left);
+    const y = Math.round(SCAN_REGION.top);
+    const width = Math.round(SCAN_REGION.width);
+    const height = Math.round(SCAN_REGION.height);
+    
+    // Crear nueva imagen solo con la región del cuadrado verde
+    const regionData = new Uint8ClampedArray(width * height * 4);
+    
+    for (let row = 0; row < height; row++) {
+        for (let col = 0; col < width; col++) {
+            const sourceIndex = ((y + row) * sourceWidth + (x + col)) * 4;
+            const targetIndex = (row * width + col) * 4;
+            
+            // Verificar que no estemos fuera de los límites
+            if (sourceIndex < sourceData.length - 3 && targetIndex < regionData.length - 3) {
+                regionData[targetIndex] = sourceData[sourceIndex];         // R
+                regionData[targetIndex + 1] = sourceData[sourceIndex + 1]; // G
+                regionData[targetIndex + 2] = sourceData[sourceIndex + 2]; // B
+                regionData[targetIndex + 3] = sourceData[sourceIndex + 3]; // A
+            }
+        }
+    }
+    
+    return new ImageData(regionData, width, height);
+}
 
 // Función para alternar el escáner (iniciar/detener)
 function toggleScanner() {
@@ -386,13 +489,35 @@ function mostrarIndicadorDeteccion() {
             transform: translate(-50%, -50%);
             width: 200px;
             height: 200px;
-            border: 3px solid #10b981;
+            border: 3px solid #25D366;
             border-radius: 20px;
-            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+            box-shadow: 0 0 20px rgba(37, 211, 102, 0.6);
             pointer-events: none;
             z-index: 10;
-            animation: pulse-scanner 2s infinite;
+            animation: pulseGreen 2s infinite;
         `;
+        
+        // Crear mensaje informativo
+        const mensaje = document.createElement('div');
+        mensaje.id = 'region-message';
+        mensaje.style.cssText = `
+            position: absolute;
+            top: -50px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(37, 211, 102, 0.95);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-align: center;
+            white-space: nowrap;
+            box-shadow: 0 4px 15px rgba(37, 211, 102, 0.4);
+            z-index: 15;
+        `;
+        mensaje.textContent = '🎯 Coloca el QR dentro del área verde';
+        overlay.appendChild(mensaje);
         
         // Agregar animación CSS si no existe
         if (!document.getElementById('scanner-styles')) {
@@ -401,16 +526,16 @@ function mostrarIndicadorDeteccion() {
             style.textContent = `
                 @keyframes pulse-scanner {
                     0% { 
-                        border-color: #10b981; 
-                        box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+                        border-color: #25D366; 
+                        box-shadow: 0 0 20px rgba(37, 211, 102, 0.6);
                     }
                     50% { 
-                        border-color: #059669; 
-                        box-shadow: 0 0 30px rgba(16, 185, 129, 0.8);
+                        border-color: #22c55e; 
+                        box-shadow: 0 0 30px rgba(37, 211, 102, 0.9);
                     }
                     100% { 
-                        border-color: #10b981; 
-                        box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
+                        border-color: #25D366; 
+                        box-shadow: 0 0 20px rgba(37, 211, 102, 0.6);
                     }
                 }
             `;
@@ -680,18 +805,32 @@ function iniciarDeteccionQR() {
                 context.imageSmoothingQuality = 'high';
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
+                // ⭐ DETECCIÓN POR REGIÓN: Solo escanear dentro del cuadrado verde
                 let imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+                
+                // Extraer solo la región del cuadrado verde
+                const regionData = extraerRegionEscaneo(imageData);
+                
+                // Mostrar información de la región para debug
+                if (intentosConsecutivos === 0) {
+                    console.log('🎯 Escaneando solo en región verde:', {
+                        region: `${Math.round(SCAN_REGION.width)}x${Math.round(SCAN_REGION.height)}`,
+                        total: `${canvas.width}x${canvas.height}`,
+                        porcentaje: Math.round((SCAN_REGION.width * SCAN_REGION.height) / (canvas.width * canvas.height) * 100) + '%'
+                    });
+                }
+                
                 let code = null;
                 
-                // =========== FASE 1: DETECCIÓN RÁPIDA ===========
-                // Método estándar (más rápido)
-                code = jsQR(imageData.data, imageData.width, imageData.height, {
+                // =========== FASE 1: DETECCIÓN RÁPIDA (SOLO EN REGIÓN VERDE) ===========
+                // Método estándar solo en la región del cuadrado verde
+                code = jsQR(regionData.data, regionData.width, regionData.height, {
                     inversionAttempts: "dontInvert"
                 });
                 
-                // Con inversión si no detecta
+                // Con inversión si no detecta (solo en región verde)
                 if (!code) {
-                    code = jsQR(imageData.data, imageData.width, imageData.height, {
+                    code = jsQR(regionData.data, regionData.width, regionData.height, {
                         inversionAttempts: "attemptBoth"
                     });
                 }
@@ -701,39 +840,50 @@ function iniciarDeteccionQR() {
                     // Activar modo ultra precisión
                     if (!modoUltraPrecision) {
                         modoUltraPrecision = true;
-                        console.log('🎯 Activando modo ULTRA PRECISIÓN');
+                        console.log('🎯 Activando modo ULTRA PRECISIÓN (solo región verde)');
                     }
                     
-                    // Mejora de imagen optimizada
-                    const imagenMejorada = mejorarImagenHibrida(imageData);
+                    // Mejora de imagen optimizada SOLO en la región verde
+                    const imagenMejorada = mejorarImagenHibrida(regionData);
                     code = jsQR(imagenMejorada.data, imagenMejorada.width, imagenMejorada.height, {
                         inversionAttempts: "attemptBoth"
                     });
-                    if (code) console.log('✅ QR detectado con mejora híbrida');
+                    if (code) console.log('✅ QR detectado con mejora híbrida en región verde');
                 }
                 
                 // =========== FASE 3: ULTRA PRECISIÓN (después de 35 intentos) ===========
                 if (!code && intentosConsecutivos > 35) {
-                    // Técnica de múltiples resoluciones
-                    const resoluciones = [
-                        { w: canvas.width * 1.2, h: canvas.height * 1.2, name: "1.2x" },
-                        { w: canvas.width * 0.8, h: canvas.height * 0.8, name: "0.8x" }
-                    ];
+                    console.log('🔍 Fase 3: Escalado de región verde');
                     
-                    for (const res of resoluciones) {
+                    // Técnica de escalado SOLO en la región verde
+                    const escalas = [1.2, 0.8, 1.5, 0.6];
+                    
+                    for (const escala of escalas) {
                         if (code) break;
                         
-                        // Crear canvas temporal para cada escala
+                        // Crear canvas temporal escalado
                         const tempCanvas = document.createElement('canvas');
                         const tempCtx = tempCanvas.getContext('2d');
-                        tempCanvas.width = res.w;
-                        tempCanvas.height = res.h;
                         
+                        const newWidth = Math.round(regionData.width * escala);
+                        const newHeight = Math.round(regionData.height * escala);
+                        
+                        tempCanvas.width = newWidth;
+                        tempCanvas.height = newHeight;
+                        
+                        // Crear imagen temporal de la región
+                        const tempRegionCanvas = document.createElement('canvas');
+                        const tempRegionCtx = tempRegionCanvas.getContext('2d');
+                        tempRegionCanvas.width = regionData.width;
+                        tempRegionCanvas.height = regionData.height;
+                        tempRegionCtx.putImageData(regionData, 0, 0);
+                        
+                        // Escalar la región
                         tempCtx.imageSmoothingEnabled = true;
                         tempCtx.imageSmoothingQuality = 'high';
-                        tempCtx.drawImage(video, 0, 0, res.w, res.h);
+                        tempCtx.drawImage(tempRegionCanvas, 0, 0, newWidth, newHeight);
                         
-                        const scaledImageData = tempCtx.getImageData(0, 0, res.w, res.h);
+                        const scaledImageData = tempCtx.getImageData(0, 0, newWidth, newHeight);
                         const scaledMejorada = mejorarImagenHibrida(scaledImageData);
                         
                         code = jsQR(scaledMejorada.data, scaledMejorada.width, scaledMejorada.height, {
@@ -741,7 +891,7 @@ function iniciarDeteccionQR() {
                         });
                         
                         if (code) {
-                            console.log(`✅ QR detectado en escala ${res.name}`);
+                            console.log(`✅ QR detectado en región verde escalada ${escala}x`);
                             break;
                         }
                     }
@@ -749,42 +899,70 @@ function iniciarDeteccionQR() {
                 
                 // =========== FASE 4: DETECCIÓN EXTREMA (después de 60 intentos) ===========
                 if (!code && intentosConsecutivos > 60) {
-                    // Área central expandida
-                    const centerSize = Math.min(canvas.width, canvas.height) * 0.85;
-                    const centerX = (canvas.width - centerSize) / 2;
-                    const centerY = (canvas.height - centerSize) / 2;
+                    console.log('⚡ Fase 4: Técnicas extremas en región verde');
                     
-                    const centerImageData = context.getImageData(centerX, centerY, centerSize, centerSize);
-                    const centerMejorada = mejorarImagenHibrida(centerImageData);
+                    // Aplicar múltiples filtros a la región verde
+                    const filtros = [
+                        (data) => mejorarParaPantallas(data),
+                        (data) => aplicarFiltroGaussiano(data),
+                        (data) => optimizarImagenAutomaticamente(data)
+                    ];
                     
-                    code = jsQR(centerMejorada.data, centerMejorada.width, centerMejorada.height, {
-                        inversionAttempts: "attemptBoth"
-                    });
-                    if (code) console.log('✅ QR detectado en área central expandida');
+                    for (const filtro of filtros) {
+                        if (code) break;
+                        
+                        try {
+                            const filtrada = filtro(regionData);
+                            code = jsQR(filtrada.data, filtrada.width, filtrada.height, {
+                                inversionAttempts: "attemptBoth"
+                            });
+                            
+                            if (code) {
+                                console.log('✅ QR detectado con filtro extremo en región verde');
+                                break;
+                            }
+                        } catch (error) {
+                            console.warn('⚠️ Error en filtro extremo:', error);
+                        }
+                    }
                 }
                 
                 // =========== FASE 5: TÉCNICAS AVANZADAS (después de 90 intentos) ===========
                 if (!code && intentosConsecutivos > 90) {
-                    // Detección por cuadrantes para QR grandes
-                    const cuadrantes = [
-                        { x: 0, y: 0, w: canvas.width/1.5, h: canvas.height/1.5 },
-                        { x: canvas.width/3, y: 0, w: canvas.width/1.5, h: canvas.height/1.5 },
-                        { x: 0, y: canvas.height/3, w: canvas.width/1.5, h: canvas.height/1.5 },
-                        { x: canvas.width/3, y: canvas.height/3, w: canvas.width/1.5, h: canvas.height/1.5 }
-                    ];
+                    console.log('🔬 Fase 5: Técnicas avanzadas en región verde');
                     
-                    for (const cuad of cuadrantes) {
+                    // Rotaciones ligeras para QR inclinados SOLO en región verde
+                    const rotaciones = [2, -2, 4, -4, 6, -6];
+                    
+                    for (const angulo of rotaciones) {
                         if (code) break;
                         
-                        const cuadImageData = context.getImageData(cuad.x, cuad.y, cuad.w, cuad.h);
-                        const cuadMejorada = mejorarImagenHibrida(cuadImageData);
+                        // Crear imagen temporal de la región
+                        const tempCanvas = document.createElement('canvas');
+                        const tempCtx = tempCanvas.getContext('2d');
+                        tempCanvas.width = regionData.width;
+                        tempCanvas.height = regionData.height;
+                        tempCtx.putImageData(regionData, 0, 0);
                         
-                        code = jsQR(cuadMejorada.data, cuadMejorada.width, cuadMejorada.height, {
+                        // Rotar la región
+                        const rotatedCanvas = document.createElement('canvas');
+                        const rotatedCtx = rotatedCanvas.getContext('2d');
+                        rotatedCanvas.width = regionData.width;
+                        rotatedCanvas.height = regionData.height;
+                        
+                        rotatedCtx.translate(regionData.width / 2, regionData.height / 2);
+                        rotatedCtx.rotate((angulo * Math.PI) / 180);
+                        rotatedCtx.drawImage(tempCanvas, -regionData.width / 2, -regionData.height / 2);
+                        
+                        const rotatedImageData = rotatedCtx.getImageData(0, 0, regionData.width, regionData.height);
+                        const rotatedMejorada = mejorarImagenHibrida(rotatedImageData);
+                        
+                        code = jsQR(rotatedMejorada.data, rotatedMejorada.width, rotatedMejorada.height, {
                             inversionAttempts: "attemptBoth"
                         });
                         
                         if (code) {
-                            console.log('✅ QR detectado en cuadrante overlapeado');
+                            console.log(`✅ QR detectado con rotación ${angulo}° en región verde`);
                             break;
                         }
                     }
@@ -792,24 +970,35 @@ function iniciarDeteccionQR() {
                 
                 // =========== FASE 6: TÉCNICAS ESPECIALES (después de 120 intentos) ===========
                 if (!code && intentosConsecutivos > 120) {
-                    // Rotaciones ligeras para QR inclinados
-                    const rotaciones = [3, -3, 6, -6];
+                    console.log('⚡ Fase 6: Técnicas especiales finales en región verde');
                     
-                    for (const angulo of rotaciones) {
-                        if (code) break;
+                    // Combinación de filtros en la región verde
+                    try {
+                        // Filtro de contraste extremo
+                        const contrasteExtremo = new ImageData(
+                            new Uint8ClampedArray(regionData.data),
+                            regionData.width,
+                            regionData.height
+                        );
                         
-                        const rotatedImageData = rotarImagenRapida(imageData, angulo);
-                        if (rotatedImageData) {
-                            const rotatedMejorada = mejorarImagenHibrida(rotatedImageData);
-                            code = jsQR(rotatedMejorada.data, rotatedMejorada.width, rotatedMejorada.height, {
-                                inversionAttempts: "attemptBoth"
-                            });
-                            
-                            if (code) {
-                                console.log(`✅ QR detectado con rotación ${angulo}°`);
-                                break;
-                            }
+                        // Aumentar contraste agresivamente
+                        for (let i = 0; i < contrasteExtremo.data.length; i += 4) {
+                            const gray = (contrasteExtremo.data[i] + contrasteExtremo.data[i + 1] + contrasteExtremo.data[i + 2]) / 3;
+                            const enhanced = gray > 128 ? 255 : 0;
+                            contrasteExtremo.data[i] = enhanced;
+                            contrasteExtremo.data[i + 1] = enhanced;
+                            contrasteExtremo.data[i + 2] = enhanced;
                         }
+                        
+                        code = jsQR(contrasteExtremo.data, contrasteExtremo.width, contrasteExtremo.height, {
+                            inversionAttempts: "attemptBoth"
+                        });
+                        
+                        if (code) {
+                            console.log('✅ QR detectado con contraste extremo en región verde');
+                        }
+                    } catch (error) {
+                        console.warn('⚠️ Error en técnicas especiales:', error);
                     }
                 }
                 
@@ -1052,12 +1241,19 @@ function actualizarIndicadorDeteccion(codigoDetectado, intentos, modoUltra = fal
             overlay.style.borderColor = '#dc2626'; // Rojo para ultra precisión
             overlay.style.boxShadow = '0 0 15px rgba(220, 38, 38, 0.6)';
         } else if (intentos < 30) {
-            overlay.style.borderColor = '#3b82f6'; // Azul para modo normal
-            overlay.style.boxShadow = '0 0 10px rgba(59, 130, 246, 0.4)';
+            overlay.style.borderColor = '#25D366'; // Verde WhatsApp para modo normal
+            overlay.style.boxShadow = '0 0 20px rgba(37, 211, 102, 0.6)';
         } else {
             overlay.style.borderColor = '#f59e0b'; // Amarillo para modo intermedio
             overlay.style.boxShadow = '0 0 12px rgba(245, 158, 11, 0.5)';
         }
+    }
+    
+    // Añadir pulso visual para indicar que solo funciona en el cuadrado verde
+    if (!codigoDetectado && intentos < 5) {
+        overlay.style.animation = 'pulseGreen 2s infinite';
+    } else {
+        overlay.style.animation = 'none';
     }
 }
 
