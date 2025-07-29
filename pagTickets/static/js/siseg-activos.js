@@ -388,16 +388,14 @@ function encriptarParaSISEG(datos) {
     try {
         // Crear timestamp para códigos QR permanentes
         const timestamp = Date.now();
-        const expiracion = timestamp + (365 * 24 * 60 * 60 * 1000); // 365 días (1 año) - Prácticamente permanente
         
-        // Preparar objeto con datos y metadatos de seguridad
+        // Preparar objeto REDUCIDO con menos metadatos para QR más simples
         const payload = {
-            data: datos,
-            timestamp: timestamp,
-            expiracion: expiracion,
-            app: 'SISEG',
-            version: '1.0',
-            permanent: true // Marcar como permanente
+            d: datos, // 'd' en lugar de 'data' para reducir tamaño
+            t: timestamp, // 't' en lugar de 'timestamp'
+            a: 'SISEG', // 'a' en lugar de 'app'
+            v: '1.0', // 'v' en lugar de 'version'
+            p: true // 'p' en lugar de 'permanent'
         };
         
         // Convertir a JSON y encriptar con AES
@@ -432,19 +430,23 @@ function desencriptarDeSISEG(datosEncriptados) {
         
         const payload = JSON.parse(jsonPayload);
         
-        // Verificar que es de SISEG
-        if (payload.app !== 'SISEG') {
+        // Verificar que es de SISEG - Compatible con formato nuevo y viejo
+        const app = payload.a || payload.app; // 'a' nuevo formato, 'app' formato viejo
+        if (app !== 'SISEG') {
             throw new Error('QR no autorizado para SISEG');
         }
         
-        // Verificar expiración (solo para códigos no permanentes)
-        if (!payload.permanent && Date.now() > payload.expiracion) {
+        // Verificar expiración (solo para códigos no permanentes) - Compatible con ambos formatos
+        const permanent = payload.p || payload.permanent;
+        const expiracion = payload.e || payload.expiracion;
+        if (!permanent && expiracion && Date.now() > expiracion) {
             throw new Error('QR expirado - Genere uno nuevo');
         }
         
         // Para códigos permanentes, solo mostrar advertencia si son muy antiguos (más de 2 años)
-        if (payload.permanent && payload.timestamp) {
-            const antiguedad = Date.now() - payload.timestamp;
+        const timestamp = payload.t || payload.timestamp;
+        if (permanent && timestamp) {
+            const antiguedad = Date.now() - timestamp;
             const dosAnios = 2 * 365 * 24 * 60 * 60 * 1000;
             
             if (antiguedad > dosAnios) {
@@ -452,7 +454,8 @@ function desencriptarDeSISEG(datosEncriptados) {
             }
         }
         
-        return payload.data;
+        // Retornar los datos - Compatible con ambos formatos
+        return payload.d || payload.data;
         
     } catch (error) {
         console.error('🚫 Error de seguridad SISEG:', error.message);
@@ -481,7 +484,7 @@ async function crearQRConLogo(datos, displayArea) {
         try {
             // Crear canvas principal para el QR
             const canvas = document.createElement('canvas');
-            const size = 300;
+            const size = 400; // Aumentado de 300 a 400 para mejor legibilidad
             canvas.width = size;
             canvas.height = size;
             
@@ -492,7 +495,7 @@ async function crearQRConLogo(datos, displayArea) {
                 size: size,
                 background: '#ffffff',
                 foreground: '#000000', // Negro como solicitaste
-                level: 'H' // Nivel alto para mejor tolerancia con logo
+                level: 'L' // Nivel BAJO para menos densidad y más fácil lectura
             });
             
             const ctx = canvas.getContext('2d');
@@ -548,7 +551,7 @@ async function crearQRConLogo(datos, displayArea) {
                     size: size,
                     background: '#ffffff',
                     foreground: '#000000',
-                    level: 'M'
+                    level: 'L' // Nivel bajo para menos densidad
                 });
                 
                 displayArea.innerHTML = '';
@@ -638,10 +641,10 @@ async function generarQRSeguro() {
             const qr = new QRious({
                 element: canvas,
                 value: datosEncriptados,
-                size: 256,
+                size: 400, // Aumentado para mejor legibilidad
                 background: '#ffffff',
                 foreground: '#000000', // Color negro
-                level: 'M'
+                level: 'L' // Nivel bajo para menos densidad
             });
             
             // Limpiar área de visualización
