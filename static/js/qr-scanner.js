@@ -78,15 +78,22 @@ function actualizarEstado(mensaje, tipo) {
 // Se establecen constrains específicos para optimizar la detección y 
 // se configura el entorno controlado para la validación posterior
 async function iniciarScanner() {
+    console.log('🔧 DEBUG: Función iniciarScanner() llamada');
+    
     try {
         console.log('📹 Iniciando scanner QR con validación SISEG...');
         actualizarEstado('🔄 Iniciando cámara...', null);
+        
+        // Verificar si navigator.mediaDevices está disponible
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            throw new Error('getUserMedia no está disponible en este navegador');
+        }
         
         document.getElementById('init-btn').disabled = true;
         
         // Configuración optimizada para lectura segura de QR
         // SEGURIDAD: Se prefiere cámara trasera para mejor calidad y control
-        const constraints = {
+        let constraints = {
             video: {
                 facingMode: 'environment', // Cámara trasera para códigos QR físicos seguros
                 width: { ideal: 1280, min: 640 },    // Resolución óptima para detección QR
@@ -95,9 +102,25 @@ async function iniciarScanner() {
             }
         };
         
+        console.log('🔧 DEBUG: Solicitando acceso a la cámara...');
         // Solicitar acceso controlado a la cámara del dispositivo
-        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        try {
+            videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (error) {
+            console.warn('⚠️ No se pudo acceder a cámara trasera, intentando con cualquier cámara...');
+            // Si falla la cámara trasera, intentar con cualquier cámara
+            constraints = {
+                video: {
+                    width: { ideal: 1280, min: 640 },
+                    height: { ideal: 720, min: 480 },
+                    aspectRatio: { ideal: 16/9 }
+                }
+            };
+            videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        }
         videoTrack = videoStream.getVideoTracks()[0];
+        
+        console.log('✅ DEBUG: Acceso a cámara obtenido exitosamente');
         
         // Verificar capacidades de hardware para optimización de lectura QR
         const capabilities = videoTrack.getCapabilities();
@@ -112,9 +135,13 @@ async function iniciarScanner() {
         canvas = document.getElementById('canvas');
         context = canvas.getContext('2d');
         
+        console.log('🔧 DEBUG: Elementos de video configurados');
+        
         video.srcObject = videoStream;
         
         video.onloadedmetadata = async () => {
+            console.log('🔧 DEBUG: Video metadata cargada, configurando UI...');
+            
             // Cambiar a pantalla completa estilo WhatsApp
             document.body.style.overflow = 'hidden';
             
@@ -149,12 +176,13 @@ async function iniciarScanner() {
                 await aplicarZoomReal(zoomActual);
             }
             
+            console.log('🔧 DEBUG: Iniciando detección QR...');
             iniciarDeteccionQR();
         };
         
     } catch (error) {
         console.error('❌ Error accediendo a la cámara:', error);
-        actualizarEstado('❌ Error: No se pudo acceder a la cámara', 'error');
+        actualizarEstado(`❌ Error: ${error.message}`, 'error');
         document.getElementById('init-btn').disabled = false;
     }
 }
@@ -353,9 +381,9 @@ function iniciarDeteccionQR() {
                 // Capturar frame actual para análisis de códigos QR
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // CÁLCULO DEL ÁREA DE ESCANEO (marco verde centrado)
-                // Definir el área precisa donde debe estar el código QR
-                const marcoWidth = Math.min(canvas.width * 0.6, 250);  // 60% del ancho o máximo 250px
+                // CÁLCULO DEL ÁREA DE ESCANEO (marco verde centrado MÁS PEQUEÑO)
+                // Definir el área precisa donde debe estar el código QR - SOLO UN QR
+                const marcoWidth = Math.min(canvas.width * 0.45, 180);  // 45% del ancho o máximo 180px (más pequeño)
                 const marcoHeight = marcoWidth;  // Marco cuadrado
                 const marcoX = (canvas.width - marcoWidth) / 2;   // Centrado horizontalmente
                 const marcoY = (canvas.height - marcoHeight) / 2; // Centrado verticalmente
@@ -378,8 +406,8 @@ function iniciarDeteccionQR() {
                     const marcoCenter = marcoWidth / 2;
                     const distanciaDelCentro = Math.sqrt(Math.pow(centerX - marcoCenter, 2) + Math.pow(centerY - marcoCenter, 2));
                     
-                    // Solo procesar si está suficientemente centrado (dentro del 70% del marco)
-                    if (distanciaDelCentro <= marcoWidth * 0.35) {
+                    // Solo procesar si está suficientemente centrado (dentro del 80% del marco más pequeño)
+                    if (distanciaDelCentro <= marcoWidth * 0.4) {
                         console.log('✅ Código QR centrado correctamente en el marco verde');
                         
                         // FEEDBACK VISUAL: Indicar detección exitosa al usuario
