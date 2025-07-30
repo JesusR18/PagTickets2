@@ -113,24 +113,25 @@
             color: #991b1b;
         }
         
-        /* CÁMARA COMPACTA CON BORDES REDONDEADOS */
+        /* CÁMARA ULTRA COMPACTA Y PRECISA */
         .camera-container {
             position: fixed;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 90vw;
-            max-width: 400px;
-            height: 60vh;
-            max-height: 500px;
-            min-height: 300px;
+            width: 85vw;
+            max-width: 350px;
+            height: 55vh;
+            max-height: 450px;
+            min-height: 280px;
             margin: 0;
             background: #000;
             overflow: hidden;
             z-index: 1000;
             display: none;
-            border-radius: 20px;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.8);
+            border-radius: 25px;
+            box-shadow: 0 15px 50px rgba(0, 0, 0, 0.9);
+            border: 2px solid rgba(37, 211, 102, 0.3);
         }
         
         /* Video compacto con esquinas redondeadas */
@@ -142,7 +143,7 @@
             position: absolute;
             top: 0;
             left: 0;
-            border-radius: 20px;
+            border-radius: 23px;
         }
         
         #canvas {
@@ -156,25 +157,26 @@
             left: 0;
             right: 0;
             bottom: 0;
-            background: rgba(0, 0, 0, 0.2);
-            border-radius: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 23px;
             z-index: 10;
             pointer-events: none;
         }
         
-        /* Marco de escaneo dentro del video compacto */
+        /* Marco de escaneo MÁS PEQUEÑO y PRECISO */
         .scan-frame {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 180px;
-            height: 180px;
+            width: 160px;
+            height: 160px;
             z-index: 15;
-            border: 3px solid #25D366;
-            border-radius: 15px;
+            border: 4px solid #25D366;
+            border-radius: 20px;
             background: transparent;
-            box-shadow: 0 0 20px rgba(37, 211, 102, 0.6);
+            box-shadow: 0 0 25px rgba(37, 211, 102, 0.8);
+            animation: pulseGreen 2s ease-in-out infinite;
         }
         
         /* Esquinas del marco WhatsApp */
@@ -228,7 +230,7 @@
             border-bottom-right-radius: 15px;
         }
         
-        /* Mensaje de instrucción WhatsApp */
+        /* Mensaje de instrucción WhatsApp MEJORADO */
         .scan-instruction {
             position: absolute;
             top: 15px;
@@ -236,16 +238,17 @@
             transform: translateX(-50%);
             background: rgba(37, 211, 102, 0.95);
             color: white;
-            padding: 10px 20px;
+            padding: 12px 25px;
             border-radius: 25px;
-            font-size: 14px;
-            font-weight: 600;
+            font-size: 13px;
+            font-weight: 700;
             z-index: 25;
             text-align: center;
             backdrop-filter: blur(15px);
             transition: all 0.3s ease;
-            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.3);
-            max-width: 90%;
+            box-shadow: 0 4px 20px rgba(37, 211, 102, 0.4);
+            max-width: 85%;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
         }
         
         .scan-instruction.success {
@@ -304,7 +307,7 @@
             }
         }
         
-        /* Línea de escaneo WhatsApp */
+        /* Línea de escaneo WhatsApp AJUSTADA al marco compacto */
         .scan-line {
             position: absolute;
             top: 0;
@@ -330,7 +333,7 @@
                 opacity: 1;
             }
             100% {
-                transform: translateY(216px);
+                transform: translateY(154px); /* Ajustado al marco de 160px menos bordes */
                 opacity: 0;
             }
         }

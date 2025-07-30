@@ -138,10 +138,10 @@ async function iniciarScanner() {
             scannerActivo = true;
             console.log('✅ Scanner WhatsApp iniciado en pantalla completa');
             
-            // Actualizar mensaje inicial
+            // Actualizar mensaje inicial con instrucciones precisas
             const scanInstruction = document.querySelector('.scan-instruction');
             if (scanInstruction) {
-                scanInstruction.textContent = '📱 Coloca el código QR dentro del marco';
+                scanInstruction.textContent = '🎯 Coloca el código QR DENTRO del marco verde';
             }
             
             // Aplicar zoom inicial
@@ -324,17 +324,18 @@ function detenerScanner() {
     actualizarEstado('✅ Scanner detenido. Presiona el botón para reiniciar', null);
 }
 
-// Función para detectar y procesar códigos QR de forma segura
-// ===========================================================
-// NÚCLEO DE SEGURIDAD QR: Esta función implementa la detección controlada
-// y el procesamiento seguro de códigos QR en tiempo real
+// Función para detectar y procesar códigos QR de forma segura SOLO en el marco verde
+// ===================================================================================
+// NÚCLEO DE SEGURIDAD QR: Esta función implementa la detección controlada y precisa
+// de códigos QR solo dentro del área del marco verde de escaneo
 // 
-// PROCESO DE SEGURIDAD:
+// PROCESO DE SEGURIDAD MEJORADO:
 // 1. Captura frames de video en tiempo real
-// 2. Analiza cada frame buscando patrones QR válidos
-// 3. Valida la estructura del código antes del procesamiento
-// 4. Envía el código al servidor para validación final
-// 5. Registra el escaneo en la base de datos auditada
+// 2. Recorta la imagen SOLO al área del marco verde de escaneo
+// 3. Analiza únicamente esa zona restringida buscando patrones QR válidos
+// 4. Valida la estructura del código antes del procesamiento
+// 5. Envía el código al servidor para validación final
+// 6. Registra el escaneo en la base de datos auditada
 function iniciarDeteccionQR() {
     // VALIDACIÓN DE SEGURIDAD: Verificar que el scanner esté en estado seguro
     if (!scannerActivo || !video || !canvas || !context) return;
@@ -352,50 +353,86 @@ function iniciarDeteccionQR() {
                 // Capturar frame actual para análisis de códigos QR
                 context.drawImage(video, 0, 0, canvas.width, canvas.height);
                 
-                // ANÁLISIS QR: Extraer datos de imagen para detección de patrones QR
-                const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-                // DETECCIÓN SEGURA: Usar librería jsQR para análisis controlado
+                // CÁLCULO DEL ÁREA DE ESCANEO (marco verde centrado)
+                // Definir el área precisa donde debe estar el código QR
+                const marcoWidth = Math.min(canvas.width * 0.6, 250);  // 60% del ancho o máximo 250px
+                const marcoHeight = marcoWidth;  // Marco cuadrado
+                const marcoX = (canvas.width - marcoWidth) / 2;   // Centrado horizontalmente
+                const marcoY = (canvas.height - marcoHeight) / 2; // Centrado verticalmente
+                
+                // EXTRACCIÓN PRECISA: Solo analizar el área del marco verde
+                const imageData = context.getImageData(marcoX, marcoY, marcoWidth, marcoHeight);
+                
+                // DETECCIÓN SEGURA: Usar librería jsQR solo en el área restringida
                 const code = jsQR(imageData.data, imageData.width, imageData.height);
                 
-                // VALIDACIÓN QR: Si se detecta un código válido, procesarlo
+                // VALIDACIÓN QR: Si se detecta un código válido dentro del marco
                 if (code) {
-                    console.log('🎯 Código QR detectado para validación SISEG:', code.data);
+                    console.log('🎯 Código QR detectado DENTRO del marco verde para validación SISEG:', code.data);
                     
-                    // FEEDBACK VISUAL: Indicar detección exitosa al usuario
-                    const scanInstruction = document.querySelector('.scan-instruction');
-                    if (scanInstruction) {
-                        scanInstruction.textContent = '✅ ¡Código detectado! Validando...';
-                        scanInstruction.classList.add('success');
+                    // VALIDACIÓN ADICIONAL: Verificar que el código está bien centrado
+                    const centerX = code.location.topLeftCorner.x + (code.location.topRightCorner.x - code.location.topLeftCorner.x) / 2;
+                    const centerY = code.location.topLeftCorner.y + (code.location.bottomLeftCorner.y - code.location.topLeftCorner.y) / 2;
+                    
+                    // El código debe estar razonablemente centrado en el marco
+                    const marcoCenter = marcoWidth / 2;
+                    const distanciaDelCentro = Math.sqrt(Math.pow(centerX - marcoCenter, 2) + Math.pow(centerY - marcoCenter, 2));
+                    
+                    // Solo procesar si está suficientemente centrado (dentro del 70% del marco)
+                    if (distanciaDelCentro <= marcoWidth * 0.35) {
+                        console.log('✅ Código QR centrado correctamente en el marco verde');
+                        
+                        // FEEDBACK VISUAL: Indicar detección exitosa al usuario
+                        const scanInstruction = document.querySelector('.scan-instruction');
+                        if (scanInstruction) {
+                            scanInstruction.textContent = '✅ ¡Código detectado en el marco! Validando...';
+                            scanInstruction.classList.add('success');
+                        }
+                        
+                        // FEEDBACK TÁCTIL: Vibración para confirmar detección exitosa
+                        if (navigator.vibrate) {
+                            navigator.vibrate([200, 100, 200]); // Patrón de vibración distintivo
+                        }
+                        
+                        // EFECTOS VISUALES DE SEGURIDAD: Cambiar UI para mostrar estado seguro
+                        const scanLine = document.querySelector('.scan-line');
+                        if (scanLine) {
+                            scanLine.style.animationPlayState = 'paused';
+                            // Cambiar a color verde para indicar detección segura
+                            scanLine.style.background = 'linear-gradient(90deg, transparent, #10b981, transparent)';
+                            scanLine.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.8)';
+                        }
+                        
+                        // MARCO DE VALIDACIÓN: Cambiar color del marco para indicar código válido
+                        const scanFrame = document.querySelector('.scan-frame');
+                        if (scanFrame) {
+                            scanFrame.style.borderColor = '#10b981';  // Verde de validación
+                            scanFrame.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.8)';
+                        }
+                        
+                        // PROCESAMIENTO SEGURO: Esperar feedback visual antes de enviar al servidor
+                        setTimeout(() => {
+                            registrarCodigo(code.data);  // Enviar código para validación en servidor
+                            detenerScanner();            // Cerrar scanner para evitar múltiples lecturas
+                        }, 1500);
+                        
+                        return; // Salir del loop de detección
+                    } else {
+                        console.log('⚠️ Código QR detectado pero fuera del centro del marco verde');
+                        
+                        // FEEDBACK EDUCATIVO: Mostrar mensaje para centrar el código
+                        const scanInstruction = document.querySelector('.scan-instruction');
+                        if (scanInstruction) {
+                            scanInstruction.textContent = '⚠️ Centra el código QR en el marco verde';
+                            scanInstruction.style.background = 'rgba(255, 165, 0, 0.95)'; // Naranja de advertencia
+                            
+                            // Volver al mensaje original después de 2 segundos
+                            setTimeout(() => {
+                                scanInstruction.textContent = '🎯 Coloca el código QR DENTRO del marco verde';
+                                scanInstruction.style.background = 'rgba(37, 211, 102, 0.95)';
+                            }, 2000);
+                        }
                     }
-                    
-                    // FEEDBACK TÁCTIL: Vibración para confirmar detección exitosa
-                    if (navigator.vibrate) {
-                        navigator.vibrate([200, 100, 200]); // Patrón de vibración distintivo
-                    }
-                    
-                    // EFECTOS VISUALES DE SEGURIDAD: Cambiar UI para mostrar estado seguro
-                    const scanLine = document.querySelector('.scan-line');
-                    if (scanLine) {
-                        scanLine.style.animationPlayState = 'paused';
-                        // Cambiar a color verde para indicar detección segura
-                        scanLine.style.background = 'linear-gradient(90deg, transparent, #10b981, transparent)';
-                        scanLine.style.boxShadow = '0 0 15px rgba(16, 185, 129, 0.8)';
-                    }
-                    
-                    // MARCO DE VALIDACIÓN: Cambiar color del marco para indicar código válido
-                    const scanFrame = document.querySelector('.scan-frame');
-                    if (scanFrame) {
-                        scanFrame.style.borderColor = '#10b981';  // Verde de validación
-                        scanFrame.style.boxShadow = '0 0 25px rgba(16, 185, 129, 0.8)';
-                    }
-                    
-                    // PROCESAMIENTO SEGURO: Esperar feedback visual antes de enviar al servidor
-                    setTimeout(() => {
-                        registrarCodigo(code.data);  // Enviar código para validación en servidor
-                        detenerScanner();            // Cerrar scanner para evitar múltiples lecturas
-                    }, 1500);
-                    
-                    return; // Salir del loop de detección
                 }
             }
         } catch (error) {

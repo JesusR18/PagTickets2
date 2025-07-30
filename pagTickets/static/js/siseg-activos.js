@@ -1709,7 +1709,67 @@ async function generarQRSeguro() {
     }
 }
 
-// Función para descargar el QR
+// Función para mostrar vista previa del nombre del archivo
+function mostrarVistaPreviewArchivo() {
+    const inputElement = document.getElementById('qr-data-input');
+    const previewElement = document.getElementById('filename-preview');
+    
+    if (!inputElement || !previewElement) return;
+    
+    const datos = inputElement.value.trim();
+    if (!datos) {
+        previewElement.style.display = 'none';
+        return;
+    }
+    
+    // Extraer el primer campo para el nombre del archivo
+    const campos = datos.split('|');
+    if (campos.length > 0 && campos[0].trim()) {
+        const nombreActivo = campos[0].trim();
+        const nombreLimpio = nombreActivo
+            .replace(/[^\w\s-_.]/g, '')
+            .replace(/\s+/g, '_')
+            .substring(0, 50);
+        
+        if (nombreLimpio) {
+            const nombreArchivo = `QR_${nombreLimpio}_[timestamp].png`;
+            previewElement.innerHTML = `📄 Archivo se descargará como: <strong>${nombreArchivo}</strong>`;
+            previewElement.style.display = 'block';
+        } else {
+            previewElement.innerHTML = `📄 Archivo se descargará como: <strong>QR_SISEG_[timestamp].png</strong>`;
+            previewElement.style.display = 'block';
+        }
+    } else {
+        previewElement.innerHTML = `📄 Archivo se descargará como: <strong>QR_SISEG_[timestamp].png</strong>`;
+        previewElement.style.display = 'block';
+    }
+}
+
+// Función para obtener el nombre del activo para el archivo
+function obtenerNombreActivoParaArchivo() {
+    const inputElement = document.getElementById('qr-data-input');
+    if (!inputElement || !inputElement.value.trim()) {
+        return null;
+    }
+    
+    const datosOriginales = inputElement.value.trim();
+    const campos = datosOriginales.split('|');
+    
+    if (campos.length > 0 && campos[0].trim()) {
+        const nombreActivo = campos[0].trim();
+        // Limpiar el nombre para que sea válido como nombre de archivo
+        const nombreLimpio = nombreActivo
+            .replace(/[^\w\s-_.]/g, '') // Eliminar caracteres especiales
+            .replace(/\s+/g, '_')       // Reemplazar espacios con guiones bajos
+            .substring(0, 50);          // Limitar longitud
+        
+        return nombreLimpio || null;
+    }
+    
+    return null;
+}
+
+// Función para descargar el QR con nombre del activo
 function descargarQR() {
     if (!qrActual) {
         alert('❌ No hay ningún QR para descargar');
@@ -1717,9 +1777,22 @@ function descargarQR() {
     }
     
     try {
-        // Crear enlace de descarga
+        // Obtener el nombre del activo para el archivo
+        const nombreActivo = obtenerNombreActivoParaArchivo();
+        
+        // Generar nombre del archivo
+        let nombreArchivo;
+        if (nombreActivo) {
+            nombreArchivo = `QR_${nombreActivo}_${Date.now()}.png`;
+            console.log(`📝 Descargando con nombre personalizado: ${nombreArchivo}`);
+        } else {
+            nombreArchivo = `QR_SISEG_${Date.now()}.png`;
+            console.log(`📝 Descargando con nombre por defecto: ${nombreArchivo}`);
+        }
+        
+        // Crear enlace de descarga con el nombre personalizado
         const link = document.createElement('a');
-        link.download = `QR_SISEG_${Date.now()}.png`;
+        link.download = nombreArchivo;
         link.href = qrActual.toDataURL();
         
         // Simular click para descargar
@@ -1727,7 +1800,7 @@ function descargarQR() {
         link.click();
         document.body.removeChild(link);
         
-        console.log('💾 QR descargado exitosamente');
+        console.log(`💾 QR descargado exitosamente como: ${nombreArchivo}`);
         
         // Vibración de confirmación
         if (navigator.vibrate) {

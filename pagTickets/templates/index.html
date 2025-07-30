@@ -906,7 +906,10 @@
             
             <div class="qr-input-section">
                 <label for="qr-data-input">📝 Información para el QR:</label>
-                <textarea id="qr-data-input" placeholder="Escribe aquí la información que quieres convertir en QR seguro...&#10;Ejemplo: Activo-001|Laptop Dell|Oficina Principal|Dell|Excelente"></textarea>
+                <textarea id="qr-data-input" placeholder="Escribe aquí la información que quieres convertir en QR seguro...&#10;Ejemplo: Activo-001|Laptop Dell|Oficina Principal|Dell|Excelente&#10;&#10;📄 Nota: El primer campo será usado como nombre del archivo al descargar&#10;Formato: NOMBRE_ACTIVO|Descripción|Ubicación|Marca|Estado" oninput="mostrarVistaPreviewArchivo()"></textarea>
+                
+                <!-- Vista previa del nombre del archivo -->
+                <div id="filename-preview" style="display: none; background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 8px; padding: 10px; margin: 10px 0; color: #065f46; font-size: 0.9em;"></div>
                 
                 <div class="qr-controls">
                     <button onclick="verificarLibrerias()" class="btn" style="background: linear-gradient(135deg, #6366f1, #8b5cf6); max-width: 200px;">
