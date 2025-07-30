@@ -72,118 +72,172 @@ function actualizarEstado(mensaje, tipo) {
     }
 }
 
-// Función principal para iniciar el scanner seguro
-// ================================================
-// SEGURIDAD QR: Esta función inicializa la captura segura de códigos QR
-// Se establecen constrains específicos para optimizar la detección y 
-// se configura el entorno controlado para la validación posterior
+// Función de prueba para verificar acceso a la cámara
+async function probarCamara() {
+    console.log('🔧 PRUEBA: Iniciando test de cámara...');
+    
+    try {
+        actualizarEstado('🔄 Probando acceso a cámara...', null);
+        
+        // Test básico de compatibilidad
+        if (!navigator.mediaDevices) {
+            actualizarEstado('❌ navigator.mediaDevices no disponible', 'error');
+            return;
+        }
+        
+        if (!navigator.mediaDevices.getUserMedia) {
+            actualizarEstado('❌ getUserMedia no disponible', 'error');
+            return;
+        }
+        
+        // Obtener lista de dispositivos
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const videoDevices = devices.filter(device => device.kind === 'videoinput');
+        
+        console.log('📹 Dispositivos de video encontrados:', videoDevices.length);
+        videoDevices.forEach((device, index) => {
+            console.log(`📹 Dispositivo ${index + 1}: ${device.label || 'Cámara sin nombre'}`);
+        });
+        
+        if (videoDevices.length === 0) {
+            actualizarEstado('❌ No se encontraron cámaras', 'error');
+            return;
+        }
+        
+        // Probar acceso básico
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        console.log('✅ PRUEBA: Acceso a cámara exitoso');
+        
+        // Mostrar información del stream
+        const track = stream.getVideoTracks()[0];
+        const settings = track.getSettings();
+        console.log('📹 Configuración de video:', settings);
+        
+        actualizarEstado(`✅ Cámara OK - ${videoDevices.length} dispositivo(s) encontrado(s)`, 'success');
+        
+        // Cerrar el stream de prueba
+        stream.getTracks().forEach(track => track.stop());
+        
+        setTimeout(() => {
+            actualizarEstado('🎯 Ahora puedes usar el scanner principal', null);
+        }, 3000);
+        
+    } catch (error) {
+        console.error('❌ PRUEBA: Error:', error);
+        actualizarEstado(`❌ Error en prueba: ${error.message}`, 'error');
+        
+        // Información adicional sobre el error
+        if (error.name === 'NotAllowedError') {
+            setTimeout(() => {
+                actualizarEstado('🔒 Permisos denegados - Permitir acceso a la cámara en el navegador', 'error');
+            }, 2000);
+        } else if (error.name === 'NotFoundError') {
+            setTimeout(() => {
+                actualizarEstado('📹 No se encontró ninguna cámara conectada', 'error');
+            }, 2000);
+        }
+    }
+}
+
+// Función principal para iniciar el scanner seguro - VERSIÓN SIMPLIFICADA
+// ====================================================================
 async function iniciarScanner() {
     console.log('🔧 DEBUG: Función iniciarScanner() llamada');
     
     try {
-        console.log('📹 Iniciando scanner QR con validación SISEG...');
+        // Mostrar estado de inicio
         actualizarEstado('🔄 Iniciando cámara...', null);
-        
-        // Verificar si navigator.mediaDevices está disponible
-        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-            throw new Error('getUserMedia no está disponible en este navegador');
-        }
-        
         document.getElementById('init-btn').disabled = true;
         
-        // Configuración optimizada para lectura segura de QR
-        // SEGURIDAD: Se prefiere cámara trasera para mejor calidad y control
-        let constraints = {
-            video: {
-                facingMode: 'environment', // Cámara trasera para códigos QR físicos seguros
-                width: { ideal: 1280, min: 640 },    // Resolución óptima para detección QR
-                height: { ideal: 720, min: 480 },    // Aspect ratio 16:9 estándar
-                aspectRatio: { ideal: 16/9 }
-            }
+        // Verificar compatibilidad del navegador
+        if (!navigator.mediaDevices) {
+            throw new Error('Tu navegador no soporta acceso a la cámara');
+        }
+        
+        if (!navigator.mediaDevices.getUserMedia) {
+            throw new Error('getUserMedia no está disponible');
+        }
+        
+        console.log('✅ DEBUG: Navegador compatible, solicitando cámara...');
+        
+        // Configuración simple de cámara
+        const constraints = {
+            video: true // Configuración simple, cualquier cámara
         };
         
-        console.log('🔧 DEBUG: Solicitando acceso a la cámara...');
-        // Solicitar acceso controlado a la cámara del dispositivo
-        try {
-            videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-        } catch (error) {
-            console.warn('⚠️ No se pudo acceder a cámara trasera, intentando con cualquier cámara...');
-            // Si falla la cámara trasera, intentar con cualquier cámara
-            constraints = {
-                video: {
-                    width: { ideal: 1280, min: 640 },
-                    height: { ideal: 720, min: 480 },
-                    aspectRatio: { ideal: 16/9 }
-                }
-            };
-            videoStream = await navigator.mediaDevices.getUserMedia(constraints);
-        }
+        // Obtener acceso a la cámara
+        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
         videoTrack = videoStream.getVideoTracks()[0];
         
-        console.log('✅ DEBUG: Acceso a cámara obtenido exitosamente');
+        console.log('✅ DEBUG: Cámara obtenida exitosamente');
         
-        // Verificar capacidades de hardware para optimización de lectura QR
-        const capabilities = videoTrack.getCapabilities();
-        if (capabilities.zoom) {
-            zoomMin = capabilities.zoom.min || 1.0;
-            zoomMax = capabilities.zoom.max || 10.0;
-            console.log(`📐 Zoom disponible para códigos QR: ${zoomMin}x - ${zoomMax}x`);
-        }
-        
-        // Configurar elementos de video
+        // Configurar elementos del DOM
         video = document.getElementById('video');
         canvas = document.getElementById('canvas');
+        
+        if (!video) {
+            throw new Error('Elemento de video no encontrado');
+        }
+        
+        if (!canvas) {
+            throw new Error('Elemento de canvas no encontrado');
+        }
+        
         context = canvas.getContext('2d');
-        
-        console.log('🔧 DEBUG: Elementos de video configurados');
-        
         video.srcObject = videoStream;
         
-        video.onloadedmetadata = async () => {
-            console.log('🔧 DEBUG: Video metadata cargada, configurando UI...');
+        console.log('✅ DEBUG: Elementos del DOM configurados');
+        
+        // Configurar eventos del video
+        video.onloadedmetadata = () => {
+            console.log('✅ DEBUG: Video metadata cargada');
             
-            // Cambiar a pantalla completa estilo WhatsApp
-            document.body.style.overflow = 'hidden';
-            
-            const header = document.querySelector('.header');
-            const container = document.querySelector('.container');
-            
-            if (header) header.style.display = 'none';
-            if (container) {
-                container.style.padding = '0';
-                container.style.maxWidth = '100%';
-                container.style.margin = '0';
-            }
-            
-            // Mostrar cámara en pantalla completa
+            // Mostrar la cámara SIN pantalla completa para debugging
             const cameraContainer = document.getElementById('camera-container');
+            cameraContainer.style.position = 'relative'; // Cambiar de fixed a relative
+            cameraContainer.style.transform = 'none';     // Quitar centrado
+            cameraContainer.style.top = 'auto';
+            cameraContainer.style.left = 'auto';
             cameraContainer.style.display = 'block';
             
-            document.getElementById('init-btn').style.display = 'none';
-            document.getElementById('status-message').style.display = 'none';
+            // No ocultar otros elementos para debugging
+            // document.getElementById('init-btn').style.display = 'none';
+            // document.getElementById('status-message').style.display = 'none';
             
+            // Activar scanner
             scannerActivo = true;
-            console.log('✅ Scanner WhatsApp iniciado en pantalla completa');
+            console.log('✅ DEBUG: Scanner activado, iniciando detección...');
             
-            // Actualizar mensaje inicial con instrucciones precisas
+            // Actualizar mensaje
             const scanInstruction = document.querySelector('.scan-instruction');
             if (scanInstruction) {
                 scanInstruction.textContent = '🎯 Coloca el código QR DENTRO del marco verde';
             }
             
-            // Aplicar zoom inicial
-            if (capabilities.zoom) {
-                await aplicarZoomReal(zoomActual);
-            }
-            
-            console.log('🔧 DEBUG: Iniciando detección QR...');
+            // Iniciar detección
             iniciarDeteccionQR();
         };
         
+        video.onerror = (error) => {
+            console.error('❌ ERROR en video:', error);
+            throw new Error('Error al cargar el video');
+        };
+        
+        // Auto-play del video
+        video.play().catch(error => {
+            console.error('❌ Error al reproducir video:', error);
+        });
+        
     } catch (error) {
-        console.error('❌ Error accediendo a la cámara:', error);
+        console.error('❌ ERROR en iniciarScanner():', error);
         actualizarEstado(`❌ Error: ${error.message}`, 'error');
         document.getElementById('init-btn').disabled = false;
+        
+        // Si hay un stream activo, cerrarlo
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
     }
 }
 

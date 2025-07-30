@@ -113,18 +113,15 @@
             color: #991b1b;
         }
         
-        /* CÁMARA SUPER COMPACTA - SOLO PARA UN QR */
+        /* CÁMARA SUPER COMPACTA - MODO DEBUGGING */
         .camera-container {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
+            position: relative; /* Cambiado de fixed a relative para debugging */
+            margin: 20px auto;  /* Centrado con margin */
             width: 70vw;
             max-width: 280px;
             height: 45vh;
             max-height: 350px;
             min-height: 250px;
-            margin: 0;
             background: #000;
             overflow: hidden;
             z-index: 1000;
@@ -632,6 +629,11 @@
         <div class="scanner-section">
             <button onclick="iniciarScanner()" class="init-btn" id="init-btn">
                 📹 INICIAR SCANNER QR SEGURO
+            </button>
+            
+            <!-- Botón de prueba para debugging -->
+            <button onclick="probarCamara()" class="init-btn" style="background: linear-gradient(135deg, #059669, #10b981); margin-top: 10px;">
+                🔧 PROBAR CÁMARA (DEBUG)
             </button>
             
             <!-- MENSAJES DE ESTADO DE SEGURIDAD -->
