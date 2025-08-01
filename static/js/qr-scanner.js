@@ -382,7 +382,7 @@ function detenerScanner() {
         videoStream = null;
         videoTrack = null;
     }
-    
+    flashActivo = false;
     // Restaurar vista normal
     document.body.style.overflow = 'auto';
     
