@@ -966,6 +966,14 @@
             <button onclick="instalarPWA()" class="btn" id="install-pwa-btn" style="background: linear-gradient(135deg, #059669, #10b981); display: block;">
                 📱 Instalar App
             </button>
+            <!-- Botón de ayuda para instalación -->
+            <button onclick="mostrarAyudaInstalacion()" class="btn" style="background: linear-gradient(135deg, #f59e0b, #f97316); margin-top: 5px;">
+                ❓ ¿Cómo instalar?
+            </button>
+            <!-- Botón de instalación manual -->
+            <button onclick="crearAccesoDirecto()" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #a855f7); margin-top: 5px;">
+                🖥️ Crear Acceso Directo
+            </button>
         </div>
         
         <!-- Scanner integrado -->
@@ -1373,11 +1381,204 @@
             setTimeout(verificarInstalacionPWA, 1000);
         });
         
+        // ============================================
+        // FUNCIÓN DE AYUDA PARA INSTALACIÓN - SÚPER FÁCIL
+        // ============================================
+        
+        function mostrarAyudaInstalacion() {
+            const navegador = detectarNavegador();
+            let titulo = '';
+            let pasos = '';
+            let imagenes = '';
+            
+            switch(navegador) {
+                case 'chrome':
+                    titulo = '🟢 INSTALACIÓN EN CHROME - MUY FÁCIL';
+                    pasos = `
+🔍 PASO 1: Mira la barra de direcciones (donde dice localhost:8000)
+📥 PASO 2: ¿Ves un ícono de DESCARGA o INSTALAR? ¡Dale clic!
+   Si NO lo ves, sigue al paso 3...
+
+⋮ PASO 3: Haz clic en los 3 puntos (⋮) del menú de Chrome
+📱 PASO 4: Busca "Instalar SISEG..." o "Crear acceso directo..."
+✅ PASO 5: ¡Confirma y listo!
+
+💡 ALTERNATIVA: Presiona Ctrl+Shift+I → Application → Manifest → Install`;
+                    break;
+                    
+                case 'edge':
+                    titulo = '🔵 INSTALACIÓN EN MICROSOFT EDGE';
+                    pasos = `
+📥 PASO 1: Busca el ícono + en la barra de direcciones
+⋯ PASO 2: O haz clic en los 3 puntos (⋯) → "Aplicaciones"
+📱 PASO 3: Selecciona "Instalar este sitio como aplicación"
+✅ PASO 4: ¡Confirma y ya tienes la app!`;
+                    break;
+                    
+                case 'safari':
+                    titulo = '🍎 INSTALACIÓN EN SAFARI (iPhone/iPad)';
+                    pasos = `
+📤 PASO 1: Toca el botón COMPARTIR (📤) en la parte de abajo
+⬇️ PASO 2: Desplázate hacia abajo en el menú
+🏠 PASO 3: Encuentra "Añadir a pantalla de inicio"
+✏️ PASO 4: Cambia el nombre si quieres (opcional)
+✅ PASO 5: Toca "Añadir" - ¡Ya está en tu pantalla de inicio!`;
+                    break;
+                    
+                case 'firefox':
+                    titulo = '🦊 INSTALACIÓN EN FIREFOX';
+                    pasos = `
+☰ PASO 1: Haz clic en el menú de Firefox (☰)
+📱 PASO 2: Busca "Instalar esta aplicación web" o "Instalar sitio"
+✅ PASO 3: Confirma la instalación
+🎯 PASO 4: ¡La app aparecerá en tu escritorio!`;
+                    break;
+                    
+                default:
+                    titulo = '📱 INSTALACIÓN GENERAL';
+                    pasos = `
+🔍 PASO 1: Busca en el MENÚ de tu navegador opciones como:
+   • "Instalar aplicación"
+   • "Añadir a pantalla de inicio"  
+   • "Crear acceso directo"
+   • "Instalar como PWA"
+
+✅ PASO 2: ¡Selecciona cualquiera de esas opciones!
+
+📞 ALTERNATIVA: En móvil, busca "Añadir a pantalla de inicio" en el menú compartir`;
+            }
+            
+            // Mostrar ventana emergente con instrucciones
+            const mensaje = titulo + '\n\n' + pasos + '\n\n🎯 ¿Necesitas más ayuda? ¡Dime qué navegador usas!';
+            
+            // Usar alert para que sea MUY visible
+            alert(mensaje);
+            
+            // También mostrar en consola
+            console.log('🚀 AYUDA INSTALACIÓN:', titulo, pasos);
+        }
+        
+        // Función para detectar navegador específico
+        function detectarNavegador() {
+            const ua = navigator.userAgent.toLowerCase();
+            
+            if (ua.includes('chrome') && !ua.includes('edge') && !ua.includes('opr')) {
+                return 'chrome';
+            } else if (ua.includes('edge')) {
+                return 'edge';
+            } else if (ua.includes('safari') && !ua.includes('chrome')) {
+                return 'safari';
+            } else if (ua.includes('firefox')) {
+                return 'firefox';
+            } else {
+                return 'otro';
+            }
+        }
+        
         // Detectar cuando se instala la PWA
         window.addEventListener('appinstalled', (evt) => {
             console.log('🎉 PWA: SISEG instalado exitosamente');
             showMessage('🎉 ¡SISEG instalado como app! Búscalo en tu menú de aplicaciones.', 'success');
         });
+        
+        // ============================================
+        // CREAR ACCESO DIRECTO MANUAL
+        // ============================================
+        
+        function crearAccesoDirecto() {
+            const navegador = detectarNavegador();
+            let instrucciones = '';
+            
+            switch(navegador) {
+                case 'chrome':
+                    instrucciones = `
+🟢 CHROME - MÉTODO GARANTIZADO:
+
+OPCIÓN 1 (Herramientas de desarrollador):
+1️⃣ Presiona F12 (o Ctrl+Shift+I)
+2️⃣ Haz clic en "Application" (arriba)
+3️⃣ En el lado izquierdo, busca "Manifest"
+4️⃣ ¡Verás un botón "Install"! ¡Dale clic!
+
+OPCIÓN 2 (Menú Chrome):
+1️⃣ Menú ⋮ → "Más herramientas" → "Crear acceso directo..."
+2️⃣ Marca "Abrir como ventana"
+3️⃣ ¡Listo! Ya tienes la app en tu escritorio
+
+OPCIÓN 3 (Configuración):
+1️⃣ chrome://settings/content/all
+2️⃣ Busca localhost:8000
+3️⃣ Permisos → Instalar aplicación`;
+                    break;
+                    
+                case 'edge':
+                    instrucciones = `
+🔵 MICROSOFT EDGE:
+
+1️⃣ Menú ⋯ (3 puntos) esquina superior derecha
+2️⃣ "Aplicaciones" o "Apps"
+3️⃣ "Instalar este sitio como aplicación"
+4️⃣ ¡Confirma y listo!
+
+ALTERNATIVA:
+1️⃣ Menú ⋯ → "Más herramientas" → "Anclar a barra de tareas"`;
+                    break;
+                    
+                case 'firefox':
+                    instrucciones = `
+🦊 FIREFOX:
+
+1️⃣ Menú ☰ (3 líneas horizontales)
+2️⃣ Busca "Instalar" o "Añadir a escritorio"
+3️⃣ Si no aparece, ve a about:config
+4️⃣ Busca "dom.webnotifications.enabled" = true
+
+ALTERNATIVA:
+1️⃣ Clic derecho en la página → "Crear acceso directo"`;
+                    break;
+                    
+                case 'safari':
+                    instrucciones = `
+🍎 SAFARI:
+
+EN MÓVIL:
+1️⃣ Botón compartir 📤 (parte inferior)
+2️⃣ "Añadir a pantalla de inicio"
+
+EN ESCRITORIO:
+1️⃣ Archivo → "Añadir a Dock"
+2️⃣ O Desarrollador → "Simular sitio web en iOS"`;
+                    break;
+                    
+                default:
+                    instrucciones = `
+📱 MÉTODO UNIVERSAL:
+
+1️⃣ Copia esta URL: http://localhost:8000
+2️⃣ Crea un acceso directo en tu escritorio
+3️⃣ Pega la URL como destino
+4️⃣ ¡Renómbralo "SISEG"!
+
+MÓVIL:
+1️⃣ Menú del navegador
+2️⃣ "Añadir a pantalla de inicio"
+3️⃣ "Crear acceso directo"`;
+            }
+            
+            alert('🚀 CREAR ACCESO DIRECTO - ' + navegador.toUpperCase() + '\n\n' + instrucciones);
+            
+            // Mostrar también instrucciones para copiar URL
+            setTimeout(() => {
+                const url = window.location.href;
+                if (confirm('📋 ¿Quieres copiar la URL para crear un acceso directo manual?\n\n' + url)) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        showMessage('✅ URL copiada al portapapeles: ' + url, 'success');
+                    }).catch(() => {
+                        showMessage('📋 URL para copiar: ' + url, 'info', 8000);
+                    });
+                }
+            }, 2000);
+        }
         
         // ============================================
         // PWA OFFLINE DETECTION
