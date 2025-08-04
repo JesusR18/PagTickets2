@@ -966,13 +966,13 @@
             <button onclick="instalarPWA()" class="btn" id="install-pwa-btn" style="background: linear-gradient(135deg, #059669, #10b981); display: block;">
                 📱 Instalar App
             </button>
-            <!-- Botón de ayuda para instalación -->
-            <button onclick="mostrarAyudaInstalacion()" class="btn" style="background: linear-gradient(135deg, #f59e0b, #f97316); margin-top: 5px;">
-                ❓ ¿Cómo instalar?
+            <!-- Botón universal de ayuda -->
+            <button onclick="mostrarAyudaUniversal()" class="btn" style="background: linear-gradient(135deg, #f59e0b, #f97316); margin-top: 5px;">
+                🌐 Ayuda Universal
             </button>
-            <!-- Botón de instalación manual -->
-            <button onclick="crearAccesoDirecto()" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #a855f7); margin-top: 5px;">
-                🖥️ Crear Acceso Directo
+            <!-- Botón de instalación manual universal -->
+            <button onclick="instalarManual()" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #a855f7); margin-top: 5px;">
+                �️ Instalación Manual
             </button>
         </div>
         
@@ -1368,7 +1368,7 @@
                 setTimeout(() => {
                     if (installButton && !deferredPrompt) {
                         installButton.classList.add('animate');
-                        showMessage('💡 Tip: El botón "📱 Ver Instrucciones" te mostrará cómo instalar SISEG como aplicación', 'info', 5000);
+                        showMessage('💡 Tip: Los botones de ayuda te mostrarán cómo instalar SISEG en CUALQUIER navegador', 'info', 5000);
                     }
                 }, 3000);
             }
@@ -1539,15 +1539,30 @@ ALTERNATIVA:
                     
                 case 'safari':
                     instrucciones = `
-🍎 SAFARI:
+🍎 SAFARI - INSTALACIÓN SÚPER FÁCIL:
 
-EN MÓVIL:
-1️⃣ Botón compartir 📤 (parte inferior)
-2️⃣ "Añadir a pantalla de inicio"
+📱 EN MÓVIL (iPhone/iPad):
+1️⃣ Toca el botón COMPARTIR 📤 (parte inferior de la pantalla)
+2️⃣ Desplázate hacia abajo en el menú
+3️⃣ Busca "Añadir a pantalla de inicio" 🏠
+4️⃣ Tócalo y confirma
+5️⃣ ¡Ya tienes SISEG como app en tu pantalla!
 
-EN ESCRITORIO:
-1️⃣ Archivo → "Añadir a Dock"
-2️⃣ O Desarrollador → "Simular sitio web en iOS"`;
+🖥️ EN ESCRITORIO (Mac):
+MÉTODO 1:
+1️⃣ Menú "Archivo" → "Añadir a Dock"
+2️⃣ ¡Ya tienes acceso rápido!
+
+MÉTODO 2:
+1️⃣ Menú "Desarrollador" → "Simular sitio web en iOS"
+2️⃣ Esto activa modo PWA
+
+MÉTODO 3 (Acceso directo):
+1️⃣ Crea nuevo marcador
+2️⃣ Añádelo al Dock
+3️⃣ ¡Funciona como app!
+
+💡 TIP: Safari en móvil funciona PERFECTO, en escritorio usa el Dock`;
                     break;
                     
                 default:
@@ -1598,6 +1613,56 @@ MÓVIL:
         // PWA NOTIFICATIONS
         // ============================================
         
+        // Función específica para Safari
+        function instruccionesSafari() {
+            const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            if (esMobil) {
+                alert(`🍎 SAFARI MÓVIL - INSTRUCCIONES SÚPER FÁCILES:
+
+📱 PASOS PARA INSTALAR:
+
+1️⃣ Busca el botón COMPARTIR 📤
+   (Está en la PARTE DE ABAJO de Safari)
+
+2️⃣ Toca el botón 📤 COMPARTIR
+
+3️⃣ En el menú que aparece, DESPLÁZATE HACIA ABAJO
+
+4️⃣ Busca "Añadir a pantalla de inicio" 🏠
+   (Puede estar al final de la lista)
+
+5️⃣ TÓCALO
+
+6️⃣ Cambia el nombre si quieres (o déjalo "SISEG")
+
+7️⃣ Toca "AÑADIR"
+
+✅ ¡LISTO! Ya tienes SISEG como app en tu pantalla de inicio
+
+💡 Ahora aparecerá como cualquier otra app en tu iPhone/iPad`);
+            } else {
+                alert(`🍎 SAFARI ESCRITORIO (Mac):
+
+🖥️ SAFARI NO INSTALA PWAs AUTOMÁTICAMENTE, pero puedes:
+
+MÉTODO 1 - Añadir al Dock:
+1️⃣ Ve al menú "Archivo" 
+2️⃣ Selecciona "Añadir a Dock"
+3️⃣ ¡Ya tienes acceso rápido!
+
+MÉTODO 2 - Marcador en Dock:
+1️⃣ Crea un marcador (⌘+D)
+2️⃣ Arrastra el marcador al Dock
+3️⃣ ¡Funciona como acceso directo!
+
+MÉTODO 3 - Usar Chrome/Edge:
+Si quieres una verdadera PWA, usa Chrome o Edge en Mac
+
+💡 TIP: Safari móvil funciona PERFECTO para PWAs`);
+            }
+        }
+        
         function solicitarPermisoNotificaciones() {
             if ('Notification' in window && 'serviceWorker' in navigator) {
                 Notification.requestPermission().then(permission => {
@@ -1622,6 +1687,131 @@ MÓVIL:
         setTimeout(solicitarPermisoNotificaciones, 5000);
         
         console.log('🚀 PWA: Sistema PWA de SISEG inicializado');
+        
+        // ============================================
+        // INSTALACIÓN UNIVERSAL PARA TODOS LOS NAVEGADORES
+        // ============================================
+        
+        function mostrarAyudaUniversal() {
+            const navegador = detectarNavegador();
+            const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            let mensaje = `🌐 INSTALACIÓN UNIVERSAL - COMPATIBLE CON TODOS LOS NAVEGADORES\n\n`;
+            
+            if (esMobil) {
+                mensaje += `📱 DISPOSITIVO MÓVIL DETECTADO:\n\n`;
+                mensaje += `✅ MÉTODO UNIVERSAL MÓVIL:\n`;
+                mensaje += `1️⃣ Busca el MENÚ del navegador (⋮ o ☰)\n`;
+                mensaje += `2️⃣ Busca estas opciones:\n`;
+                mensaje += `   • "Añadir a pantalla de inicio"\n`;
+                mensaje += `   • "Instalar aplicación"\n`;
+                mensaje += `   • "Crear acceso directo"\n`;
+                mensaje += `   • "Añadir marcador"\n\n`;
+                
+                if (navegador === 'chrome') {
+                    mensaje += `🟢 CHROME MÓVIL:\n`;
+                    mensaje += `• Menú ⋮ → "Añadir a pantalla de inicio"\n`;
+                    mensaje += `• O busca el ícono + en la barra superior\n\n`;
+                } else if (navegador === 'safari') {
+                    mensaje += `🍎 SAFARI MÓVIL:\n`;
+                    mensaje += `• Botón compartir 📤 → "Añadir a pantalla de inicio"\n\n`;
+                } else if (navegador === 'firefox') {
+                    mensaje += `🦊 FIREFOX MÓVIL:\n`;
+                    mensaje += `• Menú ☰ → "Instalar" o "Página de inicio"\n\n`;
+                } else {
+                    mensaje += `📱 NAVEGADOR MÓVIL GENÉRICO:\n`;
+                    mensaje += `• Busca en el menú "Añadir a inicio" o "Instalar"\n\n`;
+                }
+            } else {
+                mensaje += `🖥️ DISPOSITIVO ESCRITORIO DETECTADO:\n\n`;
+                mensaje += `✅ MÉTODOS UNIVERSALES ESCRITORIO:\n\n`;
+                
+                if (navegador === 'chrome') {
+                    mensaje += `🟢 CHROME ESCRITORIO:\n`;
+                    mensaje += `• Método 1: Busca ícono ⬇️ en barra de direcciones\n`;
+                    mensaje += `• Método 2: Menú ⋮ → "Instalar SISEG..."\n`;
+                    mensaje += `• Método 3: F12 → Application → Manifest → Install\n\n`;
+                } else if (navegador === 'edge') {
+                    mensaje += `🔵 EDGE ESCRITORIO:\n`;
+                    mensaje += `• Método 1: Ícono + en barra de direcciones\n`;
+                    mensaje += `• Método 2: Menú ⋯ → "Aplicaciones" → "Instalar"\n\n`;
+                } else if (navegador === 'firefox') {
+                    mensaje += `🦊 FIREFOX ESCRITORIO:\n`;
+                    mensaje += `• Menú ☰ → "Instalar esta aplicación"\n`;
+                    mensaje += `• O crear acceso directo manual\n\n`;
+                } else if (navegador === 'safari') {
+                    mensaje += `🍎 SAFARI ESCRITORIO:\n`;
+                    mensaje += `• Archivo → "Añadir a Dock"\n`;
+                    mensaje += `• O usar Chrome/Edge para PWA completa\n\n`;
+                } else {
+                    mensaje += `🌐 NAVEGADOR GENÉRICO:\n`;
+                    mensaje += `• Busca en menú: "Instalar", "Añadir", "Crear acceso"\n\n`;
+                }
+            }
+            
+            mensaje += `🛠️ MÉTODO MANUAL UNIVERSAL (SIEMPRE FUNCIONA):\n`;
+            mensaje += `1️⃣ Copia la URL: ${window.location.href}\n`;
+            mensaje += `2️⃣ Crea acceso directo en escritorio/pantalla inicio\n`;
+            mensaje += `3️⃣ Pega la URL como destino\n`;
+            mensaje += `4️⃣ Nombra el acceso "SISEG"\n\n`;
+            mensaje += `✅ ¡Funciona en Windows, Mac, Linux, Android, iOS!`;
+            
+            alert(mensaje);
+        }
+        
+        function instalarManual() {
+            const url = window.location.href;
+            const navegador = detectarNavegador();
+            const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+            
+            let instrucciones = `🛠️ INSTALACIÓN MANUAL UNIVERSAL\n\n`;
+            instrucciones += `📋 URL para copiar: ${url}\n\n`;
+            
+            if (esMobil) {
+                instrucciones += `📱 MÓVIL - PASOS UNIVERSALES:\n\n`;
+                instrucciones += `1️⃣ COPIA la URL de arriba\n`;
+                instrucciones += `2️⃣ Ve al escritorio/pantalla de inicio\n`;
+                instrucciones += `3️⃣ Busca "Crear acceso directo" o "Widget"\n`;
+                instrucciones += `4️⃣ Pega la URL\n`;
+                instrucciones += `5️⃣ Nombra "SISEG"\n\n`;
+                
+                instrucciones += `📱 ALTERNATIVAS POR NAVEGADOR:\n`;
+                instrucciones += `• Chrome: Menú → "Añadir a pantalla inicio"\n`;
+                instrucciones += `• Safari: Compartir → "Añadir a pantalla inicio"\n`;
+                instrucciones += `• Firefox: Menú → "Instalar"\n`;
+                instrucciones += `• Samsung Internet: Menú → "Añadir a pantalla"\n`;
+            } else {
+                instrucciones += `🖥️ ESCRITORIO - PASOS UNIVERSALES:\n\n`;
+                instrucciones += `WINDOWS:\n`;
+                instrucciones += `1️⃣ Clic derecho en escritorio → "Nuevo" → "Acceso directo"\n`;
+                instrucciones += `2️⃣ Pega la URL: ${url}\n`;
+                instrucciones += `3️⃣ Nombra "SISEG"\n`;
+                instrucciones += `4️⃣ ¡Listo! Ícono en escritorio\n\n`;
+                
+                instrucciones += `MAC:\n`;
+                instrucciones += `1️⃣ Abre Safari/Chrome con la URL\n`;
+                instrucciones += `2️⃣ Arrastra el ícono de la URL al Dock/Escritorio\n`;
+                instrucciones += `3️⃣ O Archivo → "Crear acceso directo"\n\n`;
+                
+                instrucciones += `LINUX:\n`;
+                instrucciones += `1️⃣ Crea archivo .desktop en ~/Desktop/\n`;
+                instrucciones += `2️⃣ Contenido: [Desktop Entry]\\nName=SISEG\\nExec=firefox ${url}\n`;
+                instrucciones += `3️⃣ chmod +x archivo.desktop\n`;
+            }
+            
+            alert(instrucciones);
+            
+            // Copiar URL al portapapeles
+            setTimeout(() => {
+                if (confirm('📋 ¿Copiar URL al portapapeles para crear acceso directo?')) {
+                    navigator.clipboard.writeText(url).then(() => {
+                        showMessage('✅ URL copiada: ' + url, 'success');
+                    }).catch(() => {
+                        showMessage('📋 URL: ' + url + ' (copia manualmente)', 'info', 8000);
+                    });
+                }
+            }, 2000);
+        }
     </script>
 </body>
 </html>
