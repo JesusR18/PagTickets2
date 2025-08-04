@@ -143,6 +143,10 @@ def verificar_autenticacion(request):
     """Función helper para verificar si el usuario está autenticado"""
     return request.session.get('autenticado', False)
 
+def offline_view(request):
+    """Vista para mostrar cuando no hay conexión"""
+    return render(request, 'offline.html')
+
 # Vista de healthcheck para Railway
 def health_check(request):
     """Vista mejorada para verificación de salud de Railway"""

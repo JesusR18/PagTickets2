@@ -5,6 +5,29 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
     <title>SISEG - Sistemas de Seguridad Integral | Control de Activos</title>
+    
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="SISEG">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SISEG">
+    <meta name="description" content="Sistema de Seguridad Integral - Control de Activos con Scanner QR">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="msapplication-TileColor" content="#991b1b">
+    <meta name="msapplication-tap-highlight" content="no">
+    <meta name="theme-color" content="#991b1b">
+    
+    <!-- PWA Icons -->
+    <link rel="apple-touch-icon" href="{% static 'images/logo.png' %}">
+    <link rel="icon" type="image/png" sizes="32x32" href="{% static 'images/logo.png' %}">
+    <link rel="icon" type="image/png" sizes="16x16" href="{% static 'images/logo.png' %}">
+    <link rel="mask-icon" href="{% static 'images/logo.png' %}" color="#991b1b">
+    <link rel="shortcut icon" href="{% static 'images/logo.png' %}">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="{% static 'manifest.json' %}">
+    
+    <!-- Librerías externas -->
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
@@ -1101,5 +1124,152 @@
 
     <!-- Cargar el archivo JavaScript externo -->
     <script src="{% static 'js/siseg-activos.js' %}"></script>
+    
+    <!-- PWA JavaScript -->
+    <script>
+        // ============================================
+        // PWA SERVICE WORKER REGISTRATION
+        // ============================================
+        
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/static/sw.js')
+                    .then(registration => {
+                        console.log('✅ PWA: Service Worker registrado exitosamente');
+                        
+                        // Verificar actualizaciones
+                        registration.addEventListener('updatefound', () => {
+                            const newWorker = registration.installing;
+                            newWorker.addEventListener('statechange', () => {
+                                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                                    // Nueva versión disponible
+                                    if (confirm('🆕 Nueva versión de SISEG disponible. ¿Actualizar ahora?')) {
+                                        newWorker.postMessage({ type: 'SKIP_WAITING' });
+                                        window.location.reload();
+                                    }
+                                }
+                            });
+                        });
+                    })
+                    .catch(error => {
+                        console.log('❌ PWA: Error registrando Service Worker:', error);
+                    });
+            });
+        }
+
+        // ============================================
+        // PWA INSTALL PROMPT
+        // ============================================
+        
+        let deferredPrompt;
+        
+        window.addEventListener('beforeinstallprompt', (e) => {
+            console.log('📱 PWA: Prompt de instalación disponible');
+            
+            // Prevenir que se muestre automáticamente
+            e.preventDefault();
+            deferredPrompt = e;
+            
+            // Mostrar botón de instalación personalizado
+            mostrarBotonInstalar();
+        });
+        
+        function mostrarBotonInstalar() {
+            // Crear botón de instalación
+            const installButton = document.createElement('button');
+            installButton.innerHTML = '📱 Instalar App SISEG';
+            installButton.style.cssText = `
+                position: fixed;
+                bottom: 80px;
+                left: 20px;
+                background: linear-gradient(135deg, #059669, #10b981);
+                color: white;
+                border: none;
+                padding: 12px 20px;
+                border-radius: 25px;
+                font-weight: bold;
+                font-size: 14px;
+                cursor: pointer;
+                box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+                z-index: 1000;
+                animation: pulse 2s infinite;
+            `;
+            
+            installButton.addEventListener('click', async () => {
+                if (deferredPrompt) {
+                    deferredPrompt.prompt();
+                    const { outcome } = await deferredPrompt.userChoice;
+                    
+                    if (outcome === 'accepted') {
+                        console.log('✅ PWA: Usuario aceptó la instalación');
+                        showMessage('🎉 ¡SISEG se está instalando como app!', 'success');
+                    } else {
+                        console.log('❌ PWA: Usuario rechazó la instalación');
+                    }
+                    
+                    deferredPrompt = null;
+                    installButton.remove();
+                }
+            });
+            
+            document.body.appendChild(installButton);
+            
+            // Auto-remover después de 30 segundos
+            setTimeout(() => {
+                if (installButton.parentNode) {
+                    installButton.remove();
+                }
+            }, 30000);
+        }
+        
+        // Detectar cuando se instala la PWA
+        window.addEventListener('appinstalled', (evt) => {
+            console.log('🎉 PWA: SISEG instalado exitosamente');
+            showMessage('🎉 ¡SISEG instalado como app! Búscalo en tu menú de aplicaciones.', 'success');
+        });
+        
+        // ============================================
+        // PWA OFFLINE DETECTION
+        // ============================================
+        
+        window.addEventListener('online', () => {
+            console.log('🌐 PWA: Conexión restaurada');
+            showMessage('🌐 Conexión restaurada - Sincronizando datos...', 'success');
+        });
+        
+        window.addEventListener('offline', () => {
+            console.log('📱 PWA: Modo offline activado');
+            showMessage('📱 Sin conexión - Modo offline activado', 'warning');
+        });
+        
+        // ============================================
+        // PWA NOTIFICATIONS
+        // ============================================
+        
+        function solicitarPermisoNotificaciones() {
+            if ('Notification' in window && 'serviceWorker' in navigator) {
+                Notification.requestPermission().then(permission => {
+                    if (permission === 'granted') {
+                        console.log('✅ PWA: Permisos de notificación concedidos');
+                        
+                        // Mostrar notificación de bienvenida
+                        navigator.serviceWorker.ready.then(registration => {
+                            registration.showNotification('SISEG - Bienvenido', {
+                                body: 'App instalada correctamente. ¡Listo para escanear activos!',
+                                icon: '/static/images/logo.png',
+                                badge: '/static/images/logo.png',
+                                vibrate: [100, 50, 100]
+                            });
+                        });
+                    }
+                });
+            }
+        }
+        
+        // Solicitar permisos después de 5 segundos
+        setTimeout(solicitarPermisoNotificaciones, 5000);
+        
+        console.log('🚀 PWA: Sistema PWA de SISEG inicializado');
+    </script>
 </body>
 </html>

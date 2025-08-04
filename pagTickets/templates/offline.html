@@ -1,0 +1,184 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISEG - Sin Conexión</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
+            min-height: 100vh;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        .offline-container {
+            background: rgba(255, 255, 255, 1);
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 15px 35px rgba(127, 29, 29, 0.4);
+            max-width: 500px;
+            width: 100%;
+            color: #333;
+            animation: slideUp 0.6s ease-out;
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .logo-container {
+            margin-bottom: 30px;
+        }
+        
+        .logo-container img {
+            width: auto;
+            height: auto;
+            max-width: 150px;
+            max-height: 60px;
+            object-fit: contain;
+        }
+        
+        .offline-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        h1 {
+            color: #991b1b;
+            font-size: 2em;
+            margin-bottom: 15px;
+        }
+        
+        .message {
+            color: #6b7280;
+            font-size: 16px;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .retry-btn {
+            background: linear-gradient(135deg, #991b1b, #dc2626);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 12px rgba(153, 27, 27, 0.3);
+        }
+        
+        .retry-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(153, 27, 27, 0.4);
+        }
+        
+        .features {
+            background: #f9fafb;
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 30px;
+            text-align: left;
+        }
+        
+        .features h3 {
+            color: #991b1b;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+        
+        .features ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features li {
+            color: #374151;
+            margin-bottom: 10px;
+            padding-left: 25px;
+            position: relative;
+        }
+        
+        .features li:before {
+            content: "✓";
+            position: absolute;
+            left: 0;
+            color: #10b981;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="offline-container">
+        <div class="logo-container">
+            <img src="{% static 'images/logo.png' %}" alt="SISEG - Sistemas de Seguridad Integral">
+        </div>
+        
+        <div class="offline-icon">📡</div>
+        
+        <h1>Sin Conexión</h1>
+        
+        <div class="message">
+            <p>No hay conexión a internet en este momento.</p>
+            <p><strong>¡No te preocupes!</strong> SISEG funciona offline. Puedes seguir escaneando activos y los datos se sincronizarán cuando regrese la conexión.</p>
+        </div>
+        
+        <button class="retry-btn" onclick="window.location.reload()">
+            🔄 Reintentar Conexión
+        </button>
+        
+        <div class="features">
+            <h3>🚀 Funciones Disponibles Offline:</h3>
+            <ul>
+                <li>Escanear códigos QR</li>
+                <li>Ver activos previamente cargados</li>
+                <li>Generar nuevos códigos QR</li>
+                <li>Búsqueda en datos locales</li>
+                <li>Sincronización automática al reconectar</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        // Verificar conexión cada 5 segundos
+        setInterval(() => {
+            if (navigator.onLine) {
+                window.location.href = '/';
+            }
+        }, 5000);
+        
+        // Detectar cuando regresa la conexión
+        window.addEventListener('online', () => {
+            window.location.href = '/';
+        });
+    </script>
+</body>
+</html>
