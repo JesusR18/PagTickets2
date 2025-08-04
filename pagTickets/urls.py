@@ -15,6 +15,8 @@ urlpatterns = [
     # Rutas de autenticación
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('logout_automatico/', views.logout_automatico, name='logout_automatico'),
+    path('verificar_sesion/', views.verificar_sesion, name='verificar_sesion'),
     # Ruta principal ('') que muestra la página de inicio con el lector QR
     path('', views.index, name='index'),
     # Rutas de healthcheck para Railway (múltiples opciones)

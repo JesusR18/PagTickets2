@@ -2856,5 +2856,338 @@ window.addEventListener('resize', function() {
     console.log('📏 Ventana redimensionada');
 });
 
+// ============================================
+// GESTIÓN AUTOMÁTICA DE SESIONES
+// ============================================
+
+// Variables para control de sesión
+let tiempoInactividad;
+let verificadorSesion;
+let tiempoFueraDePagina = 10 * 60 * 1000; // 10 minutos fuera de la página
+let usuarioFueraDePagina = false;
+let tiempoSalidaPagina = null;
+
+/**
+ * Inicializar gestión automática de sesiones
+ */
+function inicializarGestionSesion() {
+    console.log('🔐 Inicializando gestión automática de sesiones...');
+    
+    // Solicitar permisos de notificación
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission().then(permission => {
+            if (permission === 'granted') {
+                console.log('✅ Permisos de notificación concedidos');
+            }
+        });
+    }
+    
+    // Verificar sesión cada 30 segundos SOLO para mantener conexión
+    verificadorSesion = setInterval(verificarSesionActiva, 30000);
+    
+    // Detectar cuando el usuario sale de la pestaña/aplicación
+    document.addEventListener('visibilitychange', manejarCambioVisibilidad);
+    
+    // Detectar cierre de ventana/pestaña - CERRAR INMEDIATAMENTE
+    window.addEventListener('beforeunload', cerrarSesionAutomatico);
+    window.addEventListener('unload', cerrarSesionAutomatico);
+    
+    // Detectar cuando pierde el foco la ventana
+    window.addEventListener('blur', manejarPerdidaFoco);
+    window.addEventListener('focus', manejarRecuperacionFoco);
+    
+    // Mensaje de bienvenida
+    showMessage('🔐 Sistema de seguridad activado - Sin límite de tiempo activo', 'success');
+}
+
+/**
+ * Reiniciar temporizador de inactividad (ELIMINADO - No hay límite mientras esté activo)
+ */
+function reiniciarTemporizadorInactividad() {
+    // NO HACER NADA - El usuario puede estar todo el tiempo que quiera mientras esté en la página
+    // Solo cerrar sesión si sale de la aplicación
+}
+
+/**
+ * Manejar pérdida de foco de la ventana (cambio de aplicación)
+ */
+function manejarPerdidaFoco() {
+    console.log('🚪 Usuario salió de la aplicación (perdió foco)');
+    usuarioFueraDePagina = true;
+    tiempoSalidaPagina = Date.now();
+    
+    // Iniciar temporizador para cerrar sesión si no regresa
+    tiempoInactividad = setTimeout(() => {
+        console.log('⏰ Usuario no regresó a la aplicación, cerrando sesión...');
+        cerrarSesionPorAusencia();
+    }, tiempoFueraDePagina);
+    
+    // Notificación de que la sesión se cerrará si no regresa
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification('SISEG - Sesión', {
+            body: 'Tu sesión se cerrará en 10 minutos si no regresas a la aplicación.',
+            icon: '/static/images/logo.png'
+        });
+    }
+}
+
+/**
+ * Manejar recuperación de foco de la ventana (regreso a la aplicación)
+ */
+function manejarRecuperacionFoco() {
+    if (usuarioFueraDePagina) {
+        console.log('👋 Usuario regresó a la aplicación');
+        usuarioFueraDePagina = false;
+        
+        // Cancelar el temporizador de cierre
+        if (tiempoInactividad) {
+            clearTimeout(tiempoInactividad);
+            tiempoInactividad = null;
+        }
+        
+        // Verificar cuánto tiempo estuvo fuera
+        if (tiempoSalidaPagina) {
+            const tiempoFuera = Date.now() - tiempoSalidaPagina;
+            const minutosFuera = Math.floor(tiempoFuera / 60000);
+            
+            if (minutosFuera > 0) {
+                showMessage(`👋 Bienvenido de vuelta! Estuviste ${minutosFuera} minutos fuera`, 'success');
+            }
+            
+            tiempoSalidaPagina = null;
+        }
+        
+        // Verificar sesión inmediatamente al regresar
+        verificarSesionActiva();
+    }
+}
+
+/**
+ * Verificar si la sesión sigue activa en el servidor
+ */
+async function verificarSesionActiva() {
+    try {
+        const response = await fetch('/verificar_sesion/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (!data.autenticado) {
+            console.log('🔒 Sesión no válida, redirigiendo al login...');
+            limpiarTemporizadores();
+            alert('🔒 Tu sesión ha expirado. Serás redirigido al login.');
+            window.location.href = '/login/';
+        } else {
+            // Solo actualizar indicador de estado, NO de tiempo
+            actualizarIndicadorSesion();
+        }
+    } catch (error) {
+        console.error('Error verificando sesión:', error);
+    }
+}
+
+/**
+ * Actualizar indicador visual de sesión (SIN tiempo límite)
+ */
+function actualizarIndicadorSesion() {
+    const indicador = document.getElementById('sesion-tiempo');
+    if (!indicador) return;
+    
+    if (usuarioFueraDePagina) {
+        const tiempoTranscurrido = tiempoSalidaPagina ? Math.floor((Date.now() - tiempoSalidaPagina) / 60000) : 0;
+        const tiempoRestante = 10 - tiempoTranscurrido;
+        
+        if (tiempoRestante > 5) {
+            indicador.textContent = `� Fuera: ${tiempoTranscurrido}m (${tiempoRestante}m restantes)`;
+            indicador.parentElement.style.background = 'rgba(245, 158, 11, 0.1)';
+            indicador.parentElement.style.color = '#d97706';
+        } else if (tiempoRestante > 0) {
+            indicador.textContent = `⚠️ REGRESA YA: ${tiempoRestante}m`;
+            indicador.parentElement.style.background = 'rgba(239, 68, 68, 0.2)';
+            indicador.parentElement.style.color = '#dc2626';
+        } else {
+            indicador.textContent = `🚨 SESIÓN EXPIRANDO`;
+            indicador.parentElement.style.background = 'rgba(239, 68, 68, 0.3)';
+            indicador.parentElement.style.color = '#dc2626';
+        }
+    } else {
+        indicador.textContent = `� Sesión Activa - Sin límite`;
+        indicador.parentElement.style.background = 'rgba(34, 197, 94, 0.1)';
+        indicador.parentElement.style.color = '#16a34a';
+    }
+}
+
+/**
+ * Manejar cambio de visibilidad de la pestaña
+ */
+function manejarCambioVisibilidad() {
+    if (document.hidden) {
+        console.log('👁️ Usuario salió de la pestaña');
+        usuarioFueraDePagina = true;
+        tiempoSalidaPagina = Date.now();
+        
+        // Iniciar temporizador para cerrar sesión si no regresa en 10 minutos
+        tiempoInactividad = setTimeout(() => {
+            console.log('⏰ Usuario no regresó a la pestaña, cerrando sesión...');
+            cerrarSesionPorAusencia();
+        }, tiempoFueraDePagina);
+        
+        // Mostrar notificación de que la sesión se cerrará si no regresa
+        if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification('SISEG - Sesión', {
+                body: 'Tu sesión se cerrará en 10 minutos si no regresas.',
+                icon: '/static/images/logo.png'
+            });
+        }
+    } else {
+        console.log('👁️ Usuario regresó a la pestaña');
+        usuarioFueraDePagina = false;
+        
+        // Cancelar el temporizador de cierre
+        if (tiempoInactividad) {
+            clearTimeout(tiempoInactividad);
+            tiempoInactividad = null;
+        }
+        
+        // Mostrar mensaje de bienvenida si estuvo fuera
+        if (tiempoSalidaPagina) {
+            const tiempoFuera = Date.now() - tiempoSalidaPagina;
+            const minutosFuera = Math.floor(tiempoFuera / 60000);
+            
+            if (minutosFuera > 0) {
+                showMessage(`👋 Bienvenido de vuelta! Estuviste ${minutosFuera} minutos fuera`, 'success');
+            }
+            
+            tiempoSalidaPagina = null;
+        }
+        
+        // Verificar sesión inmediatamente al regresar
+        verificarSesionActiva();
+    }
+}
+
+/**
+ * Cerrar sesión automáticamente
+ */
+function cerrarSesionAutomatico() {
+    console.log('🚪 Cerrando sesión automáticamente...');
+    
+    // Usar navigator.sendBeacon para envío confiable
+    if (navigator.sendBeacon) {
+        const formData = new FormData();
+        formData.append('csrfmiddlewaretoken', getCookie('csrftoken'));
+        navigator.sendBeacon('/logout_automatico/', formData);
+    } else {
+        // Fallback para navegadores que no soportan sendBeacon
+        fetch('/logout_automatico/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({}),
+            keepalive: true
+        }).catch(e => console.log('Error cerrando sesión:', e));
+    }
+}
+
+/**
+ * Mostrar alerta de inactividad (ELIMINADO - No aplica más)
+ */
+function mostrarAlertaInactividad() {
+    // Esta función ya no se usa porque no hay límite de tiempo mientras esté activo
+}
+
+/**
+ * Cerrar sesión por ausencia (nueva función)
+ */
+function cerrarSesionPorAusencia() {
+    console.log('🚪 Cerrando sesión por ausencia prolongada...');
+    limpiarTemporizadores();
+    
+    // Intentar cerrar sesión en el servidor
+    cerrarSesionAutomatico();
+    
+    // Mostrar mensaje y redirigir
+    alert('🔒 Tu sesión se cerró porque estuviste fuera de la aplicación por más de 10 minutos.');
+    window.location.href = '/login/';
+}
+
+/**
+ * Mostrar alerta visual en pantalla (SIMPLIFICADO)
+ */
+function mostrarAlertaVisual(titulo, mensaje, critical = false) {
+    // Solo mostrar si el usuario está fuera de la página
+    if (!usuarioFueraDePagina) return;
+    
+    // Remover alerta existente si la hay
+    removerAlertaVisual();
+    
+    const alerta = document.createElement('div');
+    alerta.id = 'sesion-alerta-visual';
+    alerta.className = `sesion-alerta ${critical ? 'critical' : ''}`;
+    alerta.innerHTML = `
+        <div style="margin-bottom: 8px; font-size: 16px;">${titulo}</div>
+        <div style="font-size: 13px; opacity: 0.9;">${mensaje}</div>
+        <div style="font-size: 11px; margin-top: 5px; opacity: 0.7;">Haz clic para regresar</div>
+    `;
+    
+    // Hacer clic para activar la ventana
+    alerta.addEventListener('click', function() {
+        window.focus();
+        removerAlertaVisual();
+    });
+    
+    document.body.appendChild(alerta);
+}
+
+/**
+ * Remover alerta visual
+ */
+function removerAlertaVisual() {
+    const alerta = document.getElementById('sesion-alerta-visual');
+    if (alerta) {
+        alerta.remove();
+    }
+}
+
+/**
+ * Cerrar sesión manualmente
+ */
+function cerrarSesionManual() {
+    limpiarTemporizadores();
+    alert('🔒 Tu sesión será cerrada por inactividad.');
+    window.location.href = '/logout/';
+}
+
+/**
+ * Limpiar todos los temporizadores
+ */
+function limpiarTemporizadores() {
+    if (tiempoInactividad) {
+        clearTimeout(tiempoInactividad);
+    }
+    if (verificadorSesion) {
+        clearInterval(verificadorSesion);
+    }
+}
+
+// ============================================
+// INICIALIZACIÓN AUTOMÁTICA
+// ============================================
+
+// Inicializar gestión de sesión cuando el DOM esté listo
+document.addEventListener('DOMContentLoaded', function() {
+    // Solo inicializar si no estamos en la página de login
+    if (!window.location.pathname.includes('/login/')) {
+        inicializarGestionSesion();
+    }
+});
+
 // Mensaje final de carga
-console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
+console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos con Gestión de Sesiones');

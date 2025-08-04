@@ -115,6 +115,30 @@ def logout_view(request):
     messages.success(request, 'Sesión cerrada exitosamente.')
     return redirect('login')
 
+@csrf_exempt
+def logout_automatico(request):
+    """Vista para cerrar sesión automáticamente (AJAX)"""
+    if 'autenticado' in request.session:
+        del request.session['autenticado']
+    if 'fecha_login' in request.session:
+        del request.session['fecha_login']
+    
+    return JsonResponse({'success': True, 'message': 'Sesión cerrada automáticamente'})
+
+@csrf_exempt
+def verificar_sesion(request):
+    """Vista para verificar si la sesión sigue activa"""
+    autenticado = request.session.get('autenticado', False)
+    fecha_login = request.session.get('fecha_login')
+    
+    if autenticado and fecha_login:
+        # NO verificar tiempo límite - el usuario puede estar todo el tiempo que quiera
+        # Solo actualizar última actividad
+        request.session['ultima_actividad'] = timezone.now().isoformat()
+        return JsonResponse({'autenticado': True, 'mensaje': 'Sesión activa sin límite de tiempo'})
+    
+    return JsonResponse({'autenticado': False, 'mensaje': 'No autenticado'})
+
 def verificar_autenticacion(request):
     """Función helper para verificar si el usuario está autenticado"""
     return request.session.get('autenticado', False)

@@ -800,6 +800,45 @@
             }
         }
         
+        /* Estilos para alerta de sesión */
+        .sesion-alerta {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            padding: 15px 20px;
+            border-radius: 12px;
+            box-shadow: 0 8px 25px rgba(245, 158, 11, 0.4);
+            z-index: 9999;
+            font-weight: bold;
+            font-size: 14px;
+            animation: slideInRight 0.5s ease-out;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .sesion-alerta:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 30px rgba(245, 158, 11, 0.5);
+        }
+        
+        .sesion-alerta.critical {
+            background: linear-gradient(135deg, #dc2626, #b91c1c);
+            animation: pulse 1s infinite;
+        }
+        
+        @keyframes slideInRight {
+            from {
+                opacity: 0;
+                transform: translateX(100px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
         .alert {
             padding: 15px;
             margin: 15px 0;
@@ -836,6 +875,9 @@
         <div style="margin-top: 15px; display: flex; justify-content: center; gap: 20px; flex-wrap: wrap; font-size: 12px;">
             <div class="status-indicator" style="background: rgba(55, 65, 81, 0.1); padding: 5px 15px; border-radius: 20px; color: #374151; font-weight: 500;">
                 <span id="time-display">🕒 Cargando...</span>
+            </div>
+            <div id="sesion-indicator" class="status-indicator" style="background: rgba(34, 197, 94, 0.1); padding: 5px 15px; border-radius: 20px; color: #16a34a; font-weight: 500;">
+                <span id="sesion-tiempo">🔐 Sesión Activa</span>
             </div>
             <a href="/logout/" style="background: rgba(220, 38, 38, 0.1); padding: 5px 15px; border-radius: 20px; color: #dc2626; font-weight: 500; text-decoration: none; transition: all 0.3s ease;" 
                onmouseover="this.style.background='rgba(220, 38, 38, 0.2)'" 
