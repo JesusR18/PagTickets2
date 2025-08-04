@@ -7,6 +7,44 @@
 console.log('🚀 Iniciando aplicación SISEG - Sistema de Activos...');
 
 // ============================================
+// FUNCIONES DE AUTENTICACIÓN
+// ============================================
+
+/**
+ * Función para manejar respuestas de autenticación
+ * Redirige al login si la sesión expiró
+ */
+function manejarRespuestaAuth(response) {
+    // Si la respuesta incluye un redirect de autenticación
+    if (response.redirect && response.redirect.includes('/login/')) {
+        alert('🔒 Sesión expirada. Serás redirigido al login.');
+        window.location.href = '/login/';
+        return false;
+    }
+    return true;
+}
+
+/**
+ * Función wrapper para fetch que maneja autenticación
+ */
+async function fetchSeguro(url, options = {}) {
+    try {
+        const response = await fetch(url, options);
+        const data = await response.json();
+        
+        // Verificar si hay problemas de autenticación
+        if (!manejarRespuestaAuth(data)) {
+            return null;
+        }
+        
+        return data;
+    } catch (error) {
+        console.error('Error en petición:', error);
+        throw error;
+    }
+}
+
+// ============================================
 // VARIABLES GLOBALES
 // ============================================
 
@@ -2400,7 +2438,7 @@ function registrarCodigo(codigo) {
     
     const csrftoken = getCookie('csrftoken');
     
-    fetch('/registrar_qr/', {
+    fetchSeguro('/registrar_qr/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -2408,8 +2446,8 @@ function registrarCodigo(codigo) {
         },
         body: JSON.stringify({ codigo_qr: datosDesencriptados })
     })
-    .then(response => response.json())
     .then(data => {
+        if (!data) return; // Si hay problemas de auth, ya se manejó
         console.log('✅ Respuesta del servidor:', data);
         
         if (data.success) {
@@ -2457,15 +2495,10 @@ function cargarActivosEscaneados() {
     // Mostrar indicador de carga inmediatamente
     tbody.innerHTML = '<tr><td colspan="8" class="sin-activos loading-text">🔄 <span class="loading-spinner">⚙️</span> Cargando activos...</td></tr>';
     
-    fetch('/obtener_activos_escaneados/')
-    .then(response => {
-        console.log('📡 Respuesta recibida:', response.status);
-        if (!response.ok) {
-            throw new Error('HTTP ' + response.status + ': ' + response.statusText);
-        }
-        return response.json();
-    })
+    fetchSeguro('/obtener_activos_escaneados/')
     .then(data => {
+        if (!data) return; // Si hay problemas de auth, ya se manejó
+        
         console.log('📋 Datos recibidos:', data);
         
         // SIEMPRE limpiar el mensaje de carga primero
@@ -2741,7 +2774,7 @@ function eliminarActivo(id, nombre) {
     
     const csrftoken = getCookie('csrftoken');
     
-    fetch('/eliminar_activo/', {
+    fetchSeguro('/eliminar_activo/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -2749,8 +2782,8 @@ function eliminarActivo(id, nombre) {
         },
         body: JSON.stringify({ id: id })
     })
-    .then(response => response.json())
     .then(data => {
+        if (!data) return; // Si hay problemas de auth, ya se manejó
         if (data.success) {
             showMessage('✅ Activo "' + nombre + '" eliminado correctamente', 'success');
             cargarActivosEscaneados();
@@ -2775,7 +2808,7 @@ function eliminarTodos() {
     
     const csrftoken = getCookie('csrftoken');
     
-    fetch('/eliminar_todos_activos/', {
+    fetchSeguro('/eliminar_todos_activos/', {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
@@ -2783,8 +2816,8 @@ function eliminarTodos() {
         },
         body: JSON.stringify({})
     })
-    .then(response => response.json())
     .then(data => {
+        if (!data) return; // Si hay problemas de auth, ya se manejó
         if (data.success) {
             showMessage(`✅ ${data.message}`, 'success');
             cargarActivosEscaneados();

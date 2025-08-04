@@ -1,9 +1,9 @@
-# Importa funciones necesarias de Django
-from django.shortcuts import render
+#Esto es una prueba de codigo para verificar si esto aun funciona, la pagina debe funcionar a la perfeccion. Si no # Importa funciones necesarias de Django
+from django.shortcuts import render, redirect
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
-# Imports de auth eliminados - ya no se usan
 from django.utils import timezone
+from django.contrib import messages
 import json
 from .models import RegistroQR
 
@@ -85,6 +85,40 @@ def obtener_codigo_ubicacion(ubicacion):
     else:
         return "ARC"
 
+# Vista de login con código de acceso
+def login_view(request):
+    """Vista para el login con código de acceso"""
+    if request.method == 'POST':
+        codigo_ingresado = request.POST.get('codigo', '').strip()
+        
+        # Verificar si el código es correcto
+        if codigo_ingresado == '380300':
+            # Guardar en la sesión que el usuario está autenticado
+            request.session['autenticado'] = True
+            request.session['fecha_login'] = timezone.now().isoformat()
+            
+            # Redirigir al index
+            return redirect('index')
+        else:
+            # Código incorrecto
+            messages.error(request, 'Código de acceso incorrecto. Intenta nuevamente.')
+    
+    return render(request, 'login.html')
+
+def logout_view(request):
+    """Vista para cerrar sesión"""
+    if 'autenticado' in request.session:
+        del request.session['autenticado']
+    if 'fecha_login' in request.session:
+        del request.session['fecha_login']
+    
+    messages.success(request, 'Sesión cerrada exitosamente.')
+    return redirect('login')
+
+def verificar_autenticacion(request):
+    """Función helper para verificar si el usuario está autenticado"""
+    return request.session.get('autenticado', False)
+
 # Vista de healthcheck para Railway
 def health_check(request):
     """Vista mejorada para verificación de salud de Railway"""
@@ -143,6 +177,10 @@ def simple_ping(request):
 
 # Función principal que muestra la página de inicio con el escáner QR
 def index(request):
+    # Verificar autenticación antes de mostrar la página
+    if not verificar_autenticacion(request):
+        return redirect('login')
+    
     # Obtiene los últimos activos escaneados desde RegistroQR
     registros_qr = RegistroQR.objects.order_by('-fecha_registro')[:50]
     
@@ -221,6 +259,14 @@ def verificar_activo_existente(activo_info):
 # Función que guarda un nuevo código QR en la base de datos
 @csrf_exempt
 def registrar_qr(request):
+    # Verificar autenticación para operaciones críticas
+    if not verificar_autenticacion(request):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado',
+            'redirect': '/login/'
+        })
+    
     if request.method == 'POST':
         try:
             # Convierte los datos JSON recibidos a un diccionario de Python
@@ -283,6 +329,14 @@ def registrar_qr(request):
 # Función para eliminar un activo
 @csrf_exempt
 def eliminar_activo(request):
+    # Verificar autenticación para operaciones críticas
+    if not verificar_autenticacion(request):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado',
+            'redirect': '/login/'
+        })
+    
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
@@ -495,6 +549,14 @@ def obtener_activos_escaneados(request):
 
 # Función para exportar activos escaneados a Excel
 def exportar_activos_excel(request):
+    # Verificar autenticación para operaciones críticas
+    if not verificar_autenticacion(request):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado',
+            'redirect': '/login/'
+        })
+    
     try:
         # Crear un nuevo libro de Excel
         wb = Workbook()
@@ -600,6 +662,14 @@ def ultimos_registros(request):
 @csrf_exempt
 def eliminar_todos_activos(request):
     """Vista para eliminar todos los activos registrados"""
+    # Verificar autenticación para operaciones críticas
+    if not verificar_autenticacion(request):
+        return JsonResponse({
+            'success': False,
+            'error': 'No autenticado',
+            'redirect': '/login/'
+        })
+    
     if request.method == 'POST':
         try:
             # Contar activos antes de eliminar

@@ -12,6 +12,9 @@ from . import views
 
 # Lista que define todas las rutas URL de la aplicación
 urlpatterns = [
+    # Rutas de autenticación
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
     # Ruta principal ('') que muestra la página de inicio con el lector QR
     path('', views.index, name='index'),
     # Rutas de healthcheck para Railway (múltiples opciones)
