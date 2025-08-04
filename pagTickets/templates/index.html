@@ -1236,19 +1236,62 @@
         // Función para mostrar instrucciones de instalación manual
         function mostrarInstruccionesInstalacion() {
             const userAgent = navigator.userAgent.toLowerCase();
-            let mensaje = '';
+            let titulo = '';
+            let pasos = [];
             
             if (userAgent.includes('chrome') && !userAgent.includes('edge')) {
-                mensaje = '📱 Para instalar:\n\n1. Busca el ícono de "Instalar" en la barra de dirección\n2. O ve al menú ⋮ → "Instalar SISEG..."\n3. ¡Listo! Tendrás la app en tu dispositivo';
+                titulo = '� Instalar en Chrome:';
+                pasos = [
+                    '1️⃣ Busca el ícono de descarga/instalar (⬇️) en la barra de direcciones',
+                    '2️⃣ O haz clic en el menú de Chrome (⋮) → "Instalar SISEG..."',
+                    '3️⃣ Confirma haciendo clic en "Instalar"',
+                    '✅ ¡La app aparecerá en tu escritorio y menú de aplicaciones!'
+                ];
+            } else if (userAgent.includes('edge')) {
+                titulo = '🔧 Instalar en Edge:';
+                pasos = [
+                    '1️⃣ Busca el ícono de aplicación (+) en la barra de direcciones',
+                    '2️⃣ O ve al menú (⋯) → "Aplicaciones" → "Instalar este sitio como aplicación"',
+                    '3️⃣ Confirma la instalación',
+                    '✅ ¡Ya tienes SISEG como aplicación nativa!'
+                ];
             } else if (userAgent.includes('safari')) {
-                mensaje = '📱 Para instalar en Safari:\n\n1. Toca el botón de compartir 📤\n2. Selecciona "Añadir a pantalla de inicio"\n3. Confirma la instalación\n4. ¡Ya tienes la app!';
+                titulo = '🍎 Instalar en Safari (iPhone/iPad):';
+                pasos = [
+                    '1️⃣ Toca el botón de compartir 📤 (en la parte inferior)',
+                    '2️⃣ Desplázate y selecciona "Añadir a pantalla de inicio"',
+                    '3️⃣ Personaliza el nombre si quieres',
+                    '4️⃣ Toca "Añadir"',
+                    '✅ ¡SISEG aparecerá como icono en tu pantalla de inicio!'
+                ];
             } else if (userAgent.includes('firefox')) {
-                mensaje = '📱 Para instalar en Firefox:\n\n1. Ve al menú ☰\n2. Busca "Instalar esta aplicación"\n3. Confirma la instalación\n4. ¡Listo!';
+                titulo = '🦊 Instalar en Firefox:';
+                pasos = [
+                    '1️⃣ Ve al menú de Firefox (☰)',
+                    '2️⃣ Busca "Instalar esta aplicación web"',
+                    '3️⃣ Confirma la instalación',
+                    '✅ ¡La app se instalará en tu sistema!'
+                ];
             } else {
-                mensaje = '📱 Para instalar:\n\n1. Busca en el menú del navegador la opción "Instalar"\n2. O "Añadir a pantalla de inicio"\n3. ¡Disfruta de la app!';
+                titulo = '📱 Instalación general:';
+                pasos = [
+                    '1️⃣ Busca en el menú del navegador opciones como:',
+                    '   • "Instalar aplicación"',
+                    '   • "Añadir a pantalla de inicio"',
+                    '   • "Crear acceso directo"',
+                    '2️⃣ Confirma la instalación',
+                    '✅ ¡Disfruta de SISEG como app nativa!'
+                ];
             }
             
-            showMessage(mensaje, 'info', 8000);
+            // Crear mensaje personalizado
+            const mensaje = titulo + '\n\n' + pasos.join('\n\n');
+            
+            // Mostrar con estilos
+            showMessage(mensaje, 'info', 10000);
+            
+            // También mostrar en consola para debug
+            console.log('📱 PWA Instrucciones:', titulo, pasos);
         }
         
         // Detectar cuando está disponible el prompt de instalación
@@ -1257,14 +1300,40 @@
             e.preventDefault();
             deferredPrompt = e;
             
-            // Mostrar el botón de instalación con animación
+            // Mostrar el botón de instalación con animación y estado especial
             if (installButton) {
                 installButton.style.display = 'block';
                 installButton.classList.add('animate');
-                installButton.innerHTML = '📱 ¡Instalar App!';
-                showMessage('✨ ¡Ya puedes instalar SISEG como aplicación!', 'success');
+                installButton.innerHTML = '⚡ ¡Instalar Ahora!';
+                installButton.style.background = 'linear-gradient(135deg, #059669, #10b981)';
+                showMessage('✨ ¡Perfecto! Ya puedes instalar SISEG con un clic!', 'success');
             }
         });
+        
+        // Función adicional para forzar la detección de instalabilidad
+        function verificarPWAInstalable() {
+            // Verificar criterios básicos de PWA
+            const tieneManifest = document.querySelector('link[rel="manifest"]');
+            const tieneServiceWorker = 'serviceWorker' in navigator;
+            const esHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
+            
+            console.log('🔍 PWA Check:', {
+                manifest: !!tieneManifest,
+                serviceWorker: tieneServiceWorker,
+                https: esHTTPS,
+                deferredPrompt: !!deferredPrompt
+            });
+            
+            if (tieneManifest && tieneServiceWorker && esHTTPS) {
+                if (installButton) {
+                    installButton.style.display = 'block';
+                    if (!deferredPrompt) {
+                        installButton.innerHTML = '📱 Ver Instrucciones';
+                        installButton.style.background = 'linear-gradient(135deg, #3b82f6, #6366f1)';
+                    }
+                }
+            }
+        }
         
         // Verificar si ya está instalado
         function verificarInstalacionPWA() {
@@ -1273,22 +1342,27 @@
                 window.navigator.standalone === true) {
                 console.log('✅ PWA: Ya está instalado en modo standalone');
                 if (installButton) {
-                    installButton.style.display = 'none';
+                    installButton.innerHTML = '✅ Ya Instalado';
+                    installButton.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
+                    installButton.disabled = true;
                 }
                 return true;
             }
             
+            // Ejecutar verificación de instalabilidad
+            verificarPWAInstalable();
+            
             // Verificar si el botón de instalación debe mostrarse
             if (installButton) {
                 installButton.style.display = 'block';
-                installButton.innerHTML = '📱 Instalar App';
                 
-                // Agregar animación para llamar la atención
+                // Agregar animación para llamar la atención después de un tiempo
                 setTimeout(() => {
                     if (installButton && !deferredPrompt) {
                         installButton.classList.add('animate');
+                        showMessage('💡 Tip: El botón "📱 Ver Instrucciones" te mostrará cómo instalar SISEG como aplicación', 'info', 5000);
                     }
-                }, 2000);
+                }, 3000);
             }
             
             return false;
