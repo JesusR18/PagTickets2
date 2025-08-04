@@ -720,6 +720,47 @@
             to { transform: rotate(360deg); }
         }
         
+        /* Animación especial para botón PWA */
+        @keyframes pwaPulse {
+            0% { 
+                transform: scale(1);
+                box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+            }
+            50% { 
+                transform: scale(1.05);
+                box-shadow: 0 6px 20px rgba(5, 150, 105, 0.6);
+            }
+            100% { 
+                transform: scale(1);
+                box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
+            }
+        }
+        
+        /* Estilos para botón de instalación PWA */
+        #install-pwa-btn {
+            position: relative;
+            overflow: hidden;
+        }
+        
+        #install-pwa-btn.animate {
+            animation: pwaPulse 2s ease-in-out infinite;
+        }
+        
+        #install-pwa-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        #install-pwa-btn:hover::before {
+            left: 100%;
+        }
+        
         .loading-text {
             animation: pulse 1.5s ease-in-out infinite alternate;
         }
@@ -920,6 +961,10 @@
             </button>
             <button onclick="eliminarTodos()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
                 🗑️ Eliminar Todos
+            </button>
+            <!-- Botón de instalación PWA -->
+            <button onclick="instalarPWA()" class="btn" id="install-pwa-btn" style="background: linear-gradient(135deg, #059669, #10b981); display: block;">
+                📱 Instalar App
             </button>
         </div>
         
@@ -1158,69 +1203,101 @@
         }
 
         // ============================================
-        // PWA INSTALL PROMPT
+        // PWA INSTALL PROMPT - MEJORADO
         // ============================================
         
         let deferredPrompt;
+        let installButton = document.getElementById('install-pwa-btn');
         
+        // Función principal para instalar PWA
+        function instalarPWA() {
+            console.log('� PWA: Intentando instalar...');
+            
+            if (deferredPrompt) {
+                // Si hay prompt disponible, usarlo
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('✅ PWA: Usuario aceptó la instalación');
+                        showMessage('🎉 ¡SISEG se está instalando como app!', 'success');
+                        if (installButton) installButton.style.display = 'none';
+                    } else {
+                        console.log('❌ PWA: Usuario rechazó la instalación');
+                        showMessage('ℹ️ Instalación cancelada', 'info');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                // Mostrar instrucciones manuales
+                mostrarInstruccionesInstalacion();
+            }
+        }
+        
+        // Función para mostrar instrucciones de instalación manual
+        function mostrarInstruccionesInstalacion() {
+            const userAgent = navigator.userAgent.toLowerCase();
+            let mensaje = '';
+            
+            if (userAgent.includes('chrome') && !userAgent.includes('edge')) {
+                mensaje = '📱 Para instalar:\n\n1. Busca el ícono de "Instalar" en la barra de dirección\n2. O ve al menú ⋮ → "Instalar SISEG..."\n3. ¡Listo! Tendrás la app en tu dispositivo';
+            } else if (userAgent.includes('safari')) {
+                mensaje = '📱 Para instalar en Safari:\n\n1. Toca el botón de compartir 📤\n2. Selecciona "Añadir a pantalla de inicio"\n3. Confirma la instalación\n4. ¡Ya tienes la app!';
+            } else if (userAgent.includes('firefox')) {
+                mensaje = '📱 Para instalar en Firefox:\n\n1. Ve al menú ☰\n2. Busca "Instalar esta aplicación"\n3. Confirma la instalación\n4. ¡Listo!';
+            } else {
+                mensaje = '📱 Para instalar:\n\n1. Busca en el menú del navegador la opción "Instalar"\n2. O "Añadir a pantalla de inicio"\n3. ¡Disfruta de la app!';
+            }
+            
+            showMessage(mensaje, 'info', 8000);
+        }
+        
+        // Detectar cuando está disponible el prompt de instalación
         window.addEventListener('beforeinstallprompt', (e) => {
             console.log('📱 PWA: Prompt de instalación disponible');
-            
-            // Prevenir que se muestre automáticamente
             e.preventDefault();
             deferredPrompt = e;
             
-            // Mostrar botón de instalación personalizado
-            mostrarBotonInstalar();
+            // Mostrar el botón de instalación con animación
+            if (installButton) {
+                installButton.style.display = 'block';
+                installButton.classList.add('animate');
+                installButton.innerHTML = '📱 ¡Instalar App!';
+                showMessage('✨ ¡Ya puedes instalar SISEG como aplicación!', 'success');
+            }
         });
         
-        function mostrarBotonInstalar() {
-            // Crear botón de instalación
-            const installButton = document.createElement('button');
-            installButton.innerHTML = '📱 Instalar App SISEG';
-            installButton.style.cssText = `
-                position: fixed;
-                bottom: 80px;
-                left: 20px;
-                background: linear-gradient(135deg, #059669, #10b981);
-                color: white;
-                border: none;
-                padding: 12px 20px;
-                border-radius: 25px;
-                font-weight: bold;
-                font-size: 14px;
-                cursor: pointer;
-                box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
-                z-index: 1000;
-                animation: pulse 2s infinite;
-            `;
+        // Verificar si ya está instalado
+        function verificarInstalacionPWA() {
+            // Verificar si está en modo standalone (ya instalado)
+            if (window.matchMedia('(display-mode: standalone)').matches || 
+                window.navigator.standalone === true) {
+                console.log('✅ PWA: Ya está instalado en modo standalone');
+                if (installButton) {
+                    installButton.style.display = 'none';
+                }
+                return true;
+            }
             
-            installButton.addEventListener('click', async () => {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    const { outcome } = await deferredPrompt.userChoice;
-                    
-                    if (outcome === 'accepted') {
-                        console.log('✅ PWA: Usuario aceptó la instalación');
-                        showMessage('🎉 ¡SISEG se está instalando como app!', 'success');
-                    } else {
-                        console.log('❌ PWA: Usuario rechazó la instalación');
+            // Verificar si el botón de instalación debe mostrarse
+            if (installButton) {
+                installButton.style.display = 'block';
+                installButton.innerHTML = '📱 Instalar App';
+                
+                // Agregar animación para llamar la atención
+                setTimeout(() => {
+                    if (installButton && !deferredPrompt) {
+                        installButton.classList.add('animate');
                     }
-                    
-                    deferredPrompt = null;
-                    installButton.remove();
-                }
-            });
+                }, 2000);
+            }
             
-            document.body.appendChild(installButton);
-            
-            // Auto-remover después de 30 segundos
-            setTimeout(() => {
-                if (installButton.parentNode) {
-                    installButton.remove();
-                }
-            }, 30000);
+            return false;
         }
+        
+        // Ejecutar verificación cuando se carga la página
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(verificarInstalacionPWA, 1000);
+        });
         
         // Detectar cuando se instala la PWA
         window.addEventListener('appinstalled', (evt) => {
