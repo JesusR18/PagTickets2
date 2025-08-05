@@ -1,6 +1,6 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements_railway.txt"
+buildCommand = "pip install -r requirements_railway_minimal.txt"
 
 [deploy]
 healthcheckPath = "/ping/"

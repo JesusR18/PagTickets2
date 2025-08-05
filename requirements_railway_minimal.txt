@@ -1,5 +1,5 @@
-# Dependencias específicas para Railway
-# Incluye todo lo necesario para producción
+# Dependencias MÍNIMAS para Railway - Sin conflictos
+# Solo lo esencial para funcionamiento básico
 
 # Framework Django
 Django==5.2.1
@@ -23,17 +23,5 @@ psycopg2-binary==2.9.9
 # CORS para API
 django-cors-headers==4.3.1
 
-# Variables de entorno
-python-decouple==3.8
-
-# Logging mejorado
-django-extensions==3.2.3
-
-# Seguridad adicional (versión corregida)
-django-security==1.1.1
-
 # APIs externas para precios
 requests==2.31.0
-
-# Cache (Redis opcional para Railway)
-django-redis==5.3.0
