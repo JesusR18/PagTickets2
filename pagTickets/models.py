@@ -31,6 +31,54 @@ class RegistroQR(models.Model):
     usuario = models.CharField(max_length=100, blank=True, verbose_name="Usuario")
     ubicacion = models.CharField(max_length=200, blank=True, verbose_name="Ubicación")
     notas = models.TextField(blank=True, verbose_name="Notas")
+    
+    # ================================================================================================
+    # 💰 CAMPOS PARA APIS DE PRECIOS Y CATÁLOGOS - NUEVO SISTEMA SISEG
+    # ================================================================================================
+    
+    # Información del producto
+    marca = models.CharField(max_length=100, blank=True, verbose_name="Marca")
+    modelo = models.CharField(max_length=100, blank=True, verbose_name="Modelo")
+    numero_serie = models.CharField(max_length=100, blank=True, verbose_name="Número de Serie")
+    tipo_producto = models.CharField(max_length=50, blank=True, verbose_name="Tipo de Producto")
+    
+    # Información de precios (en USD)
+    precio_actual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Precio Actual USD")
+    precio_compra = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Precio de Compra USD")
+    precio_min_mercado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Precio Mín. Mercado")
+    precio_max_mercado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Precio Máx. Mercado")
+    
+    # Depreciación
+    valor_depreciado = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Valor Depreciado")
+    depreciacion_anual = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Depreciación Anual")
+    anos_vida_util = models.IntegerField(null=True, blank=True, verbose_name="Años Vida Útil")
+    
+    # Información técnica (JSON para flexibilidad)
+    especificaciones_json = models.JSONField(default=dict, blank=True, verbose_name="Especificaciones Técnicas")
+    
+    # APIs y fuentes
+    fuentes_precio = models.TextField(blank=True, verbose_name="Fuentes de Precio")
+    ultima_actualizacion_precio = models.DateTimeField(null=True, blank=True, verbose_name="Última Actualización Precio")
+    
+    # Estado del activo
+    estado_activo = models.CharField(
+        max_length=20, 
+        choices=[
+            ('nuevo', 'Nuevo'),
+            ('bueno', 'Bueno'),
+            ('regular', 'Regular'),
+            ('malo', 'Malo'),
+            ('fuera_servicio', 'Fuera de Servicio')
+        ],
+        default='bueno',
+        verbose_name="Estado del Activo"
+    )
+    
+    # Información de la API
+    api_consultada = models.BooleanField(default=False, verbose_name="API Consultada")
+    api_error = models.TextField(blank=True, verbose_name="Error de API")
+    
+    # ================================================================================================
 
     class Meta:
         verbose_name = "Registro QR"

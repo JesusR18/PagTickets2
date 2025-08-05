@@ -39,6 +39,25 @@ urlpatterns = [
     path('exportar_activos_excel/', views.exportar_activos_excel, name='exportar_activos_excel'),
     # Ruta para eliminar todos los activos
     path('eliminar_todos_activos/', views.eliminar_todos_activos, name='eliminar_todos_activos'),
+    
+    # ================================================================================================
+    # 🚀 RUTAS PARA SISTEMA DE APIs DE PRECIOS Y CATÁLOGOS
+    # ================================================================================================
+    # Dashboard de precios
+    path('dashboard-precios/', views.dashboard_precios, name='dashboard_precios'),
+    # API para obtener precio rápido de un producto
+    path('api/precio/', views.obtener_precio_producto, name='api_precio_producto'),
+    # API para obtener información completa de un producto
+    path('api/producto/completo/', views.obtener_info_completa_producto, name='api_producto_completo'),
+    # API para generar reporte de inventario
+    path('api/inventario/reporte/', views.generar_reporte_inventario_api, name='api_reporte_inventario'),
+    # API para obtener catálogo de marca
+    path('api/catalogo/marca/<str:marca>/', views.obtener_catalogo_marca_api, name='api_catalogo_marca'),
+    # API para verificar estado de APIs
+    path('api/estado/', views.verificar_estado_apis_view, name='api_estado'),
+    # API para actualización masiva de precios
+    path('api/actualizar-precios/', views.actualizar_precios_masivo, name='api_actualizar_precios'),
+    
     # Ruta para la app qrweb (scanner QR simple)
     path('qr/', include('qrweb.urls')),
 ]

@@ -983,6 +983,12 @@
             <button onclick="toggleGeneradorQR()" class="btn btn-primary">
                 📱 Generar QR Seguro
             </button>
+            <button onclick="mostrarDashboardPrecios()" class="btn" style="background: linear-gradient(135deg, #059669, #10b981);">
+                💰 Ver Precios
+            </button>
+            <button onclick="actualizarPreciosMasivo()" class="btn" style="background: linear-gradient(135deg, #7c3aed, #8b5cf6);">
+                🔄 Actualizar Precios
+            </button>
             <button onclick="eliminarTodos()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
                 🗑️ Eliminar Todos
             </button>
@@ -1182,6 +1188,88 @@
                 <li style="margin-bottom: 8px;">🔍 <strong>Usa el zoom</strong> para acercarte a códigos pequeños</li>
                 <li>💾 Los cambios se guardan automáticamente en la base de datos</li>
             </ul>
+        </div>
+        
+        <!-- Modal de Dashboard de Precios -->
+        <div id="modal-precios" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 9999; padding: 20px; box-sizing: border-box; overflow-y: auto;">
+            <div style="background: white; border-radius: 15px; max-width: 1000px; margin: 0 auto; padding: 25px; position: relative;">
+                <!-- Header del Modal -->
+                <div style="border-bottom: 2px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <h2 style="color: #991b1b; margin: 0; font-size: 1.5em;">💰 Dashboard de Precios SISEG</h2>
+                    <button onclick="cerrarModalPrecios()" style="background: #dc2626; color: white; border: none; padding: 8px 12px; border-radius: 8px; cursor: pointer; font-weight: bold;">❌ Cerrar</button>
+                </div>
+                
+                <!-- Estadísticas Generales -->
+                <div id="estadisticas-generales" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px;">
+                    <!-- Se llenan dinámicamente -->
+                </div>
+                
+                <!-- Pestañas -->
+                <div style="display: flex; border-bottom: 1px solid #e5e7eb; margin-bottom: 20px;">
+                    <button onclick="cambiarPestanaPrecios('resumen')" class="pestana-precio active" data-tab="resumen" style="padding: 10px 20px; border: none; background: #991b1b; color: white; border-radius: 8px 8px 0 0; cursor: pointer; margin-right: 5px;">📊 Resumen</button>
+                    <button onclick="cambiarPestanaPrecios('detalle')" class="pestana-precio" data-tab="detalle" style="padding: 10px 20px; border: none; background: #e5e7eb; color: #374151; border-radius: 8px 8px 0 0; cursor: pointer; margin-right: 5px;">📋 Detalle</button>
+                    <button onclick="cambiarPestanaPrecios('marcas')" class="pestana-precio" data-tab="marcas" style="padding: 10px 20px; border: none; background: #e5e7eb; color: #374151; border-radius: 8px 8px 0 0; cursor: pointer;">🏭 Por Marcas</button>
+                </div>
+                
+                <!-- Contenido de Pestañas -->
+                <div id="contenido-resumen" class="contenido-pestana" style="display: block;">
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+                        <div>
+                            <h3 style="color: #374151; margin-bottom: 10px;">💹 Valor del Inventario</h3>
+                            <div id="grafico-valor" style="background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <!-- Aquí irá el resumen de valores -->
+                            </div>
+                        </div>
+                        <div>
+                            <h3 style="color: #374151; margin-bottom: 10px;">📈 Por Categorías</h3>
+                            <div id="grafico-categorias" style="background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb;">
+                                <!-- Aquí irá el desglose por categorías -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="contenido-detalle" class="contenido-pestana" style="display: none;">
+                    <div style="overflow-x: auto;">
+                        <table id="tabla-detalle-precios" style="width: 100%; border-collapse: collapse; background: white;">
+                            <thead>
+                                <tr style="background: #991b1b; color: white;">
+                                    <th style="padding: 10px; text-align: left;">Activo</th>
+                                    <th style="padding: 10px; text-align: left;">Marca</th>
+                                    <th style="padding: 10px; text-align: left;">Modelo</th>
+                                    <th style="padding: 10px; text-align: left;">Tipo</th>
+                                    <th style="padding: 10px; text-align: right;">Precio Est.</th>
+                                    <th style="padding: 10px; text-align: right;">Rango</th>
+                                    <th style="padding: 10px; text-align: center;">Fuente</th>
+                                </tr>
+                            </thead>
+                            <tbody id="body-tabla-detalle">
+                                <!-- Se llena dinámicamente -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <div id="contenido-marcas" class="contenido-pestana" style="display: none;">
+                    <div id="resumen-marcas" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 15px;">
+                        <!-- Se llena dinámicamente -->
+                    </div>
+                </div>
+                
+                <!-- Loading State -->
+                <div id="loading-precios" style="text-align: center; padding: 40px; display: none;">
+                    <div style="color: #991b1b; font-size: 1.2em;">
+                        <span style="animation: spin 1s linear infinite; display: inline-block;">⚙️</span>
+                        Consultando precios en tiempo real...
+                    </div>
+                </div>
+                
+                <!-- Botones de Acción -->
+                <div style="margin-top: 25px; padding-top: 15px; border-top: 1px solid #e5e7eb; display: flex; gap: 10px; justify-content: flex-end;">
+                    <button onclick="exportarReportePrecios()" style="background: #059669; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">📊 Exportar Reporte</button>
+                    <button onclick="actualizarTodosLosPrecios()" style="background: #7c3aed; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold;">🔄 Actualizar Todo</button>
+                </div>
+            </div>
         </div>
         
         <!-- Botón flotante para acciones rápidas en móvil -->

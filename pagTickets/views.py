@@ -805,3 +805,379 @@ def pwa_offline_fallback(request):
         'mensaje': 'La aplicación puede funcionar sin conexión',
         'offline_mode': True
     })
+
+
+# ================================================================================================
+# 🚀 VISTAS PARA SISTEMA DE APIs DE PRECIOS Y CATÁLOGOS
+# ================================================================================================
+
+from .api_services import (
+    obtener_precio_activo,
+    obtener_info_completa_activo,
+    generar_reporte_inventario,
+    verificar_estado_apis,
+    obtener_catalogo_marca
+)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def obtener_precio_producto(request):
+    """
+    Vista para obtener precio rápido de un producto por marca y modelo
+    
+    POST /api/precio/
+    Body: {
+        "marca": "Dell",
+        "modelo": "Latitude 5520",
+        "nombre": "Laptop Dell para oficina" (opcional)
+    }
+    """
+    try:
+        data = json.loads(request.body)
+        marca = data.get('marca', '').strip()
+        modelo = data.get('modelo', '').strip()
+        nombre = data.get('nombre', '').strip()
+        
+        if not marca or not modelo:
+            return JsonResponse({
+                'error': 'Marca y modelo son requeridos',
+                'success': False
+            }, status=400)
+        
+        # Obtener información de precio
+        precio_info = obtener_precio_activo(marca, modelo, nombre)
+        
+        return JsonResponse({
+            'success': True,
+            'data': precio_info,
+            'mensaje': f'Precio obtenido para {marca} {modelo}'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'JSON inválido',
+            'success': False
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error obteniendo precio: {str(e)}',
+            'success': False
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def obtener_info_completa_producto(request):
+    """
+    Vista para obtener información completa de un producto incluyendo especificaciones
+    
+    POST /api/producto/completo/
+    Body: {
+        "marca": "HP",
+        "modelo": "EliteBook 840",
+        "nombre": "Laptop HP para trabajo" (opcional)
+    }
+    """
+    try:
+        data = json.loads(request.body)
+        marca = data.get('marca', '').strip()
+        modelo = data.get('modelo', '').strip()
+        nombre = data.get('nombre', '').strip()
+        
+        if not marca or not modelo:
+            return JsonResponse({
+                'error': 'Marca y modelo son requeridos',
+                'success': False
+            }, status=400)
+        
+        # Obtener información completa
+        info_completa = obtener_info_completa_activo(marca, modelo, nombre)
+        
+        return JsonResponse({
+            'success': True,
+            'data': info_completa,
+            'mensaje': f'Información completa obtenida para {marca} {modelo}'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'JSON inválido',
+            'success': False
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error obteniendo información: {str(e)}',
+            'success': False
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def generar_reporte_inventario_api(request):
+    """
+    Vista para generar reporte de valor del inventario completo
+    
+    POST /api/inventario/reporte/
+    Body: {
+        "activos": [
+            {
+                "nombre": "Laptop Dell",
+                "marca": "Dell",
+                "modelo": "Latitude 5520"
+            },
+            {
+                "nombre": "Monitor HP",
+                "marca": "HP", 
+                "modelo": "E24 G5"
+            }
+        ]
+    }
+    """
+    try:
+        data = json.loads(request.body)
+        activos = data.get('activos', [])
+        
+        if not activos:
+            # Si no se envían activos, usar todos los registros de la base de datos
+            registros = RegistroQR.objects.all()
+            activos = []
+            
+            for registro in registros:
+                activo_data = {}
+                try:
+                    # Intentar parsear los datos del QR
+                    qr_data = registro.datos_qr.split('|')
+                    if len(qr_data) >= 4:
+                        activo_data = {
+                            'nombre': qr_data[0],
+                            'marca': qr_data[3] if len(qr_data) > 3 else 'Sin marca',
+                            'modelo': qr_data[1] if len(qr_data) > 1 else 'Sin modelo'
+                        }
+                    else:
+                        activo_data = {
+                            'nombre': registro.datos_qr,
+                            'marca': 'Sin marca',
+                            'modelo': 'Sin modelo'
+                        }
+                except:
+                    activo_data = {
+                        'nombre': registro.datos_qr,
+                        'marca': 'Sin marca',
+                        'modelo': 'Sin modelo'
+                    }
+                
+                activos.append(activo_data)
+        
+        # Generar reporte
+        reporte = generar_reporte_inventario(activos)
+        
+        return JsonResponse({
+            'success': True,
+            'data': reporte,
+            'mensaje': f'Reporte generado para {len(activos)} activos'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'JSON inválido',
+            'success': False
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error generando reporte: {str(e)}',
+            'success': False
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def obtener_catalogo_marca_api(request, marca):
+    """
+    Vista para obtener información de catálogo de una marca específica
+    
+    GET /api/catalogo/marca/<marca>/
+    """
+    try:
+        if not marca:
+            return JsonResponse({
+                'error': 'Marca es requerida',
+                'success': False
+            }, status=400)
+        
+        # Obtener información del catálogo
+        catalogo = obtener_catalogo_marca(marca)
+        
+        return JsonResponse({
+            'success': True,
+            'data': catalogo,
+            'mensaje': f'Catálogo obtenido para marca {marca}'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error obteniendo catálogo: {str(e)}',
+            'success': False
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def verificar_estado_apis_view(request):
+    """
+    Vista para verificar el estado de todas las APIs disponibles
+    
+    GET /api/estado/
+    """
+    try:
+        estado = verificar_estado_apis()
+        
+        return JsonResponse({
+            'success': True,
+            'data': estado,
+            'mensaje': 'Estado de APIs verificado',
+            'timestamp': timezone.now().isoformat()
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error verificando APIs: {str(e)}',
+            'success': False
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def actualizar_precios_masivo(request):
+    """
+    Vista para actualizar precios de múltiples activos en lote
+    
+    POST /api/actualizar-precios/
+    Body: {
+        "activos": [
+            {"id": 1, "marca": "Dell", "modelo": "Latitude 5520"},
+            {"id": 2, "marca": "HP", "modelo": "EliteBook 840"}
+        ]
+    }
+    """
+    try:
+        data = json.loads(request.body)
+        activos = data.get('activos', [])
+        
+        if not activos:
+            return JsonResponse({
+                'error': 'Lista de activos es requerida',
+                'success': False
+            }, status=400)
+        
+        resultados = []
+        errores = []
+        
+        for activo in activos:
+            try:
+                marca = activo.get('marca', '').strip()
+                modelo = activo.get('modelo', '').strip()
+                activo_id = activo.get('id')
+                
+                if not marca or not modelo:
+                    errores.append({
+                        'id': activo_id,
+                        'error': 'Marca y modelo requeridos'
+                    })
+                    continue
+                
+                # Obtener precio
+                precio_info = obtener_precio_activo(marca, modelo)
+                
+                resultado = {
+                    'id': activo_id,
+                    'marca': marca,
+                    'modelo': modelo,
+                    'precio_info': precio_info,
+                    'actualizado': True
+                }
+                
+                resultados.append(resultado)
+                
+            except Exception as e:
+                errores.append({
+                    'id': activo.get('id'),
+                    'error': str(e)
+                })
+        
+        return JsonResponse({
+            'success': True,
+            'data': {
+                'resultados': resultados,
+                'errores': errores,
+                'total_procesados': len(resultados),
+                'total_errores': len(errores)
+            },
+            'mensaje': f'Procesados {len(resultados)} activos, {len(errores)} errores'
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'error': 'JSON inválido',
+            'success': False
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'error': f'Error en actualización masiva: {str(e)}',
+            'success': False
+        }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def dashboard_precios(request):
+    """
+    Vista para mostrar dashboard con información de precios del inventario
+    """
+    try:
+        # Obtener todos los registros
+        registros = RegistroQR.objects.all()
+        activos = []
+        
+        for registro in registros:
+            try:
+                # Intentar parsear los datos del QR
+                qr_data = registro.datos_qr.split('|')
+                if len(qr_data) >= 4:
+                    activo_data = {
+                        'id': registro.id,
+                        'nombre': qr_data[0],
+                        'marca': qr_data[3] if len(qr_data) > 3 else 'Sin marca',
+                        'modelo': qr_data[1] if len(qr_data) > 1 else 'Sin modelo',
+                        'ubicacion': qr_data[2] if len(qr_data) > 2 else 'Sin ubicación',
+                        'fecha_registro': registro.fecha_escaneado
+                    }
+                else:
+                    activo_data = {
+                        'id': registro.id,
+                        'nombre': registro.datos_qr,
+                        'marca': 'Sin marca',
+                        'modelo': 'Sin modelo',
+                        'ubicacion': 'Sin ubicación',
+                        'fecha_registro': registro.fecha_escaneado
+                    }
+                    
+                activos.append(activo_data)
+                
+            except:
+                continue
+        
+        # Generar reporte de inventario
+        reporte = generar_reporte_inventario(activos) if activos else {}
+        
+        # Verificar estado de APIs
+        estado_apis = verificar_estado_apis()
+        
+        context = {
+            'activos': activos,
+            'reporte': reporte,
+            'estado_apis': estado_apis,
+            'total_activos': len(activos),
+            'titulo': 'Dashboard de Precios - SISEG'
+        }
+        
+        return render(request, 'dashboard_precios.html', context)
+        
+    except Exception as e:
+        return render(request, 'dashboard_precios.html', {
+            'error': f'Error cargando dashboard: {str(e)}',
+            'titulo': 'Dashboard de Precios - SISEG'
+        })
