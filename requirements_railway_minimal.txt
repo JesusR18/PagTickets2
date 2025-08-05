@@ -1,27 +1,20 @@
-# Dependencias MÍNIMAS para Railway - Sin conflictos
-# Solo lo esencial para funcionamiento básico
+# Dependencias ULTRA-MÍNIMAS para Railway - Build rápido
+# Solo lo absolutamente esencial
 
-# Framework Django
+# Django core
 Django==5.2.1
-asgiref==3.8.1
-sqlparse==0.5.3
-tzdata==2025.2
 
-# Archivos Excel
-openpyxl==3.1.2
-
-# Servidor de producción
+# Servidor web
 gunicorn==21.2.0
 
-# Archivos estáticos en producción
+# Archivos estáticos
 whitenoise==6.6.0
 
-# Base de datos PostgreSQL para Railway
+# Base de datos
 dj-database-url==2.1.0
+
+# PostgreSQL (pre-compilado para rapidez)
 psycopg2-binary==2.9.9
 
-# CORS para API
-django-cors-headers==4.3.1
-
-# APIs externas para precios
+# APIs básicas
 requests==2.31.0

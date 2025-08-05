@@ -1,16 +1,16 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements_railway_minimal.txt"
+buildCommand = "pip install --no-cache-dir -r requirements_ultra_minimal.txt"
 
 [deploy]
 healthcheckPath = "/ping/"
-healthcheckTimeout = 300
+healthcheckTimeout = 600
 restartPolicyType = "ON_FAILURE"
 replicas = 1
-startCommand = "python quick_health.py && python manage_railway.py collectstatic --noinput && python manage_railway.py migrate --noinput && gunicorn pagTickets.wsgi_railway:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 --preload --log-level info --access-logfile -"
+startCommand = "python manage_ultra_simple.py migrate --noinput && gunicorn pagTickets.wsgi_ultra_simple:application --bind 0.0.0.0:$PORT --workers 1 --timeout 600"
 
 [variables]
-DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"
+DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"
 DEBUG = "False"
 RAILWAY_ENVIRONMENT = "production"
 PYTHONPATH = "/app"
@@ -18,4 +18,4 @@ PYTHONUNBUFFERED = "1"
 PORT = "8080"
 
 [build.env]
-DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"
+DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"
