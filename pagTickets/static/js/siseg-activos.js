@@ -297,10 +297,10 @@ function extraerRegionEscaneo(imageData) {
     if (!calcularRegionEscaneo()) {
         console.warn('⚠️ No se pudo calcular la región verde, creando región fija en el centro');
         
-        // CREAR REGIÓN FIJA EN EL CENTRO (20% del tamaño total)
+        // CREAR REGIÓN FIJA EN EL CENTRO (25% del tamaño total - MÁS GRANDE)
         const centerX = imageData.width / 2;
         const centerY = imageData.height / 2;
-        const fixedSize = Math.min(imageData.width, imageData.height) * 0.2; // Solo 20% del centro
+        const fixedSize = Math.min(imageData.width, imageData.height) * 0.25; // Ahora 25% en lugar de 20%
         
         SCAN_REGION.left = centerX - fixedSize / 2;
         SCAN_REGION.top = centerY - fixedSize / 2;
@@ -326,22 +326,41 @@ function extraerRegionEscaneo(imageData) {
     const width = Math.min(sourceWidth - x, Math.round(SCAN_REGION.width));
     const height = Math.min(sourceHeight - y, Math.round(SCAN_REGION.height));
     
-    // ⚠️ VALIDACIÓN CRÍTICA: Rechazar regiones demasiado grandes
-    const maxAllowedArea = sourceWidth * sourceHeight * 0.25; // Máximo 25% de la imagen
+    // ⚠️ VALIDACIÓN RELAJADA: Rechazar solo regiones absurdamente grandes
+    const maxAllowedArea = sourceWidth * sourceHeight * 0.8; // Máximo 80% de la imagen (más permisivo)
     const regionArea = width * height;
     
     if (regionArea > maxAllowedArea) {
-        console.error('❌ REGIÓN DEMASIADO GRANDE - Rechazando escaneo');
-        return null;
+        console.warn('⚠️ REGIÓN MUY GRANDE - Usando región central por defecto');
+        // En lugar de fallar, usar región central
+        const centerSize = Math.min(sourceWidth, sourceHeight) * 0.3;
+        const centerX = sourceWidth / 2;
+        const centerY = sourceHeight / 2;
+        
+        return context.getImageData(
+            centerX - centerSize/2, 
+            centerY - centerSize/2, 
+            centerSize, 
+            centerSize
+        );
     }
     
-    // ⚠️ VALIDACIÓN: Región mínima viable
-    if (width < 50 || height < 50) {
-        console.error('❌ REGIÓN DEMASIADO PEQUEÑA - Rechazando escaneo');
-        return null;
+    // ⚠️ VALIDACIÓN MÍNIMA: Solo rechazar regiones muy pequeñas
+    if (width < 30 || height < 30) {
+        console.warn('⚠️ REGIÓN MUY PEQUEÑA - Usando región mínima');
+        // Usar región mínima de 100x100 en el centro
+        const centerX = sourceWidth / 2;
+        const centerY = sourceHeight / 2;
+        
+        return context.getImageData(
+            centerX - 50, 
+            centerY - 50, 
+            100, 
+            100
+        );
     }
     
-    console.log('🔍 Región válida calculada:', {
+    console.log('🔍 Región válida:', {
         coordenadas: `(${x}, ${y})`,
         tamaño: `${width}x${height}`,
         porcentaje: Math.round((width * height) / (sourceWidth * sourceHeight) * 100) + '%'
@@ -947,22 +966,34 @@ function iniciarDeteccionQR() {
                 // Extraer solo la región del cuadrado verde
                 const regionData = extraerRegionEscaneo(imageData);
                 
-                // ⚠️ VALIDACIÓN: Si no se puede extraer la región, NO ESCANEAR
+                // ⚠️ VALIDACIÓN SIMPLE: Si no hay región, intentar extraer manualmente
                 if (!regionData) {
-                    console.error('❌ ERROR: No se pudo extraer la región verde - NO ESCANEO');
-                    requestAnimationFrame(detectar);
-                    return;
+                    console.warn('⚠️ Creando región manual en el centro');
+                    // Crear región manual en el centro (25% del tamaño)
+                    const centerX = canvas.width / 2;
+                    const centerY = canvas.height / 2;
+                    const size = Math.min(canvas.width, canvas.height) * 0.25;
+                    
+                    const manualRegion = context.getImageData(
+                        centerX - size/2, 
+                        centerY - size/2, 
+                        size, 
+                        size
+                    );
+                    
+                    console.log('✅ Usando región manual:', size + 'x' + size);
+                    
+                    // Escanear región manual
+                    code = jsQR(manualRegion.data, manualRegion.width, manualRegion.height, {
+                        inversionAttempts: "attemptBoth"
+                    });
+                    
+                    if (code) {
+                        console.log('🎯 QR detectado en región manual central');
+                    }
+                } else {
+                    console.log('✅ SOLO región verde - Área:', Math.round((regionData.width * regionData.height) / (canvas.width * canvas.height) * 100) + '%');
                 }
-                
-                // ⚠️ VALIDACIÓN: NUNCA usar imagen completa - Solo región verde
-                const porcentajeRegion = (regionData.width * regionData.height) / (canvas.width * canvas.height) * 100;
-                if (porcentajeRegion > 50) {
-                    console.error('❌ REGIÓN MUY GRANDE - Posible error, NO ESCANEO');
-                    requestAnimationFrame(detectar);
-                    return;
-                }
-                
-                console.log('✅ SOLO región verde - Área:', Math.round(porcentajeRegion) + '%');
                 
                 // Mostrar información de la región para debug cada 30 frames
                 if (frameSkipCounter % 30 === 0) {
@@ -975,33 +1006,39 @@ function iniciarDeteccionQR() {
                 
                 let code = null;
                 
-                // =========== FASE 1: DETECCIÓN RÁPIDA (SOLO EN REGIÓN VERDE) ===========
-                // Método estándar solo en la región del cuadrado verde
-                code = jsQR(regionData.data, regionData.width, regionData.height, {
-                    inversionAttempts: "dontInvert"
-                });
-                
-                // Con inversión si no detecta (solo en región verde)
-                if (!code) {
+                // =========== ESCANEO PRINCIPAL: SIEMPRE en la región disponible ===========
+                if (regionData) {
+                    // Método estándar en la región
                     code = jsQR(regionData.data, regionData.width, regionData.height, {
-                        inversionAttempts: "attemptBoth"
+                        inversionAttempts: "dontInvert"
                     });
+                    
+                    // Con inversión si no detecta
+                    if (!code) {
+                        code = jsQR(regionData.data, regionData.width, regionData.height, {
+                            inversionAttempts: "attemptBoth"
+                        });
+                    }
+                    
+                    if (code) {
+                        console.log('🎯 QR detectado en región verde/central');
+                    }
                 }
                 
                 // =========== FASE 2: PRECISIÓN MEDIA (después de 15 intentos) ===========
-                if (!code && intentosConsecutivos > 15) {
+                if (!code && intentosConsecutivos > 15 && regionData) {
                     // Activar modo ultra precisión
                     if (!modoUltraPrecision) {
                         modoUltraPrecision = true;
-                        console.log('🎯 Activando modo ULTRA PRECISIÓN (solo región verde)');
+                        console.log('🎯 Activando modo ULTRA PRECISIÓN (región optimizada)');
                     }
                     
-                    // Mejora de imagen optimizada SOLO en la región verde
+                    // Mejora de imagen optimizada en la región
                     const imagenMejorada = mejorarImagenHibrida(regionData);
                     code = jsQR(imagenMejorada.data, imagenMejorada.width, imagenMejorada.height, {
                         inversionAttempts: "attemptBoth"
                     });
-                    if (code) console.log('✅ QR detectado con mejora híbrida en región verde');
+                    if (code) console.log('✅ QR detectado con mejora híbrida en región');
                 }
                 
                 // =========== FASE 3: ULTRA PRECISIÓN (después de 35 intentos) ===========
