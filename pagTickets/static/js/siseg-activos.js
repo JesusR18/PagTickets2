@@ -295,8 +295,10 @@ function calcularRegionEscaneo() {
 // Función para extraer solo la región del cuadrado verde
 function extraerRegionEscaneo(imageData) {
     if (!calcularRegionEscaneo()) {
-        console.warn('⚠️ No se pudo calcular la región de escaneo, usando imagen completa');
-        return imageData;
+        console.error('❌ CRÍTICO: No se pudo calcular la región de escaneo!');
+        actualizarEstado('❌ Error calculando región verde', false);
+        // NUNCA devolver la imagen completa como fallback
+        return null;
     }
     
     const sourceWidth = imageData.width;
@@ -308,6 +310,13 @@ function extraerRegionEscaneo(imageData) {
     const y = Math.round(SCAN_REGION.top);
     const width = Math.round(SCAN_REGION.width);
     const height = Math.round(SCAN_REGION.height);
+    
+    console.log('🔍 Extrayendo región verde EXACTA:', {
+        coordenadas: `(${x}, ${y})`,
+        tamaño: `${width}x${height}`,
+        origen: `${sourceWidth}x${sourceHeight}`,
+        porcentaje: Math.round((width * height) / (sourceWidth * sourceHeight) * 100) + '%'
+    });
     
     // Crear nueva imagen solo con la región del cuadrado verde
     const regionData = new Uint8ClampedArray(width * height * 4);
@@ -327,6 +336,7 @@ function extraerRegionEscaneo(imageData) {
         }
     }
     
+    console.log('✅ Región extraída con éxito - SOLO cuadrado verde');
     return new ImageData(regionData, width, height);
 }
 
@@ -899,14 +909,35 @@ function iniciarDeteccionQR() {
                 // Extraer solo la región del cuadrado verde
                 const regionData = extraerRegionEscaneo(imageData);
                 
-                // Mostrar información de la región para debug
-                if (intentosConsecutivos === 0) {
-                    console.log('🎯 Escaneando solo en región verde:', {
-                        region: `${Math.round(SCAN_REGION.width)}x${Math.round(SCAN_REGION.height)}`,
-                        total: `${canvas.width}x${canvas.height}`,
-                        porcentaje: Math.round((SCAN_REGION.width * SCAN_REGION.height) / (canvas.width * canvas.height) * 100) + '%'
-                    });
+                // ⚠️ VALIDACIÓN CRÍTICA: Si no se puede extraer la región, NO escanear
+                if (!regionData) {
+                    console.error('❌ ERROR CRÍTICO: No se pudo extraer la región verde!');
+                    actualizarEstado('❌ Error en región de escaneo', false);
+                    requestAnimationFrame(detectar);
+                    return;
                 }
+                
+                // ⚠️ VALIDACIÓN CRÍTICA: NUNCA usar la imagen completa
+                if (regionData.width === canvas.width && regionData.height === canvas.height) {
+                    console.error('❌ ERROR CRÍTICO: Se está usando la imagen completa en lugar de la región!');
+                    actualizarEstado('❌ Error en región de escaneo', false);
+                    requestAnimationFrame(detectar);
+                    return;
+                }
+                
+                console.log('✅ CONFIRMADO: Usando SOLO región verde:', {
+                    original: `${canvas.width}x${canvas.height}`,
+                    region: `${regionData.width}x${regionData.height}`,
+                    diferencia: `${Math.round(((canvas.width * canvas.height) - (regionData.width * regionData.height)) / (canvas.width * canvas.height) * 100)}% MENOS área`
+                });
+                
+                // Mostrar información de la región para debug SIEMPRE
+                console.log('🎯 FRAME', frameSkipCounter, '- Escaneando SOLO en región verde:', {
+                    region: `${Math.round(SCAN_REGION.width)}x${Math.round(SCAN_REGION.height)}`,
+                    posicion: `(${Math.round(SCAN_REGION.left)}, ${Math.round(SCAN_REGION.top)})`,
+                    total: `${canvas.width}x${canvas.height}`,
+                    porcentaje: Math.round((SCAN_REGION.width * SCAN_REGION.height) / (canvas.width * canvas.height) * 100) + '%'
+                });
                 
                 let code = null;
                 
