@@ -779,47 +779,6 @@
             to { transform: rotate(360deg); }
         }
         
-        /* Animación especial para botón PWA */
-        @keyframes pwaPulse {
-            0% { 
-                transform: scale(1);
-                box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
-            }
-            50% { 
-                transform: scale(1.05);
-                box-shadow: 0 6px 20px rgba(5, 150, 105, 0.6);
-            }
-            100% { 
-                transform: scale(1);
-                box-shadow: 0 4px 12px rgba(5, 150, 105, 0.4);
-            }
-        }
-        
-        /* Estilos para botón de instalación PWA */
-        #install-pwa-btn {
-            position: relative;
-            overflow: hidden;
-        }
-        
-        #install-pwa-btn.animate {
-            animation: pwaPulse 2s ease-in-out infinite;
-        }
-        
-        #install-pwa-btn::before {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: -100%;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-            transition: left 0.5s;
-        }
-        
-        #install-pwa-btn:hover::before {
-            left: 100%;
-        }
-        
         .loading-text {
             animation: pulse 1.5s ease-in-out infinite alternate;
         }
@@ -1026,10 +985,6 @@
             </button>
             <button onclick="eliminarTodos()" class="btn" style="background: linear-gradient(135deg, #dc2626, #ef4444);">
                 🗑️ Eliminar Todos
-            </button>
-            <!-- Botón de instalación PWA -->
-            <button onclick="instalarPWA()" class="btn" id="install-pwa-btn" style="background: linear-gradient(135deg, #059669, #10b981); display: block;">
-                📱 Instalar App
             </button>
         </div>
         
@@ -1240,23 +1195,17 @@
     
     <!-- PWA JavaScript -->
     <script>
-        // ============================================
-        // PWA SERVICE WORKER REGISTRATION
-        // ============================================
-        
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
                 navigator.serviceWorker.register('/static/sw.js')
                     .then(registration => {
-                        console.log('✅ PWA: Service Worker registrado exitosamente');
+                        console.log('✅ PWA: Service Worker registrado');
                         
-                        // Verificar actualizaciones
                         registration.addEventListener('updatefound', () => {
                             const newWorker = registration.installing;
                             newWorker.addEventListener('statechange', () => {
                                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                                    // Nueva versión disponible
-                                    if (confirm('🆕 Nueva versión de SISEG disponible. ¿Actualizar ahora?')) {
+                                    if (confirm('🆕 Nueva versión disponible. ¿Actualizar?')) {
                                         newWorker.postMessage({ type: 'SKIP_WAITING' });
                                         window.location.reload();
                                     }
@@ -1270,138 +1219,6 @@
             });
         }
 
-        // ============================================
-        // PWA INSTALL PROMPT - MEJORADO
-        // ============================================
-        
-        let deferredPrompt;
-        let installButton = document.getElementById('install-pwa-btn');
-        
-        // Función principal para instalar PWA
-        function instalarPWA() {
-            console.log('� PWA: Intentando instalar...');
-            
-            if (deferredPrompt) {
-                // Si hay prompt disponible, usarlo
-                deferredPrompt.prompt();
-                deferredPrompt.userChoice.then((choiceResult) => {
-                    if (choiceResult.outcome === 'accepted') {
-                        console.log('✅ PWA: Usuario aceptó la instalación');
-                        showMessage('🎉 ¡SISEG se está instalando como app!', 'success');
-                        if (installButton) installButton.style.display = 'none';
-                    } else {
-                        console.log('❌ PWA: Usuario rechazó la instalación');
-                        showMessage('ℹ️ Instalación cancelada', 'info');
-                    }
-                    deferredPrompt = null;
-                });
-            } else {
-                // Mostrar instrucciones manuales
-                mostrarInstruccionesInstalacion();
-            }
-        }
-        
-        // Función para mostrar instrucciones de instalación manual
-        function mostrarInstruccionesInstalacion() {
-            const userAgent = navigator.userAgent.toLowerCase();
-            let titulo = '';
-            let pasos = [];
-            
-            if (userAgent.includes('chrome') && !userAgent.includes('edge')) {
-                titulo = '� Instalar en Chrome:';
-                pasos = [
-                    '1️⃣ Busca el ícono de descarga/instalar (⬇️) en la barra de direcciones',
-                    '2️⃣ O haz clic en el menú de Chrome (⋮) → "Instalar SISEG..."',
-                    '3️⃣ Confirma haciendo clic en "Instalar"',
-                    '✅ ¡La app aparecerá en tu escritorio y menú de aplicaciones!'
-                ];
-            } else if (userAgent.includes('edge')) {
-                titulo = '🔧 Instalar en Edge:';
-                pasos = [
-                    '1️⃣ Busca el ícono de aplicación (+) en la barra de direcciones',
-                    '2️⃣ O ve al menú (⋯) → "Aplicaciones" → "Instalar este sitio como aplicación"',
-                    '3️⃣ Confirma la instalación',
-                    '✅ ¡Ya tienes SISEG como aplicación nativa!'
-                ];
-            } else if (userAgent.includes('safari')) {
-                titulo = '🍎 Instalar en Safari (iPhone/iPad):';
-                pasos = [
-                    '1️⃣ Toca el botón de compartir 📤 (en la parte inferior)',
-                    '2️⃣ Desplázate y selecciona "Añadir a pantalla de inicio"',
-                    '3️⃣ Personaliza el nombre si quieres',
-                    '4️⃣ Toca "Añadir"',
-                    '✅ ¡SISEG aparecerá como icono en tu pantalla de inicio!'
-                ];
-            } else if (userAgent.includes('firefox')) {
-                titulo = '🦊 Instalar en Firefox:';
-                pasos = [
-                    '1️⃣ Ve al menú de Firefox (☰)',
-                    '2️⃣ Busca "Instalar esta aplicación web"',
-                    '3️⃣ Confirma la instalación',
-                    '✅ ¡La app se instalará en tu sistema!'
-                ];
-            } else {
-                titulo = '📱 Instalación general:';
-                pasos = [
-                    '1️⃣ Busca en el menú del navegador opciones como:',
-                    '   • "Instalar aplicación"',
-                    '   • "Añadir a pantalla de inicio"',
-                    '   • "Crear acceso directo"',
-                    '2️⃣ Confirma la instalación',
-                    '✅ ¡Disfruta de SISEG como app nativa!'
-                ];
-            }
-            
-            // Crear mensaje personalizado
-            const mensaje = titulo + '\n\n' + pasos.join('\n\n');
-            
-            // Mostrar con estilos
-            showMessage(mensaje, 'info', 10000);
-            
-            // También mostrar en consola para debug
-            console.log('📱 PWA Instrucciones:', titulo, pasos);
-        }
-        
-        // Detectar cuando está disponible el prompt de instalación
-        window.addEventListener('beforeinstallprompt', (e) => {
-            console.log('📱 PWA: Prompt de instalación disponible');
-            e.preventDefault();
-            deferredPrompt = e;
-            
-            // Mostrar el botón de instalación
-            if (installButton) {
-                installButton.style.display = 'block';
-                installButton.innerHTML = '⚡ ¡Instalar Ahora!';
-            }
-        });
-        
-        // Verificar si ya está instalado
-        function verificarInstalacionPWA() {
-            // Verificar si está en modo standalone (ya instalado)
-            if (window.matchMedia('(display-mode: standalone)').matches || 
-                window.navigator.standalone === true) {
-                console.log('✅ PWA: Ya está instalado en modo standalone');
-                if (installButton) {
-                    installButton.innerHTML = '✅ Ya Instalado';
-                    installButton.style.background = 'linear-gradient(135deg, #22c55e, #16a34a)';
-                    installButton.disabled = true;
-                }
-                return true;
-            }
-            
-            // Mostrar botón si es posible instalación
-            if (installButton) {
-                installButton.style.display = 'block';
-            }
-            
-            return false;
-        }
-        
-        // ============================================
-        // PWA BÁSICO - SOLO INSTALACIÓN
-        // ============================================
-        
-        // Detectar y mostrar estado PWA
         function actualizarEstadoPWA() {
             const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
                          window.navigator.standalone || 
@@ -1410,9 +1227,9 @@
             const pwaStatus = document.getElementById('pwa-status');
             if (isPWA && pwaStatus) {
                 pwaStatus.style.display = 'block';
-                console.log('📱 PWA Standalone detectada');
             }
-        }        // Detectar y mostrar estado de red (SIN NOTIFICACIONES)
+        }
+        
         function actualizarEstadoRed() {
             const networkStatus = document.getElementById('network-status');
             const networkDisplay = document.getElementById('network-display');
@@ -1430,10 +1247,8 @@
             }
         }
         
-        // Listeners para cambios de red (SIN NOTIFICACIONES)
         window.addEventListener('online', () => {
             actualizarEstadoRed();
-            // Triggear sincronización silenciosa
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'SYNC_DATA'
@@ -1445,19 +1260,12 @@
             actualizarEstadoRed();
         });
         
-        // Inicializar estados cuando carga la página
         document.addEventListener('DOMContentLoaded', () => {
             actualizarEstadoPWA();
             actualizarEstadoRed();
-            setTimeout(verificarInstalacionPWA, 1000);
         });
         
-        // Detectar cuando se instala la PWA
-        window.addEventListener('appinstalled', (evt) => {
-            console.log('✅ PWA: SISEG instalado exitosamente');
-        });
-        
-        console.log('🚀 PWA: Sistema PWA de SISEG inicializado');
+        console.log('🚀 PWA: Sistema inicializado');
     </script>
 </body>
 </html>
