@@ -7,6 +7,38 @@
 console.log('🚀 Iniciando aplicación SISEG - Sistema de Activos...');
 
 // ============================================
+// DETECCIÓN DE PWA Y MODO STANDALONE
+// ============================================
+
+// Detectar si la app está ejecutándose en modo PWA standalone
+const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+              window.navigator.standalone || 
+              document.referrer.includes('android-app://');
+
+console.log('📱 Modo PWA detectado:', isPWA);
+
+// Configurar permisos específicos para PWA
+if (isPWA) {
+    console.log('🔧 Configurando permisos para PWA standalone...');
+    
+    // Solicitar permisos de cámara temprano
+    navigator.mediaDevices.getUserMedia({ video: true })
+        .then(() => {
+            console.log('✅ Permisos de cámara concedidos para PWA');
+        })
+        .catch(error => {
+            console.warn('⚠️ Permisos de cámara no disponibles:', error);
+        });
+    
+    // Configurar wake lock para mantener pantalla activa
+    if ('wakeLock' in navigator) {
+        navigator.wakeLock.request('screen')
+            .then(() => console.log('🔋 Wake Lock activado para PWA'))
+            .catch(err => console.log('Wake Lock no disponible:', err));
+    }
+}
+
+// ============================================
 // FUNCIONES DE AUTENTICACIÓN
 // ============================================
 
@@ -319,13 +351,16 @@ async function iniciarScanner() {
         toggleBtn.textContent = '⏳ INICIANDO...';
         actualizarEstado('🚀 Configurando cámara optimizada...', null);
         
-        // Configuración PREMIUM: Máxima calidad sin trabar
+        // Configuración específica para PWA/Standalone
+        const isPWAStandalone = isPWA || window.matchMedia('(display-mode: standalone)').matches;
+        
+        // Configuración PREMIUM: Máxima calidad optimizada para PWA
         const constraints = {
             video: {
                 facingMode: 'environment',
-                width: { ideal: 1920, min: 1280 }, // Máxima resolución disponible
-                height: { ideal: 1080, min: 720 },
-                frameRate: { ideal: 30, min: 20 }, // FPS altos para mejor detección
+                width: { ideal: isPWAStandalone ? 1280 : 1920, min: 640 }, // Optimizado para PWA
+                height: { ideal: isPWAStandalone ? 720 : 1080, min: 480 },
+                frameRate: { ideal: isPWAStandalone ? 20 : 30, min: 15 }, // FPS optimizados
                 // Configuraciones avanzadas para calidad premium
                 advanced: [
                     { focusMode: 'continuous' }, // Enfoque continuo
@@ -335,8 +370,23 @@ async function iniciarScanner() {
             }
         };
         
-        // Obtener stream de video
-        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        console.log('📱 Configuración de cámara para:', isPWAStandalone ? 'PWA Standalone' : 'Navegador');
+        
+        // Obtener stream de video con reintentos para PWA
+        try {
+            videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (error) {
+            console.warn('⚠️ Error con configuración premium, intentando básica...', error);
+            // Configuración básica como fallback para PWA
+            const basicConstraints = {
+                video: {
+                    facingMode: 'environment',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                }
+            };
+            videoStream = await navigator.mediaDevices.getUserMedia(basicConstraints);
+        }
         videoTrack = videoStream.getVideoTracks()[0];
         
         // Configurar elementos de video

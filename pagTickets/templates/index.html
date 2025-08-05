@@ -940,6 +940,12 @@
             <div class="status-indicator" style="background: rgba(55, 65, 81, 0.1); padding: 5px 15px; border-radius: 20px; color: #374151; font-weight: 500;">
                 <span id="time-display">🕒 Cargando...</span>
             </div>
+            <div id="network-status" class="status-indicator" style="background: rgba(34, 197, 94, 0.1); padding: 5px 15px; border-radius: 20px; color: #16a34a; font-weight: 500;">
+                <span id="network-display">🌐 Online</span>
+            </div>
+            <div id="pwa-status" class="status-indicator" style="background: rgba(59, 130, 246, 0.1); padding: 5px 15px; border-radius: 20px; color: #2563eb; font-weight: 500; display: none;">
+                <span>📱 PWA Activa</span>
+            </div>
             <div id="sesion-indicator" class="status-indicator" style="background: rgba(34, 197, 94, 0.1); padding: 5px 15px; border-radius: 20px; color: #16a34a; font-weight: 500;">
                 <span id="sesion-tiempo">🔐 Sesión Activa</span>
             </div>
@@ -1376,8 +1382,62 @@
             return false;
         }
         
-        // Ejecutar verificación cuando se carga la página
+        // ============================================
+        // FUNCIONES DE ESTADO OFFLINE/PWA
+        // ============================================
+        
+        // Detectar y mostrar estado PWA
+        function actualizarEstadoPWA() {
+            const isPWA = window.matchMedia('(display-mode: standalone)').matches || 
+                         window.navigator.standalone || 
+                         document.referrer.includes('android-app://');
+            
+            const pwaStatus = document.getElementById('pwa-status');
+            if (isPWA && pwaStatus) {
+                pwaStatus.style.display = 'block';
+                console.log('📱 PWA Standalone detectada');
+            }
+        }
+        
+        // Detectar y mostrar estado de red
+        function actualizarEstadoRed() {
+            const networkStatus = document.getElementById('network-status');
+            const networkDisplay = document.getElementById('network-display');
+            
+            if (networkStatus && networkDisplay) {
+                if (navigator.onLine) {
+                    networkStatus.style.background = 'rgba(34, 197, 94, 0.1)';
+                    networkStatus.style.color = '#16a34a';
+                    networkDisplay.textContent = '🌐 Online';
+                } else {
+                    networkStatus.style.background = 'rgba(251, 146, 60, 0.1)';
+                    networkStatus.style.color = '#ea580c';
+                    networkDisplay.textContent = '📡 Offline';
+                }
+            }
+        }
+        
+        // Listeners para cambios de red
+        window.addEventListener('online', () => {
+            actualizarEstadoRed();
+            showMessage('🌐 Conexión restaurada - Sincronizando datos...', 'success');
+            // Triggear sincronización
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'SYNC_DATA'
+                });
+            }
+        });
+        
+        window.addEventListener('offline', () => {
+            actualizarEstadoRed();
+            showMessage('📡 Sin conexión - Funcionando offline', 'warning');
+        });
+        
+        // Inicializar estados cuando carga la página
         document.addEventListener('DOMContentLoaded', () => {
+            actualizarEstadoPWA();
+            actualizarEstadoRed();
             setTimeout(verificarInstalacionPWA, 1000);
         });
         

@@ -58,5 +58,25 @@
       "text": "text",
       "url": "url"
     }
-  }
+  },
+  "permissions": [
+    "camera",
+    "storage"
+  ],
+  "features": [
+    "camera",
+    "microphone",
+    "persistent-storage"
+  ],
+  "prefer_related_applications": false,
+  "protocol_handlers": [
+    {
+      "protocol": "web+siseg",
+      "url": "/?protocol=%s"
+    }
+  ],
+  "edge_side_panel": {
+    "preferred_width": 400
+  },
+  "capture_links": "new-client"
 }
