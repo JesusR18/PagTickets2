@@ -7,7 +7,7 @@ healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 replicas = 1
-startCommand = "python minimal_server.py"
+startCommand = "python railway_final.py"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"
