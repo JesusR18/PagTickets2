@@ -978,7 +978,15 @@
             </button>
             <!-- Botón de instalación manual universal -->
             <button onclick="instalarManual()" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #a855f7); margin-top: 5px;">
-                �️ Instalación Manual
+                ⚙️ Instalación Manual
+            </button>
+            <!-- Botón específico para preparar PWA offline en móvil -->
+            <button onclick="prepararPWAOffline()" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 5px;">
+                📱 Preparar Offline
+            </button>
+            <!-- Botón para verificar estado offline -->
+            <button onclick="verificarPWAOfflineLista()" class="btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); margin-top: 5px;">
+                🔍 Verificar Offline
             </button>
         </div>
         
@@ -1383,7 +1391,197 @@
         }
         
         // ============================================
-        // FUNCIONES DE ESTADO OFFLINE/PWA
+        // VERIFICACIÓN ESPECÍFICA PARA MÓVIL OFFLINE
+        // ============================================
+        
+        function verificarPWAOfflineLista() {
+            console.log('📱 Verificando si PWA está lista para offline en móvil...');
+            
+            // Verificar Service Worker activo
+            if (!('serviceWorker' in navigator)) {
+                showMessage('❌ Tu navegador no soporta PWA offline', 'error');
+                return false;
+            }
+            
+            navigator.serviceWorker.ready.then(registration => {
+                if (registration.active) {
+                    console.log('✅ Service Worker activo');
+                    
+                    // Verificar cache específico
+                    Promise.all([
+                        caches.open('siseg-cache-v2.1.0-offline-production'),
+                        caches.open('siseg-api-cache-v1')
+                    ]).then(([mainCache, apiCache]) => {
+                        
+                        Promise.all([
+                            mainCache.keys(),
+                            apiCache.keys()
+                        ]).then(([mainKeys, apiKeys]) => {
+                            
+                            console.log('📦 Cache principal:', mainKeys.length, 'archivos');
+                            console.log('💾 Cache API:', apiKeys.length, 'datos');
+                            
+                            const tieneArchivos = mainKeys.length > 0;
+                            const tieneDatos = apiKeys.length > 0;
+                            
+                            let mensaje = '';
+                            let tipo = '';
+                            
+                            if (tieneArchivos && tieneDatos) {
+                                mensaje = '✅ PWA completamente lista para offline en celular';
+                                tipo = 'success';
+                                
+                                // Mostrar detalles específicos
+                                setTimeout(() => {
+                                    alert(`📱 ESTADO PWA OFFLINE - CELULAR
+
+✅ PERFECTO: Todo listo para funcionar sin internet
+
+📦 ARCHIVOS CACHEADOS: ${mainKeys.length}
+💾 DATOS GUARDADOS: ${apiKeys.length}
+
+🎯 INSTRUCCIONES FINALES:
+
+1️⃣ Instala la PWA desde el navegador si no lo has hecho
+2️⃣ Abre la app DESDE TU PANTALLA DE INICIO
+3️⃣ Desconecta WiFi/datos móviles  
+4️⃣ ¡Usa SISEG completamente offline!
+
+🔄 Los cambios se sincronizarán cuando regrese internet`);
+                                }, 1000);
+                                
+                            } else if (tieneArchivos && !tieneDatos) {
+                                mensaje = '⚠️ PWA parcialmente lista - sin datos offline';
+                                tipo = 'warning';
+                                
+                                setTimeout(() => {
+                                    if (confirm('⚠️ La PWA está instalada pero no tiene datos offline.\n\n¿Quieres prepararla para uso completo offline?')) {
+                                        prepararPWAOffline();
+                                    }
+                                }, 1000);
+                                
+                            } else {
+                                mensaje = '❌ PWA no está lista para offline - usa "Preparar Offline"';
+                                tipo = 'error';
+                            }
+                            
+                            showMessage(mensaje, tipo, 5000);
+                            
+                            // Agregar indicador visual temporal
+                            const statusDiv = document.createElement('div');
+                            statusDiv.innerHTML = `
+                                <div style="position: fixed; top: 10px; left: 10px; background: ${tipo === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : tipo === 'warning' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #dc2626, #b91c1c)'}; color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
+                                    📱 ${tieneArchivos ? '✅' : '❌'} Archivos | 💾 ${tieneDatos ? '✅' : '❌'} Datos
+                                </div>
+                            `;
+                            document.body.appendChild(statusDiv);
+                            
+                            // Remover después de 8 segundos
+                            setTimeout(() => {
+                                if (statusDiv.parentNode) {
+                                    statusDiv.parentNode.removeChild(statusDiv);
+                                }
+                            }, 8000);
+                        });
+                    }).catch(error => {
+                        console.error('Error verificando cache:', error);
+                        showMessage('❌ Error verificando cache offline', 'error');
+                    });
+                } else {
+                    showMessage('⚠️ Service Worker no está activo aún', 'warning');
+                }
+            });
+        }
+        
+        // Función para forzar descarga completa de PWA
+        function prepararPWAOffline() {
+            showMessage('📱 Preparando PWA para uso offline en tu celular...', 'info');
+            
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.ready.then(registration => {
+                    if (registration.active) {
+                        // Escuchar respuestas del Service Worker
+                        navigator.serviceWorker.addEventListener('message', event => {
+                            if (event.data.type === 'OFFLINE_READY') {
+                                showMessage('✅ ¡PWA lista para offline! Desconecta internet y prueba', 'success', 8000);
+                                
+                                // Mostrar instrucciones específicas para celular
+                                setTimeout(() => {
+                                    alert(`🎉 ¡PERFECTO! PWA preparada para tu celular
+
+📱 PASOS PARA PROBAR OFFLINE:
+
+1️⃣ INSTALA la PWA si no lo has hecho:
+   • Safari: Botón compartir 📤 → "Añadir a pantalla de inicio"
+   • Chrome: Menú → "Instalar aplicación"
+
+2️⃣ ABRE la app desde tu pantalla de inicio (NO desde el navegador)
+
+3️⃣ DESCONECTA el WiFi y datos móviles
+
+4️⃣ ¡USA SISEG normalmente offline!
+
+✅ Todos los datos se han pre-cargado en tu celular`);
+                                }, 2000);
+                            } else if (event.data.type === 'OFFLINE_ERROR') {
+                                showMessage('❌ Error preparando offline: ' + event.data.message, 'error');
+                            }
+                        });
+                        
+                        // Enviar mensaje para preparar offline
+                        registration.active.postMessage({
+                            type: 'PREPARE_OFFLINE'
+                        });
+                    } else {
+                        showMessage('⚠️ Service Worker no está activo aún. Espera un momento y reintenta.', 'warning');
+                    }
+                }).catch(error => {
+                    showMessage('❌ Error con Service Worker: ' + error.message, 'error');
+                });
+            } else {
+                showMessage('❌ Tu navegador no soporta PWA offline', 'error');
+            }
+        }
+        
+        // Función específica para mostrar estado offline del móvil
+        function mostrarEstadoOfflineMovil() {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                               window.navigator.standalone;
+            const isOffline = !navigator.onLine;
+            
+            if (isStandalone && isOffline) {
+                // Está en PWA y offline - PERFECTO
+                const offlineStatus = document.createElement('div');
+                offlineStatus.innerHTML = `
+                    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #059669, #10b981); color: white; padding: 20px; border-radius: 15px; text-align: center; z-index: 9999; box-shadow: 0 8px 25px rgba(5, 150, 105, 0.5); animation: pulse 2s infinite;">
+                        <div style="font-size: 48px; margin-bottom: 15px;">🎉</div>
+                        <h3 style="margin: 0 0 10px 0; color: white;">¡PERFECTO!</h3>
+                        <p style="margin: 0; font-size: 14px;">SISEG funcionando offline en tu celular</p>
+                        <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 15px; background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">OK</button>
+                    </div>
+                `;
+                document.body.appendChild(offlineStatus);
+                
+                setTimeout(() => {
+                    if (offlineStatus.parentNode) {
+                        offlineStatus.parentNode.removeChild(offlineStatus);
+                    }
+                }, 8000);
+            }
+        }
+        
+        // Detectar cuando se vuelve offline en móvil PWA
+        window.addEventListener('offline', () => {
+            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                               window.navigator.standalone;
+            
+            if (isStandalone) {
+                mostrarEstadoOfflineMovil();
+            }
+        });
+        
+        // ============================================
+        // FUNCIONES DE ESTADO OFFLINE/PWA - ORIGINAL
         // ============================================
         
         // Detectar y mostrar estado PWA

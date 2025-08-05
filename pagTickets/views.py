@@ -4,8 +4,11 @@ from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.utils import timezone
 from django.contrib import messages
+from django.views.decorators.cache import never_cache
+from django.views.decorators.http import require_http_methods
 import json
 from .models import RegistroQR
+import os
 
 # Importar librerías para Excel
 from openpyxl import Workbook
@@ -731,3 +734,74 @@ def eliminar_todos_activos(request):
             }, status=500)
     
     return JsonResponse({'success': False, 'message': 'Método no permitido'}, status=405)
+
+# ============================================
+# VISTAS ESPECÍFICAS PARA PWA OFFLINE
+# ============================================
+
+@never_cache
+@require_http_methods(["GET"])
+def service_worker(request):
+    """
+    Vista para servir el Service Worker con headers apropiados para PWA
+    """
+    try:
+        # Ruta al archivo del Service Worker
+        sw_path = os.path.join(os.path.dirname(__file__), 'static', 'sw.js')
+        
+        with open(sw_path, 'r', encoding='utf-8') as file:
+            sw_content = file.read()
+        
+        # Crear respuesta con headers específicos para Service Worker
+        response = HttpResponse(sw_content, content_type='application/javascript')
+        
+        # Headers críticos para Service Worker
+        response['Cache-Control'] = 'no-cache, no-store, must-revalidate'
+        response['Pragma'] = 'no-cache'
+        response['Expires'] = '0'
+        response['Service-Worker-Allowed'] = '/'
+        
+        return response
+        
+    except FileNotFoundError:
+        return HttpResponse('Service Worker no encontrado', status=404)
+    except Exception as e:
+        return HttpResponse(f'Error cargando Service Worker: {str(e)}', status=500)
+
+@never_cache
+@require_http_methods(["GET"])
+def manifest_json(request):
+    """
+    Vista para servir el manifest.json con headers apropiados
+    """
+    try:
+        # Ruta al archivo manifest
+        manifest_path = os.path.join(os.path.dirname(__file__), 'static', 'manifest.json')
+        
+        with open(manifest_path, 'r', encoding='utf-8') as file:
+            manifest_content = file.read()
+        
+        # Crear respuesta con headers específicos para manifest
+        response = HttpResponse(manifest_content, content_type='application/manifest+json')
+        
+        # Headers para manifest
+        response['Cache-Control'] = 'public, max-age=86400'  # 1 día
+        response['Access-Control-Allow-Origin'] = '*'
+        
+        return response
+        
+    except FileNotFoundError:
+        return HttpResponse('Manifest no encontrado', status=404)
+    except Exception as e:
+        return HttpResponse(f'Error cargando manifest: {str(e)}', status=500)
+
+@csrf_exempt
+def pwa_offline_fallback(request):
+    """
+    Vista de respaldo para cuando la PWA está offline
+    """
+    return render(request, 'offline.html', {
+        'titulo': 'SISEG - Sin Conexión',
+        'mensaje': 'La aplicación puede funcionar sin conexión',
+        'offline_mode': True
+    })

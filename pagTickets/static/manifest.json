@@ -2,7 +2,7 @@
   "name": "SISEG - Control de Activos",
   "short_name": "SISEG",
   "description": "Sistema de Seguridad Integral - Control de Activos con Scanner QR",
-  "start_url": "/",
+  "start_url": "/?utm_source=pwa",
   "display": "standalone",
   "background_color": "#991b1b",
   "theme_color": "#991b1b",

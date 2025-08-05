@@ -1,9 +1,13 @@
 // Service Worker para SISEG PWA - VERSIÓN COMPLETA OFFLINE
 // Versión del caché - cambiar cuando actualices la app
-const CACHE_NAME = 'siseg-v2.0.0-offline';
+const CACHE_NAME = 'siseg-v2.1.0-offline-production';
 const OFFLINE_URL = '/offline/';
-const API_CACHE = 'siseg-api-v2.0.0';
-const IMAGES_CACHE = 'siseg-images-v2.0.0';
+const API_CACHE = 'siseg-api-v2.1.0';
+const IMAGES_CACHE = 'siseg-images-v2.1.0';
+
+// Detectar si estamos en producción
+const isProduction = location.hostname.includes('railway.app') || location.hostname.includes('up.railway.app');
+const baseURL = isProduction ? location.origin : '';
 
 // Archivos que se cachearán para uso offline COMPLETO
 const urlsToCache = [
@@ -13,30 +17,54 @@ const urlsToCache = [
   '/static/images/logo.png',
   '/static/images/siseg-logo.jpg',
   '/static/manifest.json',
-  // Librerías externas críticas (cached locally)
-  'https://unpkg.com/html5-qrcode',
+  '/static/sw.js',
+  // Páginas importantes para offline
+  baseURL + '/',
+  baseURL + '/login/',
+  // APIs críticas para prefetch
+  '/obtener_activos_escaneados/',
+  '/verificar_sesion/',
+  // Librerías externas críticas - Versiones específicas para cache
+  'https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js',
   'https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js',
   'https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js',
   'https://cdnjs.cloudflare.com/ajax/libs/crypto-js/4.1.1/crypto-js.min.js'
 ];
 
-// Instalar Service Worker
+// Instalar Service Worker - VERSIÓN MÓVIL OFFLINE
 self.addEventListener('install', event => {
-  console.log('🔧 SISEG PWA: Service Worker instalando...');
+  console.log('🔧 SISEG PWA: Service Worker instalando para móvil...');
   
   event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('📦 SISEG PWA: Cacheando archivos...');
+    Promise.all([
+      // Cache principal
+      caches.open(CACHE_NAME).then(cache => {
+        console.log('📦 SISEG PWA: Cacheando archivos principales...');
         return cache.addAll(urlsToCache);
-      })
-      .then(() => {
-        console.log('✅ SISEG PWA: Service Worker instalado exitosamente');
-        return self.skipWaiting();
-      })
-      .catch(error => {
-        console.error('❌ SISEG PWA: Error instalando Service Worker:', error);
-      })
+      }),
+      // Cache de APIs para offline
+      caches.open(API_CACHE).then(cache => {
+        console.log('💾 SISEG PWA: Preparando cache offline...');
+        // Pre-cachear respuestas offline
+        return cache.put('/offline-data/activos', new Response(JSON.stringify([])));
+      }),
+      // Pre-fetch datos si está online
+      fetch('/obtener_activos_escaneados/')
+        .then(response => response.json())
+        .then(data => {
+          return caches.open(API_CACHE).then(cache => {
+            return cache.put('/offline-data/activos', new Response(JSON.stringify(data)));
+          });
+        })
+        .catch(() => {
+          console.log('📱 SISEG PWA: Sin datos iniciales, funcionará offline vacío');
+        })
+    ]).then(() => {
+      console.log('✅ SISEG PWA: Instalación móvil completa - LISTO PARA OFFLINE');
+      return self.skipWaiting();
+    }).catch(error => {
+      console.error('❌ SISEG PWA: Error instalando para móvil:', error);
+    })
   );
 });
 
@@ -65,6 +93,11 @@ self.addEventListener('activate', event => {
 self.addEventListener('fetch', event => {
   const url = new URL(event.request.url);
   
+  // No manejar peticiones a extensiones del navegador
+  if (url.protocol === 'chrome-extension:' || url.protocol === 'moz-extension:') {
+    return;
+  }
+  
   // Manejar peticiones POST/API offline
   if (event.request.method !== 'GET') {
     event.respondWith(handleAPIRequest(event.request));
@@ -77,9 +110,85 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // Estrategia Network First para páginas HTML
-  event.respondWith(networkFirst(event.request));
+  // Estrategia StaleWhileRevalidate para páginas HTML (mejor para offline)
+  event.respondWith(staleWhileRevalidate(event.request));
 });
+
+// Nueva estrategia: Stale While Revalidate (mejor para offline)
+async function staleWhileRevalidate(request) {
+  const cache = await caches.open(CACHE_NAME);
+  const cachedResponse = await cache.match(request);
+  
+  // Si hay caché, devolverlo inmediatamente
+  if (cachedResponse) {
+    // Intentar actualizar en segundo plano
+    fetch(request).then(response => {
+      if (response.ok) {
+        cache.put(request, response.clone());
+      }
+    }).catch(() => {
+      // Error de red, pero ya tenemos caché
+      console.log('🔄 SISEG PWA: Usando caché, sin conexión para actualizar');
+    });
+    
+    return cachedResponse;
+  }
+  
+  // Si no hay caché, intentar red
+  try {
+    const networkResponse = await fetch(request);
+    cache.put(request, networkResponse.clone());
+    return networkResponse;
+  } catch (error) {
+    // Sin red y sin caché, mostrar página offline básica
+    console.log('❌ SISEG PWA: Sin conexión y sin caché para:', request.url);
+    
+    // Devolver página principal desde caché si existe
+    const mainPage = await cache.match('/');
+    if (mainPage) {
+      return mainPage;
+    }
+    
+    // Página offline de emergencia
+    return new Response(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>SISEG - Sin Conexión</title>
+        <style>
+          body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
+          .offline-container { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); max-width: 400px; margin: 0 auto; }
+          .offline-icon { font-size: 60px; margin-bottom: 20px; }
+          h1 { color: #991b1b; margin-bottom: 20px; }
+          p { color: #666; margin-bottom: 20px; }
+          .retry-btn { background: #991b1b; color: white; padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 16px; }
+          .retry-btn:hover { background: #7f1d1d; }
+        </style>
+      </head>
+      <body>
+        <div class="offline-container">
+          <div class="offline-icon">📡</div>
+          <h1>SISEG - Sin Conexión</h1>
+          <p>No hay conexión a internet, pero SISEG puede funcionar offline.</p>
+          <p>Conecta a internet para sincronizar datos.</p>
+          <button class="retry-btn" onclick="window.location.reload()">🔄 Reintentar</button>
+        </div>
+        <script>
+          // Recargar automáticamente cuando regrese la conexión
+          window.addEventListener('online', () => {
+            window.location.reload();
+          });
+        </script>
+      </body>
+      </html>
+    `, { 
+      status: 200, 
+      headers: { 'Content-Type': 'text/html' }
+    });
+  }
+}
 
 // Estrategia Cache First (recursos estáticos)
 async function cacheFirst(request) {
@@ -275,10 +384,13 @@ async function handleEliminarTodos() {
 }
 
 async function handleVerificarSesion() {
+  // En modo offline, simular sesión activa para permitir uso de la app
   return new Response(JSON.stringify({
     sesion_activa: true,
-    tiempo_restante: 999999,
-    offline_mode: true
+    tiempo_restante: 86400, // 24 horas en modo offline
+    offline_mode: true,
+    usuario: 'Usuario Offline',
+    mensaje: 'Funcionando sin conexión'
   }), {
     status: 200,
     headers: { 'Content-Type': 'application/json' }
@@ -332,12 +444,68 @@ async function addPendingOperation(type, data) {
 // SINCRONIZACIÓN
 // ============================================
 
-// Manejar mensajes desde la aplicación
+// Manejar mensajes desde la aplicación - MÓVIL OFFLINE
 self.addEventListener('message', event => {
+  console.log('📱 SISEG PWA: Mensaje recibido:', event.data);
+  
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   } else if (event.data && event.data.type === 'SYNC_DATA') {
     syncPendingData();
+  } else if (event.data && event.data.type === 'PREPARE_OFFLINE') {
+    console.log('📱 Preparando PWA para uso offline en móvil...');
+    
+    // Pre-cachear recursos críticos para móvil
+    event.waitUntil(
+      Promise.all([
+        // Cache principal
+        caches.open(CACHE_NAME).then(cache => {
+          console.log('📦 Pre-cacheando recursos para móvil...');
+          return cache.addAll([
+            '/',
+            '/static/js/siseg-activos.js',
+            '/static/images/logo.png',
+            '/static/images/logo-qr.jpg',
+            '/static/manifest.json'
+          ]);
+        }),
+        // Pre-fetch datos actuales si está online
+        fetch('/obtener_activos_escaneados/')
+          .then(response => response.json())
+          .then(data => {
+            console.log('💾 Guardando datos offline para móvil...');
+            return caches.open(API_CACHE).then(cache => {
+              return cache.put('/offline-data/activos', new Response(JSON.stringify(data)));
+            });
+          })
+          .catch(() => {
+            console.log('📱 SISEG PWA: Sin conexión para pre-cachear datos');
+          })
+      ]).then(() => {
+        console.log('✅ SISEG PWA: Preparación offline completa para móvil');
+        // Enviar confirmación de vuelta
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ 
+              type: 'OFFLINE_READY', 
+              success: true, 
+              message: 'PWA lista para offline en móvil' 
+            });
+          });
+        });
+      }).catch(error => {
+        console.error('❌ Error preparando offline:', error);
+        self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ 
+              type: 'OFFLINE_ERROR', 
+              success: false, 
+              message: 'Error preparando offline: ' + error.message 
+            });
+          });
+        });
+      })
+    );
   }
 });
 
