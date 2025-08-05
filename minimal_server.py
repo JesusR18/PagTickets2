@@ -46,57 +46,22 @@ def initialize_database():
 
 def start_django_server():
     """Inicia el servidor Django de manera optimizada para Railway"""
-    try:
-        # Configurar Django para inicio rápido
-        django.setup()
-        
-        # Inicializar BD en segundo plano
-        init_thread = threading.Thread(target=initialize_database, daemon=True)
-        init_thread.start()
-        
-        # Obtener la aplicación WSGI de Django
-        application = get_wsgi_application()
-        
-        # Crear servidor WSGI optimizado
-        httpd = make_server('', PORT, application, handler_class=QuietWSGIRequestHandler)
-        
-        print(f"🚀 SISEG PagTickets running on port {PORT}")
-        print(f"🌐 Access: http://0.0.0.0:{PORT}")
-        httpd.serve_forever()
-        
-    except Exception as e:
-        print(f"❌ Error starting Django: {e}")
-        # Fallback a servidor básico si Django falla
-        import http.server
-        import socketserver
-        
-        class FallbackHandler(http.server.BaseHTTPRequestHandler):
-            def do_GET(self):
-                self.send_response(200)
-                self.send_header('Content-Type', 'text/html; charset=utf-8')
-                self.end_headers()
-                html = """
-                <!DOCTYPE html>
-                <html>
-                <head>
-                    <title>SISEG PagTickets</title>
-                    <meta charset="utf-8">
-                </head>
-                <body style="font-family: Arial, sans-serif; text-align: center; padding: 50px;">
-                    <h1>🔄 SISEG PagTickets</h1>
-                    <p>Sistema inicializando...</p>
-                    <p>Refresh the page in a few seconds</p>
-                </body>
-                </html>
-                """.encode('utf-8')
-                self.wfile.write(html)
-            
-            def log_message(self, format, *args):
-                pass
-        
-        with socketserver.TCPServer(("", PORT), FallbackHandler) as httpd:
-            print(f"⚠️ Fallback server on port {PORT}")
-            httpd.serve_forever()
+    # Configurar Django para inicio rápido
+    django.setup()
+    
+    # Inicializar BD en segundo plano
+    init_thread = threading.Thread(target=initialize_database, daemon=True)
+    init_thread.start()
+    
+    # Obtener la aplicación WSGI de Django - TU APLICACION REAL
+    application = get_wsgi_application()
+    
+    # Crear servidor WSGI optimizado
+    httpd = make_server('', PORT, application, handler_class=QuietWSGIRequestHandler)
+    
+    print(f"🚀 SISEG PagTickets running on port {PORT}")
+    print(f"🌐 Access: http://0.0.0.0:{PORT}")
+    httpd.serve_forever()
 
 if __name__ == "__main__":
     start_django_server()
