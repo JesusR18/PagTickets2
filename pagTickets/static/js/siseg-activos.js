@@ -295,23 +295,24 @@ function calcularRegionEscaneo() {
 // Función para extraer solo la región del cuadrado verde
 function extraerRegionEscaneo(imageData) {
     if (!calcularRegionEscaneo()) {
-        console.warn('⚠️ No se pudo calcular la región de escaneo, usando región central por defecto');
+        console.warn('⚠️ No se pudo calcular la región verde, creando región fija en el centro');
         
-        // Crear región central por defecto (30% del centro de la imagen)
+        // CREAR REGIÓN FIJA EN EL CENTRO (20% del tamaño total)
         const centerX = imageData.width / 2;
         const centerY = imageData.height / 2;
-        const defaultSize = Math.min(imageData.width, imageData.height) * 0.3;
+        const fixedSize = Math.min(imageData.width, imageData.height) * 0.2; // Solo 20% del centro
         
-        SCAN_REGION.left = centerX - defaultSize / 2;
-        SCAN_REGION.top = centerY - defaultSize / 2;
-        SCAN_REGION.right = centerX + defaultSize / 2;
-        SCAN_REGION.bottom = centerY + defaultSize / 2;
-        SCAN_REGION.width = defaultSize;
-        SCAN_REGION.height = defaultSize;
+        SCAN_REGION.left = centerX - fixedSize / 2;
+        SCAN_REGION.top = centerY - fixedSize / 2;
+        SCAN_REGION.right = centerX + fixedSize / 2;
+        SCAN_REGION.bottom = centerY + fixedSize / 2;
+        SCAN_REGION.width = fixedSize;
+        SCAN_REGION.height = fixedSize;
         
-        console.log('✅ Usando región central por defecto:', {
+        console.log('✅ Región fija creada:', {
             centro: `(${Math.round(centerX)}, ${Math.round(centerY)})`,
-            tamaño: `${Math.round(defaultSize)}x${Math.round(defaultSize)}`
+            tamaño: `${Math.round(fixedSize)}x${Math.round(fixedSize)}`,
+            porcentaje: Math.round((fixedSize * fixedSize) / (imageData.width * imageData.height) * 100) + '%'
         });
     }
     
@@ -320,12 +321,27 @@ function extraerRegionEscaneo(imageData) {
     const sourceData = imageData.data;
     
     // Coordenadas de la región (redondeadas)
-    const x = Math.round(SCAN_REGION.left);
-    const y = Math.round(SCAN_REGION.top);
-    const width = Math.round(SCAN_REGION.width);
-    const height = Math.round(SCAN_REGION.height);
+    const x = Math.max(0, Math.round(SCAN_REGION.left));
+    const y = Math.max(0, Math.round(SCAN_REGION.top));
+    const width = Math.min(sourceWidth - x, Math.round(SCAN_REGION.width));
+    const height = Math.min(sourceHeight - y, Math.round(SCAN_REGION.height));
     
-    console.log('🔍 Región calculada:', {
+    // ⚠️ VALIDACIÓN CRÍTICA: Rechazar regiones demasiado grandes
+    const maxAllowedArea = sourceWidth * sourceHeight * 0.25; // Máximo 25% de la imagen
+    const regionArea = width * height;
+    
+    if (regionArea > maxAllowedArea) {
+        console.error('❌ REGIÓN DEMASIADO GRANDE - Rechazando escaneo');
+        return null;
+    }
+    
+    // ⚠️ VALIDACIÓN: Región mínima viable
+    if (width < 50 || height < 50) {
+        console.error('❌ REGIÓN DEMASIADO PEQUEÑA - Rechazando escaneo');
+        return null;
+    }
+    
+    console.log('🔍 Región válida calculada:', {
         coordenadas: `(${x}, ${y})`,
         tamaño: `${width}x${height}`,
         porcentaje: Math.round((width * height) / (sourceWidth * sourceHeight) * 100) + '%'
@@ -333,23 +349,32 @@ function extraerRegionEscaneo(imageData) {
     
     // Crear nueva imagen solo con la región del cuadrado verde
     const regionData = new Uint8ClampedArray(width * height * 4);
+    let pixelsCopied = 0;
     
     for (let row = 0; row < height; row++) {
         for (let col = 0; col < width; col++) {
-            const sourceIndex = ((y + row) * sourceWidth + (x + col)) * 4;
-            const targetIndex = (row * width + col) * 4;
+            const sourceX = x + col;
+            const sourceY = y + row;
             
-            // Verificar que no estemos fuera de los límites
-            if (sourceIndex < sourceData.length - 3 && targetIndex < regionData.length - 3) {
-                regionData[targetIndex] = sourceData[sourceIndex];         // R
-                regionData[targetIndex + 1] = sourceData[sourceIndex + 1]; // G
-                regionData[targetIndex + 2] = sourceData[sourceIndex + 2]; // B
-                regionData[targetIndex + 3] = sourceData[sourceIndex + 3]; // A
+            // Verificar límites estrictos
+            if (sourceX >= 0 && sourceX < sourceWidth && sourceY >= 0 && sourceY < sourceHeight) {
+                const sourceIndex = (sourceY * sourceWidth + sourceX) * 4;
+                const targetIndex = (row * width + col) * 4;
+                
+                // Verificar que los índices sean válidos
+                if (sourceIndex >= 0 && sourceIndex < sourceData.length - 3 && 
+                    targetIndex >= 0 && targetIndex < regionData.length - 3) {
+                    regionData[targetIndex] = sourceData[sourceIndex];         // R
+                    regionData[targetIndex + 1] = sourceData[sourceIndex + 1]; // G
+                    regionData[targetIndex + 2] = sourceData[sourceIndex + 2]; // B
+                    regionData[targetIndex + 3] = sourceData[sourceIndex + 3]; // A
+                    pixelsCopied++;
+                }
             }
         }
     }
     
-    console.log('✅ Región extraída correctamente');
+    console.log(`✅ Región extraída: ${pixelsCopied} píxeles copiados`);
     return new ImageData(regionData, width, height);
 }
 
@@ -922,29 +947,22 @@ function iniciarDeteccionQR() {
                 // Extraer solo la región del cuadrado verde
                 const regionData = extraerRegionEscaneo(imageData);
                 
-                // ⚠️ VALIDACIÓN: Si no se puede extraer la región, usar imagen completa como último recurso
+                // ⚠️ VALIDACIÓN: Si no se puede extraer la región, NO ESCANEAR
                 if (!regionData) {
-                    console.error('❌ ERROR: No se pudo extraer la región, usando imagen completa temporalmente');
-                    // Usar imagen completa como último recurso
-                    code = jsQR(imageData.data, imageData.width, imageData.height, {
-                        inversionAttempts: "dontInvert"
-                    });
-                    if (code) {
-                        console.log('⚠️ QR detectado usando imagen completa (modo emergencia)');
-                        registrarCodigo(code.data);
-                        return;
-                    }
+                    console.error('❌ ERROR: No se pudo extraer la región verde - NO ESCANEO');
                     requestAnimationFrame(detectar);
                     return;
                 }
                 
-                // ⚠️ VALIDACIÓN: Verificar que la región sea razonable
+                // ⚠️ VALIDACIÓN: NUNCA usar imagen completa - Solo región verde
                 const porcentajeRegion = (regionData.width * regionData.height) / (canvas.width * canvas.height) * 100;
-                if (porcentajeRegion > 80) {
-                    console.warn('⚠️ ADVERTENCIA: La región es muy grande, posible error en cálculo');
+                if (porcentajeRegion > 50) {
+                    console.error('❌ REGIÓN MUY GRANDE - Posible error, NO ESCANEO');
+                    requestAnimationFrame(detectar);
+                    return;
                 }
                 
-                console.log('✅ Usando región verde - Área:', Math.round(porcentajeRegion) + '%');
+                console.log('✅ SOLO región verde - Área:', Math.round(porcentajeRegion) + '%');
                 
                 // Mostrar información de la región para debug cada 30 frames
                 if (frameSkipCounter % 30 === 0) {

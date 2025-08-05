@@ -386,6 +386,65 @@
             display: block;
         }
         
+        /* Overlay del cuadrado verde de escaneo */
+        .qr-scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 180px;
+            height: 180px;
+            border: 3px solid #10b981;
+            border-radius: 15px;
+            box-shadow: 
+                0 0 0 9999px rgba(0, 0, 0, 0.5),
+                inset 0 0 20px rgba(16, 185, 129, 0.3);
+            pointer-events: none;
+            z-index: 10;
+        }
+        
+        .qr-scanner-overlay::before {
+            content: '';
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            right: -3px;
+            bottom: -3px;
+            border: 2px solid rgba(16, 185, 129, 0.7);
+            border-radius: 15px;
+            animation: qr-pulse 2s ease-in-out infinite;
+        }
+        
+        .qr-scanner-overlay::after {
+            content: '🎯 Solo escanea aquí';
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(16, 185, 129, 0.9);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        @keyframes qr-pulse {
+            0% { 
+                border-color: rgba(16, 185, 129, 0.7);
+                transform: scale(1);
+            }
+            50% { 
+                border-color: rgba(16, 185, 129, 1);
+                transform: scale(1.02);
+            }
+            100% { 
+                border-color: rgba(16, 185, 129, 0.7);
+                transform: scale(1);
+            }
+        }
+        
         .zoom-controls-real {
             position: absolute;
             bottom: 60px; /* Más arriba para compactar */
@@ -1000,6 +1059,9 @@
             <div id="camera-container" class="camera-container">
                 <video id="camera-video" autoplay playsinline></video>
                 <canvas id="qr-canvas" style="display: none;"></canvas>
+                
+                <!-- Overlay del cuadrado verde de escaneo -->
+                <div class="qr-scanner-overlay"></div>
                 
                 <!-- Controles de Zoom REAL - Compactos -->
                 <div class="zoom-controls-real">
