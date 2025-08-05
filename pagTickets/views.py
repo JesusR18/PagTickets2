@@ -204,7 +204,33 @@ def health_check(request):
 # Vista ultra-simple para ping/healthcheck
 def simple_ping(request):
     """Vista ultra-simple que siempre responde OK"""
-    return HttpResponse("PONG", content_type="text/plain", status=200)
+    import time
+    import logging
+    
+    logger = logging.getLogger(__name__)
+    start_time = time.time()
+    
+    try:
+        # Log de debug
+        logger.info(f"🏓 Ping request from {request.META.get('REMOTE_ADDR', 'unknown')}")
+        
+        # Verificar que Django esté funcionando
+        from django.conf import settings
+        django_ok = bool(settings.INSTALLED_APPS)
+        
+        if not django_ok:
+            logger.error("❌ Django configuration check failed")
+            return HttpResponse("DJANGO_ERROR", content_type="text/plain", status=503)
+        
+        # Tiempo de respuesta
+        response_time = (time.time() - start_time) * 1000
+        logger.info(f"✅ Ping response time: {response_time:.2f}ms")
+        
+        return HttpResponse("PONG", content_type="text/plain", status=200)
+        
+    except Exception as e:
+        logger.error(f"❌ Ping error: {e}")
+        return HttpResponse("ERROR", content_type="text/plain", status=500)
 
 # Función principal que muestra la página de inicio con el escáner QR
 def index(request):

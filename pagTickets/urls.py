@@ -23,10 +23,10 @@ urlpatterns = [
     path('sw.js', views.service_worker, name='service_worker'),
     path('manifest.json', views.manifest_json, name='manifest_json'),
     path('offline/', views.pwa_offline_fallback, name='pwa_offline'),
-    # Rutas de healthcheck para Railway (múltiples opciones)
+    # Rutas de healthcheck para Railway (múltiples opciones) - PRIORITARIAS
+    path('ping/', views.simple_ping, name='simple_ping'),
     path('health/', views.health_check, name='health_check'),
     path('healthz/', views.health_check, name='health_check_k8s'),
-    path('ping/', views.simple_ping, name='simple_ping'),
     # Ruta para registrar un código QR nuevo (recibe datos POST desde JavaScript)
     path('registrar_qr/', views.registrar_qr, name='registrar_qr'),
     # Ruta para eliminar un activo

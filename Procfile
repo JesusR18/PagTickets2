@@ -1,1 +1,1 @@
-web: python manage_railway.py collectstatic --noinput && python manage_railway.py migrate --noinput && gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 60 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50
+web: python quick_health.py && python manage_railway.py collectstatic --noinput && python manage_railway.py migrate --noinput && gunicorn pagTickets.wsgi_railway:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --keep-alive 2 --max-requests 1000 --max-requests-jitter 50 --preload --log-level info --access-logfile -
