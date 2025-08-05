@@ -444,68 +444,12 @@ async function addPendingOperation(type, data) {
 // SINCRONIZACIÓN
 // ============================================
 
-// Manejar mensajes desde la aplicación - MÓVIL OFFLINE
+// Manejar mensajes desde la aplicación (SIMPLIFICADO)
 self.addEventListener('message', event => {
-  console.log('📱 SISEG PWA: Mensaje recibido:', event.data);
-  
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
   } else if (event.data && event.data.type === 'SYNC_DATA') {
     syncPendingData();
-  } else if (event.data && event.data.type === 'PREPARE_OFFLINE') {
-    console.log('📱 Preparando PWA para uso offline en móvil...');
-    
-    // Pre-cachear recursos críticos para móvil
-    event.waitUntil(
-      Promise.all([
-        // Cache principal
-        caches.open(CACHE_NAME).then(cache => {
-          console.log('📦 Pre-cacheando recursos para móvil...');
-          return cache.addAll([
-            '/',
-            '/static/js/siseg-activos.js',
-            '/static/images/logo.png',
-            '/static/images/logo-qr.jpg',
-            '/static/manifest.json'
-          ]);
-        }),
-        // Pre-fetch datos actuales si está online
-        fetch('/obtener_activos_escaneados/')
-          .then(response => response.json())
-          .then(data => {
-            console.log('💾 Guardando datos offline para móvil...');
-            return caches.open(API_CACHE).then(cache => {
-              return cache.put('/offline-data/activos', new Response(JSON.stringify(data)));
-            });
-          })
-          .catch(() => {
-            console.log('📱 SISEG PWA: Sin conexión para pre-cachear datos');
-          })
-      ]).then(() => {
-        console.log('✅ SISEG PWA: Preparación offline completa para móvil');
-        // Enviar confirmación de vuelta
-        self.clients.matchAll().then(clients => {
-          clients.forEach(client => {
-            client.postMessage({ 
-              type: 'OFFLINE_READY', 
-              success: true, 
-              message: 'PWA lista para offline en móvil' 
-            });
-          });
-        });
-      }).catch(error => {
-        console.error('❌ Error preparando offline:', error);
-        self.clients.matchAll().then(clients => {
-          clients.forEach(client => {
-            client.postMessage({ 
-              type: 'OFFLINE_ERROR', 
-              success: false, 
-              message: 'Error preparando offline: ' + error.message 
-            });
-          });
-        });
-      })
-    );
   }
 });
 

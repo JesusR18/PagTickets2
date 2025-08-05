@@ -972,22 +972,6 @@
             <button onclick="instalarPWA()" class="btn" id="install-pwa-btn" style="background: linear-gradient(135deg, #059669, #10b981); display: block;">
                 📱 Instalar App
             </button>
-            <!-- Botón universal de ayuda -->
-            <button onclick="mostrarAyudaUniversal()" class="btn" style="background: linear-gradient(135deg, #f59e0b, #f97316); margin-top: 5px;">
-                🌐 Ayuda Universal
-            </button>
-            <!-- Botón de instalación manual universal -->
-            <button onclick="instalarManual()" class="btn" style="background: linear-gradient(135deg, #8b5cf6, #a855f7); margin-top: 5px;">
-                ⚙️ Instalación Manual
-            </button>
-            <!-- Botón específico para preparar PWA offline en móvil -->
-            <button onclick="prepararPWAOffline()" class="btn" style="background: linear-gradient(135deg, #10b981, #059669); margin-top: 5px;">
-                📱 Preparar Offline
-            </button>
-            <!-- Botón para verificar estado offline -->
-            <button onclick="verificarPWAOfflineLista()" class="btn" style="background: linear-gradient(135deg, #3b82f6, #1d4ed8); margin-top: 5px;">
-                🔍 Verificar Offline
-            </button>
         </div>
         
         <!-- Scanner integrado -->
@@ -1322,40 +1306,12 @@
             e.preventDefault();
             deferredPrompt = e;
             
-            // Mostrar el botón de instalación con animación y estado especial
+            // Mostrar el botón de instalación
             if (installButton) {
                 installButton.style.display = 'block';
-                installButton.classList.add('animate');
                 installButton.innerHTML = '⚡ ¡Instalar Ahora!';
-                installButton.style.background = 'linear-gradient(135deg, #059669, #10b981)';
-                showMessage('✨ ¡Perfecto! Ya puedes instalar SISEG con un clic!', 'success');
             }
         });
-        
-        // Función adicional para forzar la detección de instalabilidad
-        function verificarPWAInstalable() {
-            // Verificar criterios básicos de PWA
-            const tieneManifest = document.querySelector('link[rel="manifest"]');
-            const tieneServiceWorker = 'serviceWorker' in navigator;
-            const esHTTPS = location.protocol === 'https:' || location.hostname === 'localhost';
-            
-            console.log('🔍 PWA Check:', {
-                manifest: !!tieneManifest,
-                serviceWorker: tieneServiceWorker,
-                https: esHTTPS,
-                deferredPrompt: !!deferredPrompt
-            });
-            
-            if (tieneManifest && tieneServiceWorker && esHTTPS) {
-                if (installButton) {
-                    installButton.style.display = 'block';
-                    if (!deferredPrompt) {
-                        installButton.innerHTML = '📱 Ver Instrucciones';
-                        installButton.style.background = 'linear-gradient(135deg, #3b82f6, #6366f1)';
-                    }
-                }
-            }
-        }
         
         // Verificar si ya está instalado
         function verificarInstalacionPWA() {
@@ -1371,217 +1327,16 @@
                 return true;
             }
             
-            // Ejecutar verificación de instalabilidad
-            verificarPWAInstalable();
-            
-            // Verificar si el botón de instalación debe mostrarse
+            // Mostrar botón si es posible instalación
             if (installButton) {
                 installButton.style.display = 'block';
-                
-                // Agregar animación para llamar la atención después de un tiempo
-                setTimeout(() => {
-                    if (installButton && !deferredPrompt) {
-                        installButton.classList.add('animate');
-                        showMessage('💡 Tip: Los botones de ayuda te mostrarán cómo instalar SISEG en CUALQUIER navegador', 'info', 5000);
-                    }
-                }, 3000);
             }
             
             return false;
         }
         
         // ============================================
-        // VERIFICACIÓN ESPECÍFICA PARA MÓVIL OFFLINE
-        // ============================================
-        
-        function verificarPWAOfflineLista() {
-            console.log('📱 Verificando si PWA está lista para offline en móvil...');
-            
-            // Verificar Service Worker activo
-            if (!('serviceWorker' in navigator)) {
-                showMessage('❌ Tu navegador no soporta PWA offline', 'error');
-                return false;
-            }
-            
-            navigator.serviceWorker.ready.then(registration => {
-                if (registration.active) {
-                    console.log('✅ Service Worker activo');
-                    
-                    // Verificar cache específico
-                    Promise.all([
-                        caches.open('siseg-cache-v2.1.0-offline-production'),
-                        caches.open('siseg-api-cache-v1')
-                    ]).then(([mainCache, apiCache]) => {
-                        
-                        Promise.all([
-                            mainCache.keys(),
-                            apiCache.keys()
-                        ]).then(([mainKeys, apiKeys]) => {
-                            
-                            console.log('📦 Cache principal:', mainKeys.length, 'archivos');
-                            console.log('💾 Cache API:', apiKeys.length, 'datos');
-                            
-                            const tieneArchivos = mainKeys.length > 0;
-                            const tieneDatos = apiKeys.length > 0;
-                            
-                            let mensaje = '';
-                            let tipo = '';
-                            
-                            if (tieneArchivos && tieneDatos) {
-                                mensaje = '✅ PWA completamente lista para offline en celular';
-                                tipo = 'success';
-                                
-                                // Mostrar detalles específicos
-                                setTimeout(() => {
-                                    alert(`📱 ESTADO PWA OFFLINE - CELULAR
-
-✅ PERFECTO: Todo listo para funcionar sin internet
-
-📦 ARCHIVOS CACHEADOS: ${mainKeys.length}
-💾 DATOS GUARDADOS: ${apiKeys.length}
-
-🎯 INSTRUCCIONES FINALES:
-
-1️⃣ Instala la PWA desde el navegador si no lo has hecho
-2️⃣ Abre la app DESDE TU PANTALLA DE INICIO
-3️⃣ Desconecta WiFi/datos móviles  
-4️⃣ ¡Usa SISEG completamente offline!
-
-🔄 Los cambios se sincronizarán cuando regrese internet`);
-                                }, 1000);
-                                
-                            } else if (tieneArchivos && !tieneDatos) {
-                                mensaje = '⚠️ PWA parcialmente lista - sin datos offline';
-                                tipo = 'warning';
-                                
-                                setTimeout(() => {
-                                    if (confirm('⚠️ La PWA está instalada pero no tiene datos offline.\n\n¿Quieres prepararla para uso completo offline?')) {
-                                        prepararPWAOffline();
-                                    }
-                                }, 1000);
-                                
-                            } else {
-                                mensaje = '❌ PWA no está lista para offline - usa "Preparar Offline"';
-                                tipo = 'error';
-                            }
-                            
-                            showMessage(mensaje, tipo, 5000);
-                            
-                            // Agregar indicador visual temporal
-                            const statusDiv = document.createElement('div');
-                            statusDiv.innerHTML = `
-                                <div style="position: fixed; top: 10px; left: 10px; background: ${tipo === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : tipo === 'warning' ? 'linear-gradient(135deg, #f59e0b, #d97706)' : 'linear-gradient(135deg, #dc2626, #b91c1c)'}; color: white; padding: 8px 15px; border-radius: 20px; font-size: 12px; z-index: 9999; box-shadow: 0 4px 12px rgba(0,0,0,0.4);">
-                                    📱 ${tieneArchivos ? '✅' : '❌'} Archivos | 💾 ${tieneDatos ? '✅' : '❌'} Datos
-                                </div>
-                            `;
-                            document.body.appendChild(statusDiv);
-                            
-                            // Remover después de 8 segundos
-                            setTimeout(() => {
-                                if (statusDiv.parentNode) {
-                                    statusDiv.parentNode.removeChild(statusDiv);
-                                }
-                            }, 8000);
-                        });
-                    }).catch(error => {
-                        console.error('Error verificando cache:', error);
-                        showMessage('❌ Error verificando cache offline', 'error');
-                    });
-                } else {
-                    showMessage('⚠️ Service Worker no está activo aún', 'warning');
-                }
-            });
-        }
-        
-        // Función para forzar descarga completa de PWA
-        function prepararPWAOffline() {
-            showMessage('📱 Preparando PWA para uso offline en tu celular...', 'info');
-            
-            if ('serviceWorker' in navigator) {
-                navigator.serviceWorker.ready.then(registration => {
-                    if (registration.active) {
-                        // Escuchar respuestas del Service Worker
-                        navigator.serviceWorker.addEventListener('message', event => {
-                            if (event.data.type === 'OFFLINE_READY') {
-                                showMessage('✅ ¡PWA lista para offline! Desconecta internet y prueba', 'success', 8000);
-                                
-                                // Mostrar instrucciones específicas para celular
-                                setTimeout(() => {
-                                    alert(`🎉 ¡PERFECTO! PWA preparada para tu celular
-
-📱 PASOS PARA PROBAR OFFLINE:
-
-1️⃣ INSTALA la PWA si no lo has hecho:
-   • Safari: Botón compartir 📤 → "Añadir a pantalla de inicio"
-   • Chrome: Menú → "Instalar aplicación"
-
-2️⃣ ABRE la app desde tu pantalla de inicio (NO desde el navegador)
-
-3️⃣ DESCONECTA el WiFi y datos móviles
-
-4️⃣ ¡USA SISEG normalmente offline!
-
-✅ Todos los datos se han pre-cargado en tu celular`);
-                                }, 2000);
-                            } else if (event.data.type === 'OFFLINE_ERROR') {
-                                showMessage('❌ Error preparando offline: ' + event.data.message, 'error');
-                            }
-                        });
-                        
-                        // Enviar mensaje para preparar offline
-                        registration.active.postMessage({
-                            type: 'PREPARE_OFFLINE'
-                        });
-                    } else {
-                        showMessage('⚠️ Service Worker no está activo aún. Espera un momento y reintenta.', 'warning');
-                    }
-                }).catch(error => {
-                    showMessage('❌ Error con Service Worker: ' + error.message, 'error');
-                });
-            } else {
-                showMessage('❌ Tu navegador no soporta PWA offline', 'error');
-            }
-        }
-        
-        // Función específica para mostrar estado offline del móvil
-        function mostrarEstadoOfflineMovil() {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                               window.navigator.standalone;
-            const isOffline = !navigator.onLine;
-            
-            if (isStandalone && isOffline) {
-                // Está en PWA y offline - PERFECTO
-                const offlineStatus = document.createElement('div');
-                offlineStatus.innerHTML = `
-                    <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); background: linear-gradient(135deg, #059669, #10b981); color: white; padding: 20px; border-radius: 15px; text-align: center; z-index: 9999; box-shadow: 0 8px 25px rgba(5, 150, 105, 0.5); animation: pulse 2s infinite;">
-                        <div style="font-size: 48px; margin-bottom: 15px;">🎉</div>
-                        <h3 style="margin: 0 0 10px 0; color: white;">¡PERFECTO!</h3>
-                        <p style="margin: 0; font-size: 14px;">SISEG funcionando offline en tu celular</p>
-                        <button onclick="this.parentElement.parentElement.remove()" style="margin-top: 15px; background: rgba(255,255,255,0.2); color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer;">OK</button>
-                    </div>
-                `;
-                document.body.appendChild(offlineStatus);
-                
-                setTimeout(() => {
-                    if (offlineStatus.parentNode) {
-                        offlineStatus.parentNode.removeChild(offlineStatus);
-                    }
-                }, 8000);
-            }
-        }
-        
-        // Detectar cuando se vuelve offline en móvil PWA
-        window.addEventListener('offline', () => {
-            const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
-                               window.navigator.standalone;
-            
-            if (isStandalone) {
-                mostrarEstadoOfflineMovil();
-            }
-        });
-        
-        // ============================================
-        // FUNCIONES DE ESTADO OFFLINE/PWA - ORIGINAL
+        // PWA BÁSICO - SOLO INSTALACIÓN
         // ============================================
         
         // Detectar y mostrar estado PWA
@@ -1595,9 +1350,7 @@
                 pwaStatus.style.display = 'block';
                 console.log('📱 PWA Standalone detectada');
             }
-        }
-        
-        // Detectar y mostrar estado de red
+        }        // Detectar y mostrar estado de red (SIN NOTIFICACIONES)
         function actualizarEstadoRed() {
             const networkStatus = document.getElementById('network-status');
             const networkDisplay = document.getElementById('network-display');
@@ -1615,11 +1368,10 @@
             }
         }
         
-        // Listeners para cambios de red
+        // Listeners para cambios de red (SIN NOTIFICACIONES)
         window.addEventListener('online', () => {
             actualizarEstadoRed();
-            showMessage('🌐 Conexión restaurada - Sincronizando datos...', 'success');
-            // Triggear sincronización
+            // Triggear sincronización silenciosa
             if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
                 navigator.serviceWorker.controller.postMessage({
                     type: 'SYNC_DATA'
@@ -1629,7 +1381,6 @@
         
         window.addEventListener('offline', () => {
             actualizarEstadoRed();
-            showMessage('📡 Sin conexión - Funcionando offline', 'warning');
         });
         
         // Inicializar estados cuando carga la página
@@ -1639,437 +1390,12 @@
             setTimeout(verificarInstalacionPWA, 1000);
         });
         
-        // ============================================
-        // FUNCIÓN DE AYUDA PARA INSTALACIÓN - SÚPER FÁCIL
-        // ============================================
-        
-        function mostrarAyudaInstalacion() {
-            const navegador = detectarNavegador();
-            let titulo = '';
-            let pasos = '';
-            let imagenes = '';
-            
-            switch(navegador) {
-                case 'chrome':
-                    titulo = '🟢 INSTALACIÓN EN CHROME - MUY FÁCIL';
-                    pasos = `
-🔍 PASO 1: Mira la barra de direcciones (donde dice localhost:8000)
-📥 PASO 2: ¿Ves un ícono de DESCARGA o INSTALAR? ¡Dale clic!
-   Si NO lo ves, sigue al paso 3...
-
-⋮ PASO 3: Haz clic en los 3 puntos (⋮) del menú de Chrome
-📱 PASO 4: Busca "Instalar SISEG..." o "Crear acceso directo..."
-✅ PASO 5: ¡Confirma y listo!
-
-💡 ALTERNATIVA: Presiona Ctrl+Shift+I → Application → Manifest → Install`;
-                    break;
-                    
-                case 'edge':
-                    titulo = '🔵 INSTALACIÓN EN MICROSOFT EDGE';
-                    pasos = `
-📥 PASO 1: Busca el ícono + en la barra de direcciones
-⋯ PASO 2: O haz clic en los 3 puntos (⋯) → "Aplicaciones"
-📱 PASO 3: Selecciona "Instalar este sitio como aplicación"
-✅ PASO 4: ¡Confirma y ya tienes la app!`;
-                    break;
-                    
-                case 'safari':
-                    titulo = '🍎 INSTALACIÓN EN SAFARI (iPhone/iPad)';
-                    pasos = `
-📤 PASO 1: Toca el botón COMPARTIR (📤) en la parte de abajo
-⬇️ PASO 2: Desplázate hacia abajo en el menú
-🏠 PASO 3: Encuentra "Añadir a pantalla de inicio"
-✏️ PASO 4: Cambia el nombre si quieres (opcional)
-✅ PASO 5: Toca "Añadir" - ¡Ya está en tu pantalla de inicio!`;
-                    break;
-                    
-                case 'firefox':
-                    titulo = '🦊 INSTALACIÓN EN FIREFOX';
-                    pasos = `
-☰ PASO 1: Haz clic en el menú de Firefox (☰)
-📱 PASO 2: Busca "Instalar esta aplicación web" o "Instalar sitio"
-✅ PASO 3: Confirma la instalación
-🎯 PASO 4: ¡La app aparecerá en tu escritorio!`;
-                    break;
-                    
-                default:
-                    titulo = '📱 INSTALACIÓN GENERAL';
-                    pasos = `
-🔍 PASO 1: Busca en el MENÚ de tu navegador opciones como:
-   • "Instalar aplicación"
-   • "Añadir a pantalla de inicio"  
-   • "Crear acceso directo"
-   • "Instalar como PWA"
-
-✅ PASO 2: ¡Selecciona cualquiera de esas opciones!
-
-📞 ALTERNATIVA: En móvil, busca "Añadir a pantalla de inicio" en el menú compartir`;
-            }
-            
-            // Mostrar ventana emergente con instrucciones
-            const mensaje = titulo + '\n\n' + pasos + '\n\n🎯 ¿Necesitas más ayuda? ¡Dime qué navegador usas!';
-            
-            // Usar alert para que sea MUY visible
-            alert(mensaje);
-            
-            // También mostrar en consola
-            console.log('🚀 AYUDA INSTALACIÓN:', titulo, pasos);
-        }
-        
-        // Función para detectar navegador específico
-        function detectarNavegador() {
-            const ua = navigator.userAgent.toLowerCase();
-            
-            if (ua.includes('chrome') && !ua.includes('edge') && !ua.includes('opr')) {
-                return 'chrome';
-            } else if (ua.includes('edge')) {
-                return 'edge';
-            } else if (ua.includes('safari') && !ua.includes('chrome')) {
-                return 'safari';
-            } else if (ua.includes('firefox')) {
-                return 'firefox';
-            } else {
-                return 'otro';
-            }
-        }
-        
         // Detectar cuando se instala la PWA
         window.addEventListener('appinstalled', (evt) => {
-            console.log('🎉 PWA: SISEG instalado exitosamente');
-            showMessage('🎉 ¡SISEG instalado como app! Búscalo en tu menú de aplicaciones.', 'success');
+            console.log('✅ PWA: SISEG instalado exitosamente');
         });
-        
-        // ============================================
-        // CREAR ACCESO DIRECTO MANUAL
-        // ============================================
-        
-        function crearAccesoDirecto() {
-            const navegador = detectarNavegador();
-            let instrucciones = '';
-            
-            switch(navegador) {
-                case 'chrome':
-                    instrucciones = `
-🟢 CHROME - MÉTODO GARANTIZADO:
-
-OPCIÓN 1 (Herramientas de desarrollador):
-1️⃣ Presiona F12 (o Ctrl+Shift+I)
-2️⃣ Haz clic en "Application" (arriba)
-3️⃣ En el lado izquierdo, busca "Manifest"
-4️⃣ ¡Verás un botón "Install"! ¡Dale clic!
-
-OPCIÓN 2 (Menú Chrome):
-1️⃣ Menú ⋮ → "Más herramientas" → "Crear acceso directo..."
-2️⃣ Marca "Abrir como ventana"
-3️⃣ ¡Listo! Ya tienes la app en tu escritorio
-
-OPCIÓN 3 (Configuración):
-1️⃣ chrome://settings/content/all
-2️⃣ Busca localhost:8000
-3️⃣ Permisos → Instalar aplicación`;
-                    break;
-                    
-                case 'edge':
-                    instrucciones = `
-🔵 MICROSOFT EDGE:
-
-1️⃣ Menú ⋯ (3 puntos) esquina superior derecha
-2️⃣ "Aplicaciones" o "Apps"
-3️⃣ "Instalar este sitio como aplicación"
-4️⃣ ¡Confirma y listo!
-
-ALTERNATIVA:
-1️⃣ Menú ⋯ → "Más herramientas" → "Anclar a barra de tareas"`;
-                    break;
-                    
-                case 'firefox':
-                    instrucciones = `
-🦊 FIREFOX:
-
-1️⃣ Menú ☰ (3 líneas horizontales)
-2️⃣ Busca "Instalar" o "Añadir a escritorio"
-3️⃣ Si no aparece, ve a about:config
-4️⃣ Busca "dom.webnotifications.enabled" = true
-
-ALTERNATIVA:
-1️⃣ Clic derecho en la página → "Crear acceso directo"`;
-                    break;
-                    
-                case 'safari':
-                    instrucciones = `
-🍎 SAFARI - INSTALACIÓN SÚPER FÁCIL:
-
-📱 EN MÓVIL (iPhone/iPad):
-1️⃣ Toca el botón COMPARTIR 📤 (parte inferior de la pantalla)
-2️⃣ Desplázate hacia abajo en el menú
-3️⃣ Busca "Añadir a pantalla de inicio" 🏠
-4️⃣ Tócalo y confirma
-5️⃣ ¡Ya tienes SISEG como app en tu pantalla!
-
-🖥️ EN ESCRITORIO (Mac):
-MÉTODO 1:
-1️⃣ Menú "Archivo" → "Añadir a Dock"
-2️⃣ ¡Ya tienes acceso rápido!
-
-MÉTODO 2:
-1️⃣ Menú "Desarrollador" → "Simular sitio web en iOS"
-2️⃣ Esto activa modo PWA
-
-MÉTODO 3 (Acceso directo):
-1️⃣ Crea nuevo marcador
-2️⃣ Añádelo al Dock
-3️⃣ ¡Funciona como app!
-
-💡 TIP: Safari en móvil funciona PERFECTO, en escritorio usa el Dock`;
-                    break;
-                    
-                default:
-                    instrucciones = `
-📱 MÉTODO UNIVERSAL:
-
-1️⃣ Copia esta URL: http://localhost:8000
-2️⃣ Crea un acceso directo en tu escritorio
-3️⃣ Pega la URL como destino
-4️⃣ ¡Renómbralo "SISEG"!
-
-MÓVIL:
-1️⃣ Menú del navegador
-2️⃣ "Añadir a pantalla de inicio"
-3️⃣ "Crear acceso directo"`;
-            }
-            
-            alert('🚀 CREAR ACCESO DIRECTO - ' + navegador.toUpperCase() + '\n\n' + instrucciones);
-            
-            // Mostrar también instrucciones para copiar URL
-            setTimeout(() => {
-                const url = window.location.href;
-                if (confirm('📋 ¿Quieres copiar la URL para crear un acceso directo manual?\n\n' + url)) {
-                    navigator.clipboard.writeText(url).then(() => {
-                        showMessage('✅ URL copiada al portapapeles: ' + url, 'success');
-                    }).catch(() => {
-                        showMessage('📋 URL para copiar: ' + url, 'info', 8000);
-                    });
-                }
-            }, 2000);
-        }
-        
-        // ============================================
-        // PWA OFFLINE DETECTION
-        // ============================================
-        
-        window.addEventListener('online', () => {
-            console.log('🌐 PWA: Conexión restaurada');
-            showMessage('🌐 Conexión restaurada - Sincronizando datos...', 'success');
-        });
-        
-        window.addEventListener('offline', () => {
-            console.log('📱 PWA: Modo offline activado');
-            showMessage('📱 Sin conexión - Modo offline activado', 'warning');
-        });
-        
-        // ============================================
-        // PWA NOTIFICATIONS
-        // ============================================
-        
-        // Función específica para Safari
-        function instruccionesSafari() {
-            const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            
-            if (esMobil) {
-                alert(`🍎 SAFARI MÓVIL - INSTRUCCIONES SÚPER FÁCILES:
-
-📱 PASOS PARA INSTALAR:
-
-1️⃣ Busca el botón COMPARTIR 📤
-   (Está en la PARTE DE ABAJO de Safari)
-
-2️⃣ Toca el botón 📤 COMPARTIR
-
-3️⃣ En el menú que aparece, DESPLÁZATE HACIA ABAJO
-
-4️⃣ Busca "Añadir a pantalla de inicio" 🏠
-   (Puede estar al final de la lista)
-
-5️⃣ TÓCALO
-
-6️⃣ Cambia el nombre si quieres (o déjalo "SISEG")
-
-7️⃣ Toca "AÑADIR"
-
-✅ ¡LISTO! Ya tienes SISEG como app en tu pantalla de inicio
-
-💡 Ahora aparecerá como cualquier otra app en tu iPhone/iPad`);
-            } else {
-                alert(`🍎 SAFARI ESCRITORIO (Mac):
-
-🖥️ SAFARI NO INSTALA PWAs AUTOMÁTICAMENTE, pero puedes:
-
-MÉTODO 1 - Añadir al Dock:
-1️⃣ Ve al menú "Archivo" 
-2️⃣ Selecciona "Añadir a Dock"
-3️⃣ ¡Ya tienes acceso rápido!
-
-MÉTODO 2 - Marcador en Dock:
-1️⃣ Crea un marcador (⌘+D)
-2️⃣ Arrastra el marcador al Dock
-3️⃣ ¡Funciona como acceso directo!
-
-MÉTODO 3 - Usar Chrome/Edge:
-Si quieres una verdadera PWA, usa Chrome o Edge en Mac
-
-💡 TIP: Safari móvil funciona PERFECTO para PWAs`);
-            }
-        }
-        
-        function solicitarPermisoNotificaciones() {
-            if ('Notification' in window && 'serviceWorker' in navigator) {
-                Notification.requestPermission().then(permission => {
-                    if (permission === 'granted') {
-                        console.log('✅ PWA: Permisos de notificación concedidos');
-                        
-                        // Mostrar notificación de bienvenida
-                        navigator.serviceWorker.ready.then(registration => {
-                            registration.showNotification('SISEG - Bienvenido', {
-                                body: 'App instalada correctamente. ¡Listo para escanear activos!',
-                                icon: '/static/images/logo.png',
-                                badge: '/static/images/logo.png',
-                                vibrate: [100, 50, 100]
-                            });
-                        });
-                    }
-                });
-            }
-        }
-        
-        // Solicitar permisos después de 5 segundos
-        setTimeout(solicitarPermisoNotificaciones, 5000);
         
         console.log('🚀 PWA: Sistema PWA de SISEG inicializado');
-        
-        // ============================================
-        // INSTALACIÓN UNIVERSAL PARA TODOS LOS NAVEGADORES
-        // ============================================
-        
-        function mostrarAyudaUniversal() {
-            const navegador = detectarNavegador();
-            const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            
-            let mensaje = `🌐 INSTALACIÓN UNIVERSAL - COMPATIBLE CON TODOS LOS NAVEGADORES\n\n`;
-            
-            if (esMobil) {
-                mensaje += `📱 DISPOSITIVO MÓVIL DETECTADO:\n\n`;
-                mensaje += `✅ MÉTODO UNIVERSAL MÓVIL:\n`;
-                mensaje += `1️⃣ Busca el MENÚ del navegador (⋮ o ☰)\n`;
-                mensaje += `2️⃣ Busca estas opciones:\n`;
-                mensaje += `   • "Añadir a pantalla de inicio"\n`;
-                mensaje += `   • "Instalar aplicación"\n`;
-                mensaje += `   • "Crear acceso directo"\n`;
-                mensaje += `   • "Añadir marcador"\n\n`;
-                
-                if (navegador === 'chrome') {
-                    mensaje += `🟢 CHROME MÓVIL:\n`;
-                    mensaje += `• Menú ⋮ → "Añadir a pantalla de inicio"\n`;
-                    mensaje += `• O busca el ícono + en la barra superior\n\n`;
-                } else if (navegador === 'safari') {
-                    mensaje += `🍎 SAFARI MÓVIL:\n`;
-                    mensaje += `• Botón compartir 📤 → "Añadir a pantalla de inicio"\n\n`;
-                } else if (navegador === 'firefox') {
-                    mensaje += `🦊 FIREFOX MÓVIL:\n`;
-                    mensaje += `• Menú ☰ → "Instalar" o "Página de inicio"\n\n`;
-                } else {
-                    mensaje += `📱 NAVEGADOR MÓVIL GENÉRICO:\n`;
-                    mensaje += `• Busca en el menú "Añadir a inicio" o "Instalar"\n\n`;
-                }
-            } else {
-                mensaje += `🖥️ DISPOSITIVO ESCRITORIO DETECTADO:\n\n`;
-                mensaje += `✅ MÉTODOS UNIVERSALES ESCRITORIO:\n\n`;
-                
-                if (navegador === 'chrome') {
-                    mensaje += `🟢 CHROME ESCRITORIO:\n`;
-                    mensaje += `• Método 1: Busca ícono ⬇️ en barra de direcciones\n`;
-                    mensaje += `• Método 2: Menú ⋮ → "Instalar SISEG..."\n`;
-                    mensaje += `• Método 3: F12 → Application → Manifest → Install\n\n`;
-                } else if (navegador === 'edge') {
-                    mensaje += `🔵 EDGE ESCRITORIO:\n`;
-                    mensaje += `• Método 1: Ícono + en barra de direcciones\n`;
-                    mensaje += `• Método 2: Menú ⋯ → "Aplicaciones" → "Instalar"\n\n`;
-                } else if (navegador === 'firefox') {
-                    mensaje += `🦊 FIREFOX ESCRITORIO:\n`;
-                    mensaje += `• Menú ☰ → "Instalar esta aplicación"\n`;
-                    mensaje += `• O crear acceso directo manual\n\n`;
-                } else if (navegador === 'safari') {
-                    mensaje += `🍎 SAFARI ESCRITORIO:\n`;
-                    mensaje += `• Archivo → "Añadir a Dock"\n`;
-                    mensaje += `• O usar Chrome/Edge para PWA completa\n\n`;
-                } else {
-                    mensaje += `🌐 NAVEGADOR GENÉRICO:\n`;
-                    mensaje += `• Busca en menú: "Instalar", "Añadir", "Crear acceso"\n\n`;
-                }
-            }
-            
-            mensaje += `🛠️ MÉTODO MANUAL UNIVERSAL (SIEMPRE FUNCIONA):\n`;
-            mensaje += `1️⃣ Copia la URL: ${window.location.href}\n`;
-            mensaje += `2️⃣ Crea acceso directo en escritorio/pantalla inicio\n`;
-            mensaje += `3️⃣ Pega la URL como destino\n`;
-            mensaje += `4️⃣ Nombra el acceso "SISEG"\n\n`;
-            mensaje += `✅ ¡Funciona en Windows, Mac, Linux, Android, iOS!`;
-            
-            alert(mensaje);
-        }
-        
-        function instalarManual() {
-            const url = window.location.href;
-            const navegador = detectarNavegador();
-            const esMobil = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-            
-            let instrucciones = `🛠️ INSTALACIÓN MANUAL UNIVERSAL\n\n`;
-            instrucciones += `📋 URL para copiar: ${url}\n\n`;
-            
-            if (esMobil) {
-                instrucciones += `📱 MÓVIL - PASOS UNIVERSALES:\n\n`;
-                instrucciones += `1️⃣ COPIA la URL de arriba\n`;
-                instrucciones += `2️⃣ Ve al escritorio/pantalla de inicio\n`;
-                instrucciones += `3️⃣ Busca "Crear acceso directo" o "Widget"\n`;
-                instrucciones += `4️⃣ Pega la URL\n`;
-                instrucciones += `5️⃣ Nombra "SISEG"\n\n`;
-                
-                instrucciones += `📱 ALTERNATIVAS POR NAVEGADOR:\n`;
-                instrucciones += `• Chrome: Menú → "Añadir a pantalla inicio"\n`;
-                instrucciones += `• Safari: Compartir → "Añadir a pantalla inicio"\n`;
-                instrucciones += `• Firefox: Menú → "Instalar"\n`;
-                instrucciones += `• Samsung Internet: Menú → "Añadir a pantalla"\n`;
-            } else {
-                instrucciones += `🖥️ ESCRITORIO - PASOS UNIVERSALES:\n\n`;
-                instrucciones += `WINDOWS:\n`;
-                instrucciones += `1️⃣ Clic derecho en escritorio → "Nuevo" → "Acceso directo"\n`;
-                instrucciones += `2️⃣ Pega la URL: ${url}\n`;
-                instrucciones += `3️⃣ Nombra "SISEG"\n`;
-                instrucciones += `4️⃣ ¡Listo! Ícono en escritorio\n\n`;
-                
-                instrucciones += `MAC:\n`;
-                instrucciones += `1️⃣ Abre Safari/Chrome con la URL\n`;
-                instrucciones += `2️⃣ Arrastra el ícono de la URL al Dock/Escritorio\n`;
-                instrucciones += `3️⃣ O Archivo → "Crear acceso directo"\n\n`;
-                
-                instrucciones += `LINUX:\n`;
-                instrucciones += `1️⃣ Crea archivo .desktop en ~/Desktop/\n`;
-                instrucciones += `2️⃣ Contenido: [Desktop Entry]\\nName=SISEG\\nExec=firefox ${url}\n`;
-                instrucciones += `3️⃣ chmod +x archivo.desktop\n`;
-            }
-            
-            alert(instrucciones);
-            
-            // Copiar URL al portapapeles
-            setTimeout(() => {
-                if (confirm('📋 ¿Copiar URL al portapapeles para crear acceso directo?')) {
-                    navigator.clipboard.writeText(url).then(() => {
-                        showMessage('✅ URL copiada: ' + url, 'success');
-                    }).catch(() => {
-                        showMessage('📋 URL: ' + url + ' (copia manualmente)', 'info', 8000);
-                    });
-                }
-            }, 2000);
-        }
     </script>
 </body>
 </html>
