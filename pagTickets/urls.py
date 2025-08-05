@@ -27,6 +27,8 @@ urlpatterns = [
     path('ping/', views.simple_ping, name='simple_ping'),
     path('health/', views.health_check, name='health_check'),
     path('healthz/', views.health_check, name='health_check_k8s'),
+    path('ready/', views.quick_health, name='quick_health'),
+    path('status/', views.quick_health, name='status_check'),
     # Ruta para registrar un código QR nuevo (recibe datos POST desde JavaScript)
     path('registrar_qr/', views.registrar_qr, name='registrar_qr'),
     # Ruta para eliminar un activo

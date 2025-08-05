@@ -1,13 +1,13 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install -r requirements_optimized.txt"
+buildCommand = "pip install -r requirements.txt"
 
 [deploy]
-healthcheckPath = "/"
-healthcheckTimeout = 300
+healthcheckPath = "/ready/"
+healthcheckTimeout = 120
 restartPolicyType = "ON_FAILURE"
 replicas = 1
-startCommand = "python railway_final.py"
+startCommand = "gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --timeout 120 --workers 1"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"
