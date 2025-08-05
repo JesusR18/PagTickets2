@@ -1,13 +1,12 @@
 [build]
 builder = "nixpacks"
-buildCommand = "pip install --no-cache-dir gunicorn"
 
 [deploy]
 healthcheckPath = "/"
 healthcheckTimeout = 300
 restartPolicyType = "ON_FAILURE"
 replicas = 1
-startCommand = "gunicorn railway_wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300 --log-level info --access-logfile - --error-logfile -"
+startCommand = "python minimal_server.py"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"
