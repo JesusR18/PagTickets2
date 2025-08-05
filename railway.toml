@@ -3,11 +3,11 @@ builder = "nixpacks"
 buildCommand = "pip install --no-cache-dir -r requirements_ultra_minimal.txt"
 
 [deploy]
-healthcheckPath = "/ping/"
-healthcheckTimeout = 600
+healthcheckPath = "/ping"
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
 replicas = 1
-startCommand = "python manage_ultra_simple.py migrate --noinput && gunicorn pagTickets.wsgi_ultra_simple:application --bind 0.0.0.0:$PORT --workers 1 --timeout 600"
+startCommand = "gunicorn pagTickets.wsgi_no_django:application --bind 0.0.0.0:$PORT --workers 1 --timeout 30 --keep-alive 2"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"
