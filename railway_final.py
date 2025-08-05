@@ -22,8 +22,8 @@ class RailwayHandler(http.server.BaseHTTPRequestHandler):
     def do_GET(self):
         global django_app, django_ready
         
-        # Si Django está listo, SIEMPRE usar la aplicación real
-        if django_ready and django_app:
+        # SIEMPRE intentar usar Django primero para TODAS las rutas
+        if django_app:
             try:
                 environ = self.get_wsgi_environ()
                 
@@ -40,44 +40,18 @@ class RailwayHandler(http.server.BaseHTTPRequestHandler):
             except Exception as e:
                 print(f"Error serving Django: {e}")
         
-        # Solo si Django NO está listo y es healthcheck
+        # Solo para healthchecks específicos si Django falla
         if self.path in ['/health', '/ping', '/healthz']:
             self.send_response(200)
             self.send_header('Content-Type', 'text/plain')
             self.end_headers()
             self.wfile.write(b'OK')
         else:
-            # Para la página principal, mostrar tu página incluso si Django no está listo
-            self.send_response(200)
-            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            # Si Django no está disponible, error 503
+            self.send_response(503)
+            self.send_header('Content-Type', 'text/plain')
             self.end_headers()
-            loading_html = """
-            <!DOCTYPE html>
-            <html lang="es">
-            <head>
-                <meta charset="UTF-8">
-                <meta name="viewport" content="width=device-width, initial-scale=1.0">
-                <title>SISEG - Cargando</title>
-                <style>
-                    body { font-family: Arial, sans-serif; text-align: center; padding: 50px; background: #f5f5f5; }
-                    .loading { color: #991b1b; font-size: 24px; margin: 20px 0; }
-                    .spinner { border: 4px solid #f3f3f3; border-top: 4px solid #991b1b; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 20px auto; }
-                    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-                </style>
-                <script>
-                    // Recargar página cada 2 segundos hasta que Django esté listo
-                    setTimeout(function(){ location.reload(); }, 2000);
-                </script>
-            </head>
-            <body>
-                <h1>🔄 SISEG - Sistemas de Seguridad Integral</h1>
-                <div class="spinner"></div>
-                <p class="loading">Iniciando sistema...</p>
-                <p>Tu aplicación estará lista en unos segundos</p>
-            </body>
-            </html>
-            """.encode('utf-8')
-            self.wfile.write(loading_html)
+            self.wfile.write(b'Service loading...')
     
     def do_POST(self):
         self.do_GET()
@@ -111,11 +85,11 @@ class RailwayHandler(http.server.BaseHTTPRequestHandler):
         pass
 
 def load_django():
-    """Cargar Django en segundo plano de forma ultra-rápida"""
+    """Cargar Django de forma directa"""
     global django_app, django_ready
     
     try:
-        print("🔄 Iniciando Django...")
+        print("🔄 Configurando Django SISEG...")
         
         # Configurar Django
         os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pagTickets.settings')
@@ -124,46 +98,38 @@ def load_django():
         import django
         from django.core.wsgi import get_wsgi_application
         
-        # Setup rápido sin migraciones
+        # Setup rápido
         django.setup()
         
-        # Obtener aplicación Django INMEDIATAMENTE
+        # Obtener aplicación Django
         django_app = get_wsgi_application()
         django_ready = True
         
-        print("✅ Django aplicación SISEG lista!")
-        
-        # Migrar base de datos en segundo plano (DESPUÉS de que esté listo)
-        def migrate_later():
-            try:
-                time.sleep(5)
-                from django.core.management import execute_from_command_line
-                execute_from_command_line(['manage.py', 'migrate', '--run-syncdb'])
-                print("✅ Base de datos inicializada")
-            except Exception as e:
-                print(f"⚠️ Migración: {e}")
-        
-        migrate_thread = threading.Thread(target=migrate_later, daemon=True)
-        migrate_thread.start()
+        print("✅ Aplicación SISEG cargada correctamente!")
+        return True
         
     except Exception as e:
         print(f"❌ Error cargando Django: {e}")
         django_ready = False
+        return False
 
 def start_server():
-    """Iniciar servidor Railway con carga ultra-rápida de Django"""
+    """Iniciar servidor Railway con Django cargado síncronamente"""
     print(f"🚀 Starting Railway server on port {PORT}")
     
-    # Cargar Django INMEDIATAMENTE al iniciar
-    django_thread = threading.Thread(target=load_django, daemon=True)
-    django_thread.start()
+    # Cargar Django ANTES de iniciar el servidor
+    print("🔄 Cargando tu aplicación SISEG...")
+    load_django()
     
-    # Pequeña pausa para dar tiempo a Django de cargar
-    time.sleep(0.5)
+    # Verificar que Django esté listo
+    if django_ready and django_app:
+        print("✅ Tu aplicación SISEG está lista!")
+    else:
+        print("⚠️ Django no se cargó completamente")
     
     # Iniciar servidor
     with socketserver.TCPServer(("", PORT), RailwayHandler) as httpd:
-        print(f"✅ Server ready - SISEG PagTickets iniciando")
+        print(f"🌐 SISEG PagTickets serviendo en puerto {PORT}")
         httpd.serve_forever()
 
 if __name__ == "__main__":
