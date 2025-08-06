@@ -1,12 +1,13 @@
 [build]
 builder = "nixpacks"
+buildCommand = "python manage.py collectstatic --noinput"
 
 [deploy]
 healthcheckPath = "/ping/"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
 replicas = 1
-startCommand = "gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 30 --max-requests 1000 --preload"
+startCommand = "python manage.py migrate --noinput && gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 30 --max-requests 1000 --preload"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"

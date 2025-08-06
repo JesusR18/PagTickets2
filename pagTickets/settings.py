@@ -120,6 +120,15 @@ DATABASES = {
     }
 }
 
+# En Railway, usar base de datos en memoria para evitar problemas de escritura
+if 'RAILWAY_ENVIRONMENT' in os.environ:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': ':memory:',
+        }
+    }
+
 
 # Password validation
 # https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
@@ -155,12 +164,13 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Directorios donde Django buscará archivos estáticos
 STATICFILES_DIRS = [
     BASE_DIR / 'static',
+    BASE_DIR / 'pagTickets' / 'static',
 ]
 
 # Configuración para archivos multimedia (imágenes subidas por usuarios)
@@ -168,6 +178,10 @@ MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # Configuración para servir archivos estáticos en producción
+# En Railway, agregar whitenoise para servir archivos estáticos
+if 'RAILWAY_ENVIRONMENT' in os.environ:
+    MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
