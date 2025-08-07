@@ -72,13 +72,15 @@ DATABASES = {
     }
 }
 
-# ARCHIVOS ESTÁTICOS
+# ARCHIVOS ESTÁTICOS - SIMPLIFICADO
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
-STATICFILES_DIRS = [
-    BASE_DIR / 'static',
-    BASE_DIR / 'pagTickets' / 'static',
-]
+
+# Comentar STATICFILES_DIRS temporalmente para evitar errores
+# STATICFILES_DIRS = [
+#     BASE_DIR / 'static',
+#     BASE_DIR / 'pagTickets' / 'static',
+# ]
 
 # INTERNATIONALIZATION
 LANGUAGE_CODE = 'es-mx'
@@ -99,5 +101,34 @@ CSRF_TRUSTED_ORIGINS = [
 SECURE_SSL_REDIRECT = False
 SESSION_COOKIE_SECURE = False
 CSRF_COOKIE_SECURE = False
+
+# LOGGING DETALLADO para debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
 
 print("🚀 Settings Railway INDEPENDIENTE cargado")
