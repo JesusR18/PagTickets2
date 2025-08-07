@@ -1,220 +1,58 @@
 """
-Configuración de Django para Railway (producción)
-Configuración optimizada para despliegue en Railway
+Configuración ULTRA-SIMPLE de Django para Railway
+Configuración mínima para garantizar deployment exitoso
 """
 
 from .settings import *
 import os
-import dj_database_url
 
-# Middleware simplificado para Railway
+# =================================
+# CONFIGURACIÓN MÍNIMA RAILWAY
+# =================================
+
+# DEBUG OFF en producción
+DEBUG = False
+
+# Hosts - Permitir TODOS para evitar problemas
+ALLOWED_HOSTS = ['*']
+
+# Middleware MÍNIMO
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
-    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-# =================================
-# CONFIGURACIÓN BÁSICA RAILWAY
-# =================================
-
-# Modo debug deshabilitado en producción
-DEBUG = False
-
-# Hosts permitidos para Railway
-ALLOWED_HOSTS = [
-    '*.railway.app',
-    '*.up.railway.app',
-    'localhost',
-    '127.0.0.1',
-    '0.0.0.0',
-    # Agregar el dominio específico si lo conoces
-]
-
-# Permitir todas las IPs para healthcheck
-import os
-if os.environ.get('RAILWAY_ENVIRONMENT') == 'production':
-    ALLOWED_HOSTS.append('*')  # Solo en Railway
-
-# Deshabilitar autenticación para healthcheck en Railway
-RAILWAY_DISABLE_AUTH = True
-
-# Dominios confiables para CSRF
+# CSRF simplificado
 CSRF_TRUSTED_ORIGINS = [
     'https://*.railway.app',
     'https://*.up.railway.app',
 ]
 
-# Configuración de logging para Railway
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'pagTickets': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
+# Base de datos SIMPLE (SQLite)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
 }
 
-# =================================
-# BASE DE DATOS RAILWAY
-# =================================
-
-# PostgreSQL en Railway
-if 'DATABASE_URL' in os.environ:
-    DATABASES = {
-        'default': dj_database_url.parse(
-            os.environ.get('DATABASE_URL'),
-            conn_max_age=600,
-            conn_health_checks=True,
-        )
-    }
-else:
-    # Fallback a SQLite para desarrollo
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
-
-# =================================
-# ARCHIVOS ESTÁTICOS RAILWAY
-# =================================
-
+# Archivos estáticos SIMPLE
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
-# Configuración de WhiteNoise para archivos estáticos
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+# WhiteNoise para archivos estáticos
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedStaticFilesStorage'
 
-# =================================
-# SEGURIDAD RAILWAY
-# =================================
+# SECURITY MÍNIMA
+SECURE_SSL_REDIRECT = False
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
 
-# SSL y HTTPS - Simplificado para Railway
-SECURE_SSL_REDIRECT = False  # Railway maneja SSL automáticamente
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+# Variable para Railway
+RAILWAY_ENVIRONMENT = True
 
-# Cookies - Relajado para debugging
-SESSION_COOKIE_SECURE = False  # Temporal para healthcheck
-CSRF_COOKIE_SECURE = False     # Temporal para healthcheck
-
-# =================================
-# CORS PARA RAILWAY
-# =================================
-
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-# =================================
-# LOGGING RAILWAY
-# =================================
-
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
-            'style': '{',
-        },
-        'simple': {
-            'format': '{levelname} {message}',
-            'style': '{',
-        },
-    },
-    'handlers': {
-        'console': {
-            'class': 'logging.StreamHandler',
-            'formatter': 'verbose',
-        },
-    },
-    'root': {
-        'handlers': ['console'],
-        'level': 'INFO',
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['console'],
-            'level': os.getenv('DJANGO_LOG_LEVEL', 'INFO'),
-            'propagate': False,
-        },
-        'pagTickets': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-        'qrweb': {
-            'handlers': ['console'],
-            'level': 'INFO',
-            'propagate': False,
-        },
-    },
-}
-
-# =================================
-# CONFIGURACIÓN ADICIONAL RAILWAY
-# =================================
-
-# Timezone
-USE_TZ = True
-TIME_ZONE = 'America/Mexico_City'
-
-# Internacionalización
-LANGUAGE_CODE = 'es-mx'
-
-# Cache (opcional)
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
-    }
-}
-
-# Configuración de email (opcional)
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-
-print("✅ Configuración Railway cargada exitosamente")
+print("🚀 Configuración ULTRA-SIMPLE Railway cargada")

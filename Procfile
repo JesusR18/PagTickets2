@@ -1,1 +1,1 @@
-web: python manage.py migrate --noinput && gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 30 --max-requests 1000 --preload
+web: gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 300
