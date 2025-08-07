@@ -9,11 +9,11 @@ startCommand = "bash start.sh"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"
-DEBUG = "True"
+DEBUG = "False"
 RAILWAY_ENVIRONMENT = "production"
 PYTHONPATH = "/app"
 PYTHONUNBUFFERED = "1"
 PORT = "8080"
 
 [build.env]
-DJANGO_SETTINGS_MODULE = "pagTickets.settings_minimal"
+DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"
