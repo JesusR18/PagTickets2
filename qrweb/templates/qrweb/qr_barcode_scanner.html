@@ -1,0 +1,642 @@
+{% load tz %}
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISEG - Escáner QR y Códigos de Barras</title>
+    
+    <!-- LIBRERÍAS PARA QR Y CÓDIGOS DE BARRAS -->
+    <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@zxing/library@latest/umd/index.min.js"></script>
+    
+    <style>
+        * {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 50%, #60a5fa 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .scanner-section, .generator-section {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            text-align: center;
+            border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+            padding-bottom: 10px;
+        }
+        
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        .tab-button {
+            flex: 1;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+        
+        .tab-button.active {
+            background: rgba(255, 255, 255, 0.4);
+        }
+        
+        .tab-content {
+            display: none;
+        }
+        
+        .tab-content.active {
+            display: block;
+        }
+        
+        #reader {
+            width: 100%;
+            border-radius: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 10px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 5px;
+            background: #10b981;
+            color: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: bold;
+            margin: 5px;
+        }
+        
+        .btn:hover {
+            background: #059669;
+            transform: translateY(-2px);
+        }
+        
+        .btn-secondary {
+            background: #6b7280;
+        }
+        
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        
+        .result-display {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 10px 0;
+            min-height: 60px;
+        }
+        
+        .status-message {
+            text-align: center;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+        }
+        
+        .status-success {
+            background: rgba(16, 185, 129, 0.8);
+        }
+        
+        .status-error {
+            background: rgba(239, 68, 68, 0.8);
+        }
+        
+        .generated-image {
+            max-width: 100%;
+            margin: 10px 0;
+            border-radius: 10px;
+            background: white;
+            padding: 10px;
+        }
+        
+        .records-section {
+            grid-column: 1 / -1;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 20px;
+            border-radius: 15px;
+            backdrop-filter: blur(10px);
+            margin-top: 20px;
+        }
+        
+        .records-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+        
+        .record-item {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 4px solid #10b981;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .tabs {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📱 SISEG - Escáner y Generador de Códigos</h1>
+        <p>Sistema Integral de Gestión de Activos con QR y Códigos de Barras</p>
+    </div>
+    
+    <div class="main-container">
+        <!-- SECCIÓN DE ESCÁNER -->
+        <div class="scanner-section">
+            <h2 class="section-title">📷 Escáner de Códigos</h2>
+            
+            <div class="tabs">
+                <button class="tab-button active" onclick="switchScannerTab('qr')">📱 QR Scanner</button>
+                <button class="tab-button" onclick="switchScannerTab('barcode')">📊 Barcode Scanner</button>
+            </div>
+            
+            <!-- TAB QR SCANNER -->
+            <div id="qr-scanner-tab" class="tab-content active">
+                <div id="reader"></div>
+                <div class="result-display">
+                    <strong>Resultado QR:</strong>
+                    <div id="qr-result">Esperando código QR...</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Nombre del Activo:</label>
+                    <input type="text" id="qr-nombre-activo" placeholder="Ej: Laptop Dell Inspiron">
+                </div>
+                
+                <div class="form-group">
+                    <label>Marca:</label>
+                    <input type="text" id="qr-marca" placeholder="Ej: Dell">
+                </div>
+                
+                <div class="form-group">
+                    <label>Modelo:</label>
+                    <input type="text" id="qr-modelo" placeholder="Ej: Inspiron 15 3000">
+                </div>
+                
+                <button class="btn" onclick="startQRScanner()">🎥 Iniciar Escáner QR</button>
+                <button class="btn btn-secondary" onclick="stopScanner()">⏹️ Detener</button>
+            </div>
+            
+            <!-- TAB BARCODE SCANNER -->
+            <div id="barcode-scanner-tab" class="tab-content">
+                <div id="barcode-reader"></div>
+                <div class="result-display">
+                    <strong>Resultado Código de Barras:</strong>
+                    <div id="barcode-result">Esperando código de barras...</div>
+                </div>
+                
+                <div class="form-group">
+                    <label>Formato esperado:</label>
+                    <select id="barcode-format">
+                        <option value="auto">Detección Automática</option>
+                        <option value="code128">CODE 128</option>
+                        <option value="code39">CODE 39</option>
+                        <option value="ean13">EAN-13</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label>Nombre del Activo:</label>
+                    <input type="text" id="barcode-nombre-activo" placeholder="Ej: Monitor Samsung">
+                </div>
+                
+                <div class="form-group">
+                    <label>Marca:</label>
+                    <input type="text" id="barcode-marca" placeholder="Ej: Samsung">
+                </div>
+                
+                <div class="form-group">
+                    <label>Modelo:</label>
+                    <input type="text" id="barcode-modelo" placeholder="Ej: 24 inch LED">
+                </div>
+                
+                <button class="btn" onclick="startBarcodeScanner()">📊 Iniciar Escáner Barcode</button>
+                <button class="btn btn-secondary" onclick="stopScanner()">⏹️ Detener</button>
+            </div>
+            
+            <div id="status-message"></div>
+        </div>
+        
+        <!-- SECCIÓN DE GENERADOR -->
+        <div class="generator-section">
+            <h2 class="section-title">🎨 Generador de Códigos</h2>
+            
+            <div class="tabs">
+                <button class="tab-button active" onclick="switchGeneratorTab('qr')">📱 Generar QR</button>
+                <button class="tab-button" onclick="switchGeneratorTab('barcode')">📊 Generar Barcode</button>
+            </div>
+            
+            <!-- TAB QR GENERATOR -->
+            <div id="qr-generator-tab" class="tab-content active">
+                <div class="form-group">
+                    <label>Texto para el QR:</label>
+                    <input type="text" id="qr-text" placeholder="Texto o URL" value="SISEG-ACTIVO-001">
+                </div>
+                
+                <button class="btn" onclick="generateQR()">🎨 Generar QR</button>
+                <button class="btn btn-secondary" onclick="downloadQR()">💾 Descargar QR</button>
+                
+                <div id="qr-generated-container">
+                    <img id="qr-generated-image" class="generated-image" style="display: none;">
+                </div>
+            </div>
+            
+            <!-- TAB BARCODE GENERATOR -->
+            <div id="barcode-generator-tab" class="tab-content">
+                <div class="form-group">
+                    <label>Código para el Barcode:</label>
+                    <input type="text" id="barcode-code" placeholder="Código numérico" value="123456789012">
+                </div>
+                
+                <div class="form-group">
+                    <label>Formato:</label>
+                    <select id="barcode-gen-format">
+                        <option value="code128">CODE 128</option>
+                        <option value="code39">CODE 39</option>
+                        <option value="ean13">EAN-13</option>
+                    </select>
+                </div>
+                
+                <button class="btn" onclick="generateBarcode()">📊 Generar Barcode</button>
+                <button class="btn btn-secondary" onclick="downloadBarcode()">💾 Descargar Barcode</button>
+                
+                <div id="barcode-generated-container">
+                    <img id="barcode-generated-image" class="generated-image" style="display: none;">
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- SECCIÓN DE REGISTROS -->
+    <div class="records-section">
+        <h2 class="section-title">📋 Últimos Registros</h2>
+        <button class="btn" onclick="loadRecords()">🔄 Actualizar Registros</button>
+        
+        <div class="records-grid" id="records-container">
+            {% for registro in registros %}
+            <div class="record-item">
+                <div><strong>{{ registro.get_tipo_codigo_display }}:</strong> {{ registro.codigo }}</div>
+                <div><strong>Fecha:</strong> {{ registro.fecha|date:"d/m/Y H:i" }}</div>
+                {% if registro.nombre_activo %}
+                <div><strong>Activo:</strong> {{ registro.nombre_activo }}</div>
+                {% endif %}
+                {% if registro.marca_activo %}
+                <div><strong>Marca:</strong> {{ registro.marca_activo }}</div>
+                {% endif %}
+                {% if registro.modelo_activo %}
+                <div><strong>Modelo:</strong> {{ registro.modelo_activo }}</div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <script>
+        let html5QrcodeScanner = null;
+        let isScanning = false;
+        
+        // Cambiar tabs del escáner
+        function switchScannerTab(type) {
+            document.querySelectorAll('#scanner-section .tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('#scanner-section .tab-content').forEach(tab => tab.classList.remove('active'));
+            
+            if (type === 'qr') {
+                document.querySelector('[onclick="switchScannerTab(\'qr\')"]').classList.add('active');
+                document.getElementById('qr-scanner-tab').classList.add('active');
+            } else {
+                document.querySelector('[onclick="switchScannerTab(\'barcode\')"]').classList.add('active');
+                document.getElementById('barcode-scanner-tab').classList.add('active');
+            }
+            
+            stopScanner();
+        }
+        
+        // Cambiar tabs del generador
+        function switchGeneratorTab(type) {
+            document.querySelectorAll('.generator-section .tab-button').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.generator-section .tab-content').forEach(tab => tab.classList.remove('active'));
+            
+            if (type === 'qr') {
+                document.querySelector('[onclick="switchGeneratorTab(\'qr\')"]').classList.add('active');
+                document.getElementById('qr-generator-tab').classList.add('active');
+            } else {
+                document.querySelector('[onclick="switchGeneratorTab(\'barcode\')"]').classList.add('active');
+                document.getElementById('barcode-generator-tab').classList.add('active');
+            }
+        }
+        
+        // Iniciar escáner QR
+        function startQRScanner() {
+            if (isScanning) {
+                stopScanner();
+            }
+            
+            const config = {
+                fps: 10,
+                qrbox: { width: 250, height: 250 },
+                aspectRatio: 1.0
+            };
+            
+            html5QrcodeScanner = new Html5Qrcode("reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText, decodedResult) => {
+                    document.getElementById('qr-result').innerText = decodedText;
+                    showStatus(`✅ QR detectado: ${decodedText}`, 'success');
+                    
+                    // Auto-guardar el QR
+                    saveQRCode(decodedText);
+                },
+                (errorMessage) => {
+                    // Error de escaneo - ignorar para no spam
+                }
+            ).then(() => {
+                isScanning = true;
+                showStatus('🎥 Escáner QR iniciado', 'success');
+            }).catch(err => {
+                showStatus(`❌ Error iniciando escáner: ${err}`, 'error');
+            });
+        }
+        
+        // Iniciar escáner de códigos de barras
+        function startBarcodeScanner() {
+            if (isScanning) {
+                stopScanner();
+            }
+            
+            const config = {
+                fps: 10,
+                qrbox: { width: 300, height: 150 },
+                aspectRatio: 2.0,
+                supportedScanTypes: [
+                    Html5QrcodeScanType.SCAN_TYPE_BARCODE
+                ]
+            };
+            
+            html5QrcodeScanner = new Html5Qrcode("barcode-reader");
+            
+            html5QrcodeScanner.start(
+                { facingMode: "environment" },
+                config,
+                (decodedText, decodedResult) => {
+                    document.getElementById('barcode-result').innerText = decodedText;
+                    showStatus(`✅ Código de barras detectado: ${decodedText}`, 'success');
+                    
+                    // Auto-guardar el código de barras
+                    saveBarcodeCode(decodedText);
+                },
+                (errorMessage) => {
+                    // Error de escaneo - ignorar para no spam
+                }
+            ).then(() => {
+                isScanning = true;
+                showStatus('📊 Escáner de códigos de barras iniciado', 'success');
+            }).catch(err => {
+                showStatus(`❌ Error iniciando escáner: ${err}`, 'error');
+            });
+        }
+        
+        // Detener escáner
+        function stopScanner() {
+            if (html5QrcodeScanner && isScanning) {
+                html5QrcodeScanner.stop().then(() => {
+                    isScanning = false;
+                    showStatus('⏹️ Escáner detenido', 'success');
+                }).catch(err => {
+                    showStatus('❌ Error deteniendo escáner', 'error');
+                });
+            }
+        }
+        
+        // Guardar código QR
+        function saveQRCode(codigo) {
+            const data = {
+                codigo_qr: codigo,
+                nombre_activo: document.getElementById('qr-nombre-activo').value,
+                marca_activo: document.getElementById('qr-marca').value,
+                modelo_activo: document.getElementById('qr-modelo').value
+            };
+            
+            fetch('/qr/registrar_qr/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showStatus('💾 QR guardado exitosamente', 'success');
+                    loadRecords();
+                } else {
+                    showStatus('❌ Error guardando QR', 'error');
+                }
+            });
+        }
+        
+        // Guardar código de barras
+        function saveBarcodeCode(codigo) {
+            const formato = document.getElementById('barcode-format').value;
+            const data = {
+                codigo_barras: codigo,
+                formato_barcode: formato === 'auto' ? 'CODE128' : formato.toUpperCase(),
+                nombre_activo: document.getElementById('barcode-nombre-activo').value,
+                marca_activo: document.getElementById('barcode-marca').value,
+                modelo_activo: document.getElementById('barcode-modelo').value
+            };
+            
+            fetch('/qr/registrar_barcode/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    showStatus('💾 Código de barras guardado exitosamente', 'success');
+                    loadRecords();
+                } else {
+                    showStatus('❌ Error guardando código de barras', 'error');
+                }
+            });
+        }
+        
+        // Generar código QR
+        function generateQR() {
+            const texto = document.getElementById('qr-text').value;
+            
+            fetch('/qr/generar_qr_base64/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ texto: texto })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const img = document.getElementById('qr-generated-image');
+                    img.src = data.qr_base64;
+                    img.style.display = 'block';
+                    showStatus('✅ QR generado exitosamente', 'success');
+                } else {
+                    showStatus('❌ Error generando QR', 'error');
+                }
+            });
+        }
+        
+        // Generar código de barras
+        function generateBarcode() {
+            const codigo = document.getElementById('barcode-code').value;
+            const formato = document.getElementById('barcode-gen-format').value;
+            
+            fetch('/qr/generar_barcode_base64/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ 
+                    codigo: codigo,
+                    formato: formato 
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'ok') {
+                    const img = document.getElementById('barcode-generated-image');
+                    img.src = data.barcode_base64;
+                    img.style.display = 'block';
+                    showStatus('✅ Código de barras generado exitosamente', 'success');
+                } else {
+                    showStatus(`❌ Error: ${data.error}`, 'error');
+                }
+            });
+        }
+        
+        // Descargar QR
+        function downloadQR() {
+            const texto = document.getElementById('qr-text').value;
+            window.open(`/qr/generar_qr_imagen/?texto=${encodeURIComponent(texto)}`, '_blank');
+        }
+        
+        // Descargar código de barras
+        function downloadBarcode() {
+            const codigo = document.getElementById('barcode-code').value;
+            const formato = document.getElementById('barcode-gen-format').value;
+            window.open(`/qr/generar_barcode_imagen/?codigo=${encodeURIComponent(codigo)}&formato=${formato}`, '_blank');
+        }
+        
+        // Cargar registros
+        function loadRecords() {
+            fetch('/qr/ultimos_registros/')
+            .then(response => response.json())
+            .then(data => {
+                const container = document.getElementById('records-container');
+                container.innerHTML = '';
+                
+                data.registros.forEach(registro => {
+                    const div = document.createElement('div');
+                    div.className = 'record-item';
+                    div.innerHTML = `
+                        <div><strong>${registro.tipo === 'QR' ? 'Código QR' : 'Código de Barras'}:</strong> ${registro.codigo}</div>
+                        <div><strong>Fecha:</strong> ${registro.fecha}</div>
+                        ${registro.nombre_activo ? `<div><strong>Activo:</strong> ${registro.nombre_activo}</div>` : ''}
+                        ${registro.marca_activo ? `<div><strong>Marca:</strong> ${registro.marca_activo}</div>` : ''}
+                        ${registro.modelo_activo ? `<div><strong>Modelo:</strong> ${registro.modelo_activo}</div>` : ''}
+                        ${registro.formato_barcode ? `<div><strong>Formato:</strong> ${registro.formato_barcode}</div>` : ''}
+                    `;
+                    container.appendChild(div);
+                });
+            });
+        }
+        
+        // Mostrar mensaje de estado
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('status-message');
+            statusDiv.innerHTML = `<div class="status-message status-${type}">${message}</div>`;
+            
+            setTimeout(() => {
+                statusDiv.innerHTML = '';
+            }, 3000);
+        }
+        
+        // Cargar registros al iniciar
+        document.addEventListener('DOMContentLoaded', function() {
+            loadRecords();
+        });
+    </script>
+</body>
+</html>
