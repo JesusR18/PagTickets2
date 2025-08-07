@@ -3,8 +3,8 @@ builder = "nixpacks"
 buildCommand = "python manage.py collectstatic --noinput"
 
 [deploy]
-healthcheckPath = "/ping/"
-healthcheckTimeout = 30
+healthcheckPath = "/health/"
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
 replicas = 1
 startCommand = "python manage.py migrate --noinput && gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 1"

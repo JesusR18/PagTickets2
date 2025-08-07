@@ -7,9 +7,8 @@ from .settings import *
 import os
 import dj_database_url
 
-# Agregar middleware específico para Railway
+# Middleware simplificado para Railway
 MIDDLEWARE = [
-    'pagTickets.railway_middleware.RailwayHealthCheckMiddleware',  # Primero para healthcheck rápido
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
@@ -41,6 +40,9 @@ ALLOWED_HOSTS = [
 import os
 if os.environ.get('RAILWAY_ENVIRONMENT') == 'production':
     ALLOWED_HOSTS.append('*')  # Solo en Railway
+
+# Deshabilitar autenticación para healthcheck en Railway
+RAILWAY_DISABLE_AUTH = True
 
 # Dominios confiables para CSRF
 CSRF_TRUSTED_ORIGINS = [
@@ -122,16 +124,13 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # SEGURIDAD RAILWAY
 # =================================
 
-# SSL y HTTPS
-SECURE_SSL_REDIRECT = False  # Railway maneja SSL
+# SSL y HTTPS - Simplificado para Railway
+SECURE_SSL_REDIRECT = False  # Railway maneja SSL automáticamente
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
 
-# Cookies seguras
-SESSION_COOKIE_SECURE = True
-CSRF_COOKIE_SECURE = True
+# Cookies - Relajado para debugging
+SESSION_COOKIE_SECURE = False  # Temporal para healthcheck
+CSRF_COOKIE_SECURE = False     # Temporal para healthcheck
 
 # =================================
 # CORS PARA RAILWAY
