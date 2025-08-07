@@ -7,7 +7,7 @@ healthcheckPath = "/ping/"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
 replicas = 1
-startCommand = "python manage.py migrate --noinput && gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --timeout 30 --max-requests 1000 --preload"
+startCommand = "python manage.py migrate --noinput && gunicorn pagTickets.wsgi:application --bind 0.0.0.0:$PORT --workers 1"
 
 [variables]
 DJANGO_SETTINGS_MODULE = "pagTickets.settings_ultra_simple"

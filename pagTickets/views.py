@@ -167,9 +167,14 @@ def quick_health(request):
 
 # Función principal que muestra la página de inicio con el escáner QR
 def index(request):
-    # Verificar autenticación antes de mostrar la página
-    if not verificar_autenticacion(request):
-        return redirect('login')
+    # En Railway, saltar autenticación temporalmente para pruebas
+    if 'RAILWAY_ENVIRONMENT' in os.environ:
+        # Autenticación automática en Railway
+        request.session['autenticado'] = True
+    else:
+        # Verificar autenticación normal en local
+        if not verificar_autenticacion(request):
+            return redirect('login')
     
     # Obtiene los últimos activos escaneados desde RegistroQR
     registros_qr = RegistroQR.objects.order_by('-fecha_registro')[:50]
