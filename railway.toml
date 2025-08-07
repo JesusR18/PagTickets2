@@ -8,7 +8,7 @@ replicas = 1
 startCommand = "bash start.sh"
 
 [variables]
-DJANGO_SETTINGS_MODULE = "pagTickets.settings_minimal"
+DJANGO_SETTINGS_MODULE = "pagTickets.settings_railway"
 DEBUG = "True"
 RAILWAY_ENVIRONMENT = "production"
 PYTHONPATH = "/app"

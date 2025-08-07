@@ -1,16 +1,36 @@
 #!/usr/bin/env python
 """
 Test script para verificar que la aplicación SISEG funciona correctamente
-después de las correcciones de importación
+después de las correcciones de importación - VERSION RAILWAY
 """
 
 import os
 import sys
 import django
 
-# Configurar Django
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pagTickets.settings')
+# Configurar Django con configuración Railway
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'pagTickets.settings_railway')
 django.setup()
+
+def test_qrweb_models():
+    """Test de modelos de qrweb"""
+    print("🧪 Probando modelos de qrweb...")
+    
+    try:
+        from qrweb.models import QRRegistro
+        from qrweb import views
+        print("✅ Import de QRRegistro exitoso")
+        print("✅ Import de qrweb.views exitoso")
+        
+        # Test crear registro QR (sin guardar en DB)
+        test_qr = QRRegistro(codigo="TEST_QR_12345")
+        print(f"✅ Modelo QRRegistro funcional: {test_qr}")
+        
+        return True
+        
+    except Exception as e:
+        print(f"❌ Error en test de qrweb: {e}")
+        return False
 
 def test_api_services():
     """Test de los servicios de API"""
@@ -97,6 +117,7 @@ def main():
     
     # Ejecutar tests
     resultados.append(test_views_import())
+    resultados.append(test_qrweb_models())
     resultados.append(test_api_services())
     resultados.append(test_url_patterns())
     
