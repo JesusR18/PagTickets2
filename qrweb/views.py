@@ -34,6 +34,17 @@ def qr_home(request):
     }
     return render(request, 'qrweb/qr_barcode_scanner.html', context)
 
+# Nueva vista específica SOLO para escanear códigos de barras
+def barcode_scanner(request):
+    # Obtiene los últimos registros de códigos de barras únicamente
+    registros = QRRegistro.objects.filter(tipo_codigo='barcode').order_by('-fecha')[:20]
+    context = {
+        'registros': registros,
+        'barcode_available': BARCODE_AVAILABLE,
+        'solo_barcode': True  # Flag para indicar que es solo para códigos de barras
+    }
+    return render(request, 'qrweb/barcode_scanner_simple.html', context)
+
 # Decorador que permite recibir peticiones POST sin validación CSRF
 @csrf_exempt
 # Función que guarda un nuevo código QR en la base de datos

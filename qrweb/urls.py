@@ -5,6 +5,9 @@ urlpatterns = [
     # Página principal con escáner QR/Barcode
     path('', views.qr_home, name='qr_home'),
     
+    # Página específica SOLO para escanear códigos de barras
+    path('barcode/', views.barcode_scanner, name='barcode_scanner'),
+    
     # APIs para registrar códigos
     path('registrar_qr/', views.registrar_qr, name='qr_registrar'),
     path('registrar_barcode/', views.registrar_barcode, name='barcode_registrar'),

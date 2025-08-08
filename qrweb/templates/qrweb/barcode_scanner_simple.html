@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SISEG - Escáner de Códigos de Barras</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #7f1d1d 0%, #991b1b 50%, #b91c1c 100%);
+            min-height: 100vh;
+            color: white;
+            padding: 10px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 20px;
+            color: #333;
+        }
+        
+        .scanner-section {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #991b1b, #dc2626);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(153, 27, 27, 0.4);
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(135deg, #6b7280, #4b5563);
+        }
+        
+        .camera-container {
+            position: relative;
+            max-width: 100%;
+            margin: 20px auto;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            display: none;
+        }
+        
+        #barcode-video {
+            width: 100%;
+            height: auto;
+        }
+        
+        .scanner-overlay {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 200px;
+            height: 100px;
+            border: 3px solid #f59e0b;
+            border-radius: 10px;
+            box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.5);
+            pointer-events: none;
+        }
+        
+        .scanner-overlay::after {
+            content: '📊 Código de Barras';
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(245, 158, 11, 0.9);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 8px;
+            font-size: 14px;
+            font-weight: bold;
+            white-space: nowrap;
+        }
+        
+        .result-section {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            margin: 20px 0;
+            display: none;
+        }
+        
+        .result-section.success {
+            background: #ecfdf5;
+            border: 2px solid #10b981;
+        }
+        
+        .registros-section {
+            margin-top: 30px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+            color: white;
+            font-weight: bold;
+        }
+        
+        tr:hover {
+            background-color: #f9fafb;
+        }
+        
+        .status-message {
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+            text-align: center;
+            font-weight: bold;
+        }
+        
+        .status-scanning {
+            background: #fef3c7;
+            color: #92400e;
+            border: 2px solid #f59e0b;
+        }
+        
+        .status-success {
+            background: #dcfce7;
+            color: #166534;
+            border: 2px solid #10b981;
+        }
+        
+        .status-error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 2px solid #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>📊 Escáner de Códigos de Barras</h1>
+        <p>Especializado en lectura de códigos UPC, EAN, Code128 y más</p>
+        <a href="/" class="btn btn-secondary">🏠 Volver al Inicio</a>
+    </div>
+
+    <div class="container">
+        <div class="scanner-section">
+            <h2>📷 Escáner Activo</h2>
+            <p>Enfoca el código de barras dentro del área marcada</p>
+            
+            <button id="start-scanner" class="btn btn-primary" onclick="iniciarEscaner()">
+                📊 Iniciar Escáner de Códigos de Barras
+            </button>
+            
+            <button id="stop-scanner" class="btn" onclick="detenerEscaner()" style="display: none;">
+                ⏹️ Detener Escáner
+            </button>
+            
+            <div id="camera-container" class="camera-container">
+                <video id="barcode-video" autoplay playsinline></video>
+                <div class="scanner-overlay"></div>
+            </div>
+            
+            <div id="scanner-status" class="status-message status-scanning" style="display: none;">
+                🔍 Buscando códigos de barras...
+            </div>
+        </div>
+
+        <div id="result-section" class="result-section">
+            <h3>✅ Código Detectado</h3>
+            <p><strong>Código:</strong> <span id="codigo-detectado"></span></p>
+            <p><strong>Tipo:</strong> <span id="tipo-detectado"></span></p>
+            <button onclick="guardarCodigo()" class="btn btn-primary">💾 Guardar en Base de Datos</button>
+        </div>
+
+        <div class="registros-section">
+            <h3>📋 Últimos Códigos de Barras Escaneados</h3>
+            {% if registros %}
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Código</th>
+                            <th>Tipo</th>
+                            <th>Fecha</th>
+                            <th>Activo</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for registro in registros %}
+                        <tr>
+                            <td>{{ registro.codigo }}</td>
+                            <td>{{ registro.get_tipo_codigo_display }}</td>
+                            <td>{{ registro.fecha|date:"d/m/Y H:i" }}</td>
+                            <td>{{ registro.nombre_activo|default:"--" }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            {% else %}
+                <div class="status-message">
+                    📋 No hay códigos de barras registrados aún
+                </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Librerías para códigos de barras -->
+    <script src="https://unpkg.com/@zxing/library@latest"></script>
+    
+    <script>
+        let codeReader = null;
+        let scanning = false;
+        let ultimoCodigoDetectado = null;
+
+        // Función para iniciar el escáner
+        async function iniciarEscaner() {
+            try {
+                // Crear instancia del lector de códigos
+                codeReader = new ZXing.BrowserMultiFormatReader();
+                
+                // Mostrar elementos del escáner
+                document.getElementById('camera-container').style.display = 'block';
+                document.getElementById('scanner-status').style.display = 'block';
+                document.getElementById('start-scanner').style.display = 'none';
+                document.getElementById('stop-scanner').style.display = 'inline-block';
+                
+                scanning = true;
+                
+                // Iniciar el escáner
+                const videoElement = document.getElementById('barcode-video');
+                
+                codeReader.decodeFromVideoDevice(null, videoElement, (result, err) => {
+                    if (result && scanning) {
+                        // Código detectado exitosamente
+                        const codigo = result.text;
+                        const formato = result.format;
+                        
+                        // Evitar duplicados inmediatos
+                        if (ultimoCodigoDetectado !== codigo) {
+                            ultimoCodigoDetectado = codigo;
+                            mostrarResultado(codigo, formato);
+                        }
+                    }
+                    
+                    if (err && !(err instanceof ZXing.NotFoundException)) {
+                        console.error('Error del escáner:', err);
+                    }
+                });
+                
+                console.log('✅ Escáner de códigos de barras iniciado');
+                
+            } catch (error) {
+                console.error('❌ Error iniciando escáner:', error);
+                mostrarError('Error iniciando la cámara. Verifica los permisos.');
+            }
+        }
+
+        // Función para detener el escáner
+        function detenerEscaner() {
+            if (codeReader) {
+                codeReader.reset();
+                codeReader = null;
+            }
+            
+            scanning = false;
+            
+            // Ocultar elementos del escáner
+            document.getElementById('camera-container').style.display = 'none';
+            document.getElementById('scanner-status').style.display = 'none';
+            document.getElementById('start-scanner').style.display = 'inline-block';
+            document.getElementById('stop-scanner').style.display = 'none';
+            
+            console.log('⏹️ Escáner detenido');
+        }
+
+        // Función para mostrar el resultado
+        function mostrarResultado(codigo, formato) {
+            document.getElementById('codigo-detectado').textContent = codigo;
+            document.getElementById('tipo-detectado').textContent = formato;
+            document.getElementById('result-section').style.display = 'block';
+            document.getElementById('result-section').className = 'result-section success';
+            
+            // Cambiar estado a éxito
+            const status = document.getElementById('scanner-status');
+            status.className = 'status-message status-success';
+            status.textContent = '✅ ¡Código de barras detectado!';
+            
+            console.log(`📊 Código detectado: ${codigo} (${formato})`);
+        }
+
+        // Función para mostrar errores
+        function mostrarError(mensaje) {
+            const status = document.getElementById('scanner-status');
+            status.className = 'status-message status-error';
+            status.textContent = `❌ ${mensaje}`;
+            status.style.display = 'block';
+        }
+
+        // Función para guardar el código en la base de datos
+        async function guardarCodigo() {
+            const codigo = document.getElementById('codigo-detectado').textContent;
+            const tipo = document.getElementById('tipo-detectado').textContent;
+            
+            if (!codigo) {
+                alert('❌ No hay código para guardar');
+                return;
+            }
+            
+            try {
+                const response = await fetch('/qr/registrar_barcode/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        codigo_barcode: codigo,
+                        formato_barcode: tipo,
+                        nombre_activo: `Código ${tipo}`,
+                        marca_activo: 'Escaneado',
+                        modelo_activo: 'Manual'
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert('✅ Código guardado exitosamente');
+                    // Recargar la página para mostrar el nuevo registro
+                    location.reload();
+                } else {
+                    alert(`❌ Error guardando: ${data.message}`);
+                }
+                
+            } catch (error) {
+                console.error('Error guardando código:', error);
+                alert('❌ Error de conexión al guardar');
+            }
+        }
+
+        // Cleanup al cerrar la página
+        window.addEventListener('beforeunload', () => {
+            if (codeReader) {
+                codeReader.reset();
+            }
+        });
+
+        console.log('🚀 Escáner de códigos de barras listo');
+    </script>
+</body>
+</html>
