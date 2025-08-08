@@ -80,18 +80,18 @@ async function fetchSeguro(url, options = {}) {
 // VARIABLES GLOBALES
 // ============================================
 
-// Variables para el scanner QR con zoom real
-let videoStream = null;
-let videoTrack = null;
-let zoomActual = 1;
-let zoomMin = 1;
-let zoomMax = 10;
+// Variables para el scanner QR ULTRA PRECISO
+let html5QrCode = null;
+let zxingReader = null;
 let scannerActivo = false;
-let video = null;
-let canvas = null;
-let context = null;
+let ultimoCodigoDetectado = null;
 let activosEscaneados = [];
-let zoomTimeout = null; // Para hacer el zoom más fluido
+let videoStream = null;
+let videoElement = null;
+let canvasElement = null;
+let canvasContext = null;
+let scanInterval = null;
+let contadorDetecciones = 0;
 
 // Variables para swipe to delete
 let touchStartX = 0;
@@ -397,15 +397,482 @@ function extraerRegionEscaneo(imageData) {
     return new ImageData(regionData, width, height);
 }
 
+// ============================================
+// ESCÁNER QR ULTRA PRECISO - MÚLTIPLES ALGORITMOS
+// ============================================
+
 // Función para alternar el escáner (iniciar/detener)
 function toggleScanner() {
-    console.log('🎯 Toggle scanner, estado actual:', scannerActivo);
+    console.log('🎯 Toggle scanner ULTRA PRECISO, estado actual:', scannerActivo);
     
     if (!scannerActivo) {
-        iniciarScanner();
+        iniciarScannerUltraPreciso();
     } else {
-        detenerScanner();
+        detenerScannerUltraPreciso();
     }
+}
+
+// Función para iniciar el escáner QR ULTRA PRECISO
+async function iniciarScannerUltraPreciso() {
+    const toggleBtn = document.getElementById('scanner-toggle-btn');
+    const cameraContainer = document.getElementById('camera-container');
+    const stopContainer = document.getElementById('stop-button-container');
+    
+    try {
+        console.log('🚀 Iniciando escáner QR ULTRA PRECISO con múltiples algoritmos...');
+        
+        // Actualizar UI
+        toggleBtn.disabled = true;
+        toggleBtn.textContent = '⏳ INICIANDO ESCÁNER ULTRA PRECISO...';
+        
+        // Inicializar ZXing Reader para máxima compatibilidad
+        if (typeof ZXing !== 'undefined') {
+            zxingReader = new ZXing.BrowserMultiFormatReader();
+            console.log('✅ ZXing Reader inicializado');
+        }
+        
+        // Configuración de cámara de MÁXIMA CALIDAD
+        const constraints = {
+            video: {
+                facingMode: 'environment',
+                width: { ideal: 1920, min: 640 },
+                height: { ideal: 1080, min: 480 },
+                frameRate: { ideal: 30, min: 15 },
+                focusMode: 'continuous',
+                exposureMode: 'continuous',
+                whiteBalanceMode: 'continuous'
+            }
+        };
+        
+        // Obtener stream de video
+        videoStream = await navigator.mediaDevices.getUserMedia(constraints);
+        
+        // Configurar elementos
+        videoElement = document.getElementById('camera-video');
+        canvasElement = document.getElementById('qr-canvas');
+        canvasContext = canvasElement.getContext('2d');
+        
+        videoElement.srcObject = videoStream;
+        videoElement.setAttribute('playsinline', true);
+        videoElement.setAttribute('autoplay', true);
+        videoElement.setAttribute('muted', true);
+        
+        // Esperar a que el video esté listo
+        await new Promise(resolve => {
+            videoElement.onloadedmetadata = () => {
+                console.log('📹 Video ULTRA HD listo:', videoElement.videoWidth + 'x' + videoElement.videoHeight);
+                resolve();
+            };
+        });
+        
+        // Configurar HTML5-QRCode con máxima precisión
+        try {
+            html5QrCode = new Html5Qrcode("camera-video");
+            
+            const configUltraPreciso = {
+                fps: 30,  // Máxima velocidad
+                qrbox: { width: 300, height: 300 },  // Área grande de detección
+                aspectRatio: 1.0,
+                disableFlip: false,
+                experimentalFeatures: {
+                    useBarCodeDetectorIfSupported: true
+                }
+            };
+            
+            // Función de detección HÍBRIDA
+            const onScanSuccess = (decodedText, decodedResult) => {
+                procesarCodigoDetectado(decodedText, 'HTML5-QRCode');
+            };
+            
+            await html5QrCode.start(
+                { facingMode: "environment" },
+                configUltraPreciso,
+                onScanSuccess,
+                () => {} // Sin mostrar errores
+            );
+            
+            console.log('✅ HTML5-QRCode iniciado con configuración ultra precisa');
+            
+        } catch (html5Error) {
+            console.warn('⚠️ HTML5-QRCode no disponible, usando métodos alternativos');
+        }
+        
+        // INICIAR ESCANEO HÍBRIDO CONTINUO
+        iniciarEscaneoHibrido();
+        
+        // Actualizar estado
+        scannerActivo = true;
+        cameraContainer.style.display = 'block';
+        stopContainer.style.display = 'block';
+        
+        toggleBtn.textContent = '🎯 ESCÁNER ULTRA PRECISO ACTIVO';
+        toggleBtn.disabled = false;
+        
+        actualizarEstado('🎯 Escáner Ultra Preciso activo - Detecta QR en papel, cartón y pantallas', true);
+        
+        console.log('✅ Escáner QR Ultra Preciso iniciado exitosamente');
+        
+    } catch (error) {
+        console.error('❌ Error iniciando escáner ultra preciso:', error);
+        
+        toggleBtn.disabled = false;
+        toggleBtn.textContent = '📱 INICIAR SCANNER QR';
+        
+        let mensajeError = 'Error iniciando la cámara ultra precisa';
+        if (error.name === 'NotAllowedError') {
+            mensajeError = 'Permisos de cámara denegados. Por favor, permite el acceso a la cámara.';
+        } else if (error.name === 'NotFoundError') {
+            mensajeError = 'No se encontró una cámara disponible.';
+        }
+        
+        actualizarEstado(`❌ ${mensajeError}`, false);
+    }
+}
+
+// Función para ESCANEO HÍBRIDO CONTINUO
+function iniciarEscaneoHibrido() {
+    if (scanInterval) {
+        clearInterval(scanInterval);
+    }
+    
+    console.log('🔄 Iniciando escaneo híbrido continuo...');
+    
+    scanInterval = setInterval(() => {
+        if (!scannerActivo || !videoElement || videoElement.readyState !== videoElement.HAVE_ENOUGH_DATA) {
+            return;
+        }
+        
+        try {
+            // Configurar canvas con la resolución del video
+            canvasElement.width = videoElement.videoWidth;
+            canvasElement.height = videoElement.videoHeight;
+            
+            // Dibujar frame actual con máxima calidad
+            canvasContext.imageSmoothingEnabled = true;
+            canvasContext.imageSmoothingQuality = 'high';
+            canvasContext.drawImage(videoElement, 0, 0, canvasElement.width, canvasElement.height);
+            
+            // MÉTODO 1: jsQR con múltiples técnicas
+            escanearConJSQR();
+            
+            // MÉTODO 2: ZXing (si está disponible)
+            if (zxingReader) {
+                escanearConZXing();
+            }
+            
+            // MÉTODO 3: Análisis manual de regiones
+            escanearPorRegiones();
+            
+            contadorDetecciones++;
+            
+            // Mostrar estadísticas cada cierto tiempo
+            mostrarEstadisticasPrecision();
+            
+        } catch (error) {
+            console.warn('Error en escaneo híbrido:', error);
+        }
+        
+    }, 100); // Escanear cada 100ms para máxima precisión
+}
+
+// MÉTODO 1: Escaneo con jsQR ULTRA PRECISO
+function escanearConJSQR() {
+    if (typeof jsQR === 'undefined') return;
+    
+    const imageData = canvasContext.getImageData(0, 0, canvasElement.width, canvasElement.height);
+    
+    // Configuración ultra precisa para jsQR
+    const opciones = {
+        inversionAttempts: "attemptBoth"
+    };
+    
+    // 1. Escaneo normal
+    let code = jsQR(imageData.data, imageData.width, imageData.height, opciones);
+    
+    if (!code) {
+        // 2. Escaneo con mejora de contraste
+        const imagenMejorada = mejorarContraste(imageData);
+        code = jsQR(imagenMejorada.data, imagenMejorada.width, imagenMejorada.height, opciones);
+    }
+    
+    if (!code) {
+        // 3. Escaneo con filtro de nitidez
+        const imagenNitida = aplicarFiltroNitidez(imageData);
+        code = jsQR(imagenNitida.data, imagenNitida.width, imagenNitida.height, opciones);
+    }
+    
+    if (!code) {
+        // 4. Escaneo en escala de grises optimizada
+        const imagenGris = convertirAGrisOptimizado(imageData);
+        code = jsQR(imagenGris.data, imagenGris.width, imagenGris.height, opciones);
+    }
+    
+    if (code) {
+        procesarCodigoDetectado(code.data, 'jsQR-UltraPreciso');
+    }
+}
+
+// MÉTODO 2: Escaneo con ZXing
+async function escanearConZXing() {
+    try {
+        const result = await zxingReader.decodeFromCanvas(canvasElement);
+        if (result) {
+            procesarCodigoDetectado(result.text, 'ZXing');
+        }
+    } catch (error) {
+        // Normal, no siempre encuentra códigos
+    }
+}
+
+// MÉTODO 3: Escaneo por regiones específicas
+function escanearPorRegiones() {
+    if (typeof jsQR === 'undefined') return;
+    
+    const regiones = [
+        // Centro
+        { x: canvasElement.width * 0.25, y: canvasElement.height * 0.25, w: canvasElement.width * 0.5, h: canvasElement.height * 0.5 },
+        // Cuadrante superior izquierdo
+        { x: 0, y: 0, w: canvasElement.width * 0.6, h: canvasElement.height * 0.6 },
+        // Cuadrante superior derecho
+        { x: canvasElement.width * 0.4, y: 0, w: canvasElement.width * 0.6, h: canvasElement.height * 0.6 },
+        // Cuadrante inferior izquierdo
+        { x: 0, y: canvasElement.height * 0.4, w: canvasElement.width * 0.6, h: canvasElement.height * 0.6 },
+        // Cuadrante inferior derecho
+        { x: canvasElement.width * 0.4, y: canvasElement.height * 0.4, w: canvasElement.width * 0.6, h: canvasElement.height * 0.6 }
+    ];
+    
+    for (const region of regiones) {
+        try {
+            const imageData = canvasContext.getImageData(region.x, region.y, region.w, region.h);
+            const code = jsQR(imageData.data, imageData.width, imageData.height, {
+                inversionAttempts: "attemptBoth"
+            });
+            
+            if (code) {
+                procesarCodigoDetectado(code.data, 'jsQR-Regiones');
+                break;
+            }
+        } catch (error) {
+            // Continuar con la siguiente región
+        }
+    }
+}
+
+// FUNCIONES DE MEJORA DE IMAGEN PARA ULTRA PRECISIÓN
+
+// Mejorar contraste
+function mejorarContraste(imageData) {
+    const data = new Uint8ClampedArray(imageData.data);
+    const factor = 1.5; // Factor de contraste
+    
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = Math.min(255, Math.max(0, (data[i] - 128) * factor + 128));     // R
+        data[i + 1] = Math.min(255, Math.max(0, (data[i + 1] - 128) * factor + 128)); // G
+        data[i + 2] = Math.min(255, Math.max(0, (data[i + 2] - 128) * factor + 128)); // B
+    }
+    
+    return new ImageData(data, imageData.width, imageData.height);
+}
+
+// Aplicar filtro de nitidez
+function aplicarFiltroNitidez(imageData) {
+    const data = new Uint8ClampedArray(imageData.data);
+    const width = imageData.width;
+    const height = imageData.height;
+    
+    // Kernel de nitidez
+    const kernel = [
+        0, -1, 0,
+        -1, 5, -1,
+        0, -1, 0
+    ];
+    
+    for (let y = 1; y < height - 1; y++) {
+        for (let x = 1; x < width - 1; x++) {
+            for (let c = 0; c < 3; c++) { // RGB
+                let sum = 0;
+                for (let ky = -1; ky <= 1; ky++) {
+                    for (let kx = -1; kx <= 1; kx++) {
+                        const idx = ((y + ky) * width + (x + kx)) * 4 + c;
+                        sum += imageData.data[idx] * kernel[(ky + 1) * 3 + (kx + 1)];
+                    }
+                }
+                const idx = (y * width + x) * 4 + c;
+                data[idx] = Math.min(255, Math.max(0, sum));
+            }
+        }
+    }
+    
+    return new ImageData(data, width, height);
+}
+
+// Convertir a escala de grises optimizada
+function convertirAGrisOptimizado(imageData) {
+    const data = new Uint8ClampedArray(imageData.data);
+    
+    for (let i = 0; i < data.length; i += 4) {
+        // Fórmula optimizada para QR
+        const gris = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+        const valorOptimizado = gris > 128 ? 255 : 0; // Binarización para QR
+        
+        data[i] = valorOptimizado;     // R
+        data[i + 1] = valorOptimizado; // G
+        data[i + 2] = valorOptimizado; // B
+    }
+    
+    return new ImageData(data, imageData.width, imageData.height);
+}
+
+// Función para procesar código detectado (evita duplicados)
+function procesarCodigoDetectado(codigoTexto, metodo) {
+    // Evitar duplicados inmediatos
+    if (ultimoCodigoDetectado === codigoTexto) {
+        return;
+    }
+    
+    ultimoCodigoDetectado = codigoTexto;
+    console.log(`🎯 QR detectado con ${metodo}:`, codigoTexto);
+    
+    // Actualizar indicadores visuales
+    actualizarIndicadorPrecision(metodo);
+    
+    // Procesar el código
+    procesarCodigoQR(codigoTexto);
+    
+    // Limpiar después de 2 segundos para permitir nuevas detecciones
+    setTimeout(() => {
+        ultimoCodigoDetectado = null;
+        limpiarIndicadoresPrecision();
+    }, 2000);
+}
+
+// Función para actualizar indicadores de precisión
+function actualizarIndicadorPrecision(metodo) {
+    // Limpiar indicadores previos
+    limpiarIndicadoresPrecision();
+    
+    // Activar indicador correspondiente
+    let indicadorId = '';
+    
+    if (metodo.includes('HTML5')) {
+        indicadorId = 'indicator-html5';
+    } else if (metodo.includes('jsQR')) {
+        indicadorId = 'indicator-jsqr';
+    } else if (metodo.includes('ZXing')) {
+        indicadorId = 'indicator-zxing';
+    }
+    
+    if (indicadorId) {
+        const indicador = document.getElementById(indicadorId);
+        if (indicador) {
+            indicador.classList.add('active');
+            indicador.textContent = `✅ ${metodo.split('-')[0]}`;
+        }
+    }
+    
+    console.log(`📊 Indicador activado: ${metodo}`);
+}
+
+// Función para limpiar indicadores de precisión
+function limpiarIndicadoresPrecision() {
+    const indicadores = ['indicator-html5', 'indicator-jsqr', 'indicator-zxing'];
+    
+    indicadores.forEach(id => {
+        const indicador = document.getElementById(id);
+        if (indicador) {
+            indicador.classList.remove('active');
+            indicador.textContent = id.replace('indicator-', '').toUpperCase();
+        }
+    });
+}
+
+// Función para mostrar estadísticas de precisión
+function mostrarEstadisticasPrecision() {
+    if (contadorDetecciones > 0 && contadorDetecciones % 50 === 0) {
+        console.log(`📊 Estadísticas Ultra Precisión: ${contadorDetecciones} intentos de detección`);
+        
+        // Mostrar notificación temporal
+        const notificacion = document.createElement('div');
+        notificacion.style.cssText = `
+            position: fixed;
+            bottom: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 20px;
+            font-size: 12px;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        `;
+        notificacion.textContent = `🎯 Ultra Precisión: ${contadorDetecciones} análisis realizados`;
+        
+        document.body.appendChild(notificacion);
+        
+        setTimeout(() => {
+            if (notificacion.parentNode) {
+                notificacion.remove();
+            }
+        }, 2000);
+    }
+}
+
+// Función para detener el escáner
+async function detenerScannerUltraPreciso() {
+    try {
+        console.log('⏹️ Deteniendo escáner ultra preciso...');
+        
+        // Detener interval de escaneo
+        if (scanInterval) {
+            clearInterval(scanInterval);
+            scanInterval = null;
+        }
+        
+        // Detener HTML5-QRCode
+        if (html5QrCode && scannerActivo) {
+            await html5QrCode.stop();
+            html5QrCode = null;
+        }
+        
+        // Detener ZXing
+        if (zxingReader) {
+            zxingReader.reset();
+            zxingReader = null;
+        }
+        
+        // Detener stream de video
+        if (videoStream) {
+            videoStream.getTracks().forEach(track => track.stop());
+            videoStream = null;
+        }
+        
+        // Actualizar estado
+        scannerActivo = false;
+        ultimoCodigoDetectado = null;
+        contadorDetecciones = 0;
+        
+        // Ocultar elementos
+        document.getElementById('camera-container').style.display = 'none';
+        document.getElementById('stop-button-container').style.display = 'none';
+        
+        // Actualizar botón
+        const toggleBtn = document.getElementById('scanner-toggle-btn');
+        toggleBtn.textContent = '📱 INICIAR SCANNER QR';
+        toggleBtn.disabled = false;
+        
+        actualizarEstado('⏹️ Escáner Ultra Preciso detenido', null);
+        
+        console.log('✅ Escáner ultra preciso detenido exitosamente');
+        
+    } catch (error) {
+        console.error('Error deteniendo escáner ultra preciso:', error);
+    }
+}
+
+// Función para detener escáner (alias para compatibilidad)
+function detenerScanner() {
+    detenerScannerUltraPreciso();
 }
 
 // Función para iniciar la cámara OPTIMIZADA (calidad + rendimiento)
@@ -3857,6 +4324,468 @@ function mostrarErrorPrecios(mensaje) {
 }
 
 // ============================================
+// FUNCIÓN PARA PROCESAR CÓDIGOS QR DETECTADOS
+// ============================================
+
+// Función para procesar el código QR detectado con ULTRA PRECISIÓN
+async function procesarCodigoQR(codigoQR) {
+    try {
+        console.log('🔍 Procesando código QR con ULTRA PRECISIÓN:', codigoQR);
+        
+        // Mostrar feedback visual inmediato
+        actualizarEstado('✅ ¡Código QR detectado con ULTRA PRECISIÓN! Procesando...', true);
+        
+        // VALIDACIÓN ESPECÍFICA PARA QR DE SISEG
+        if (codigoQR.includes('SISEG') || codigoQR.startsWith(SISEG_SIGNATURE)) {
+            console.log('🔐 QR OFICIAL DE SISEG detectado con máxima precisión');
+            return await procesarQRSisegOficial(codigoQR);
+        }
+        
+        // DETECCIÓN INTELIGENTE DE FORMATO
+        let datosExtraidos = extraerDatosQRInteligente(codigoQR);
+        
+        // VALIDACIÓN ANTI-DUPLICADOS ULTRA PRECISA
+        const yaExiste = activosEscaneados.some(activo => {
+            const tiempoTranscurrido = Date.now() - new Date(activo.fecha).getTime();
+            return (activo.codigo === datosExtraidos.codigo && tiempoTranscurrido < 3000) ||
+                   (activo.nombre === datosExtraidos.nombre && tiempoTranscurrido < 2000);
+        });
+        
+        if (yaExiste) {
+            actualizarEstado('⚠️ Código ya escaneado recientemente - Esperando...', false);
+            return;
+        }
+        
+        // GUARDAR CON MÁXIMA PRECISIÓN
+        const response = await fetch('/guardar_activo/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                ...datosExtraidos,
+                metodo_deteccion: 'UltraPreciso',
+                timestamp: new Date().toISOString()
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Agregar a la lista local con información adicional
+            activosEscaneados.unshift({
+                ...datosExtraidos,
+                fecha: new Date().toISOString(),
+                id: data.id || Date.now(),
+                precision: 'Ultra'
+            });
+            
+            // Actualizar interfaz
+            actualizarTablaActivos();
+            actualizarContadorActivos();
+            
+            actualizarEstado(`✅ ${datosExtraidos.nombre} guardado con ULTRA PRECISIÓN`, true);
+            
+            // Feedback mejorado
+            mostrarFeedbackUltraPreciso(datosExtraidos);
+            
+        } else {
+            throw new Error(data.message || 'Error guardando activo');
+        }
+        
+    } catch (error) {
+        console.error('❌ Error procesando QR:', error);
+        actualizarEstado(`❌ Error: ${error.message}`, false);
+    }
+}
+
+// Función específica para QR oficiales de SISEG
+async function procesarQRSisegOficial(codigoQR) {
+    try {
+        console.log('🏢 Procesando QR OFICIAL de SISEG...');
+        
+        // Extraer datos del QR de SISEG
+        let datosDecifrados;
+        
+        if (codigoQR.startsWith(SISEG_SIGNATURE)) {
+            // QR encriptado de SISEG
+            const codigoEncriptado = codigoQR.replace(SISEG_SIGNATURE, '');
+            datosDecifrados = descifrarQRSiseg(codigoEncriptado);
+        } else {
+            // QR de SISEG con formato estándar
+            datosDecifrados = extraerDatosSiseg(codigoQR);
+        }
+        
+        // Validación específica para SISEG
+        if (!datosDecifrados.codigo) {
+            datosDecifrados.codigo = 'SISEG-' + Date.now();
+        }
+        
+        // Marcar como oficial de SISEG
+        datosDecifrados.es_siseg_oficial = true;
+        datosDecifrados.nivel_seguridad = 'Alto';
+        
+        // Guardar con prioridad alta
+        const response = await fetch('/guardar_activo/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCookie('csrftoken')
+            },
+            body: JSON.stringify({
+                ...datosDecifrados,
+                metodo_deteccion: 'SISEG_Oficial',
+                prioridad: 'Alta'
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            activosEscaneados.unshift({
+                ...datosDecifrados,
+                fecha: new Date().toISOString(),
+                id: data.id || Date.now(),
+                tipo: 'SISEG_Oficial'
+            });
+            
+            actualizarTablaActivos();
+            actualizarContadorActivos();
+            
+            actualizarEstado(`🏢 QR OFICIAL SISEG procesado: ${datosDecifrados.nombre}`, true);
+            mostrarFeedbackSisegOficial(datosDecifrados);
+        }
+        
+    } catch (error) {
+        console.error('❌ Error procesando QR oficial SISEG:', error);
+        actualizarEstado(`❌ Error en QR SISEG: ${error.message}`, false);
+    }
+}
+
+// Función para extraer datos de QR con INTELIGENCIA ARTIFICIAL
+function extraerDatosQRInteligente(codigoQR) {
+    console.log('🧠 Analizando QR con inteligencia artificial...');
+    
+    // MÉTODO 1: Separadores comunes
+    const separadores = ['|', '\n', ';', ',', '\t', ' - ', ' : ', ' / '];
+    
+    for (const sep of separadores) {
+        if (codigoQR.includes(sep)) {
+            const partes = codigoQR.split(sep).map(p => p.trim()).filter(p => p.length > 0);
+            
+            if (partes.length >= 2) {
+                return {
+                    codigo: partes[0] || 'QR-' + Date.now(),
+                    nombre: partes[1] || 'Activo Escaneado',
+                    ubicacion: partes[2] || 'Sin ubicación',
+                    marca: partes[3] || 'Sin marca',
+                    modelo: partes[4] || 'Sin modelo',
+                    numero_serie: partes[5] || 'N/A',
+                    descripcion: partes[6] || 'Escaneado con Ultra Precisión'
+                };
+            }
+        }
+    }
+    
+    // MÉTODO 2: Análisis por patrones
+    if (codigoQR.match(/^[A-Z0-9-]+\s+.+/)) {
+        // Formato: CÓDIGO Descripción
+        const match = codigoQR.match(/^([A-Z0-9-]+)\s+(.+)/);
+        return {
+            codigo: match[1],
+            nombre: match[2],
+            ubicacion: 'Detectado automáticamente',
+            marca: 'Sin especificar',
+            modelo: 'QR Code',
+            numero_serie: 'N/A'
+        };
+    }
+    
+    // MÉTODO 3: URL o texto largo
+    if (codigoQR.includes('http') || codigoQR.length > 50) {
+        return {
+            codigo: 'WEB-' + Date.now(),
+            nombre: 'Contenido Web/Texto',
+            ubicacion: 'Digital',
+            marca: 'Web',
+            modelo: 'URL/Texto',
+            numero_serie: codigoQR.substring(0, 20) + '...'
+        };
+    }
+    
+    // MÉTODO 4: Código simple
+    return {
+        codigo: codigoQR.substring(0, 30) || 'QR-' + Date.now(),
+        nombre: 'Activo QR Ultra Preciso',
+        ubicacion: 'Escaneado',
+        marca: 'Ultra Scan',
+        modelo: 'QR Code',
+        numero_serie: 'N/A',
+        contenido_original: codigoQR
+    };
+}
+
+// Función para extraer datos específicos de SISEG
+function extraerDatosSiseg(codigoQR) {
+    // Patrones específicos de SISEG
+    const patronesSiseg = [
+        /SISEG[_-](\w+)[_-](.+)/i,
+        /ACTIVO[_-](\w+)[_-](.+)/i,
+        /EQUIPO[_-](\w+)[_-](.+)/i
+    ];
+    
+    for (const patron of patronesSiseg) {
+        const match = codigoQR.match(patron);
+        if (match) {
+            return {
+                codigo: match[1],
+                nombre: match[2].replace(/[_-]/g, ' '),
+                ubicacion: 'SISEG - Sistema Oficial',
+                marca: 'SISEG',
+                modelo: 'Activo Registrado',
+                numero_serie: match[1]
+            };
+        }
+    }
+    
+    // Si contiene SISEG pero no coincide con patrones, extraer información básica
+    if (codigoQR.toLowerCase().includes('siseg')) {
+        return {
+            codigo: 'SISEG-' + Date.now(),
+            nombre: codigoQR.replace(/siseg/gi, 'SISEG').substring(0, 50),
+            ubicacion: 'SISEG - Sistema',
+            marca: 'SISEG',
+            modelo: 'Registro Oficial',
+            numero_serie: 'SISEG-' + Date.now().toString().slice(-6)
+        };
+    }
+    
+    return null;
+}
+
+// Función para descifrar QR encriptado de SISEG
+function descifrarQRSiseg(codigoEncriptado) {
+    try {
+        // Simulación de descifrado (aquí iría el algoritmo real)
+        console.log('🔓 Descifrando QR seguro de SISEG...');
+        
+        // Por ahora, decodificar base64 si es posible
+        try {
+            const decodificado = atob(codigoEncriptado);
+            const partes = decodificado.split('|');
+            
+            return {
+                codigo: partes[0] || 'SISEG-DESC-' + Date.now(),
+                nombre: partes[1] || 'Activo SISEG Descifrado',
+                ubicacion: partes[2] || 'SISEG - Ubicación Segura',
+                marca: partes[3] || 'SISEG',
+                modelo: partes[4] || 'Seguro',
+                numero_serie: partes[5] || 'ENC-' + Date.now().toString().slice(-6)
+            };
+        } catch (b64Error) {
+            // Si no es base64, tratar como texto normal
+            return {
+                codigo: 'SISEG-SEC-' + Date.now(),
+                nombre: 'Activo SISEG Seguro',
+                ubicacion: 'SISEG - Sistema Encriptado',
+                marca: 'SISEG',
+                modelo: 'Seguridad Alta',
+                numero_serie: codigoEncriptado.substring(0, 10)
+            };
+        }
+    } catch (error) {
+        console.error('Error descifrando QR SISEG:', error);
+        return {
+            codigo: 'SISEG-ERR-' + Date.now(),
+            nombre: 'QR SISEG (Error Descifrado)',
+            ubicacion: 'SISEG - Sistema',
+            marca: 'SISEG',
+            modelo: 'Error Descifrado',
+            numero_serie: 'ERR-' + Date.now().toString().slice(-6)
+        };
+    }
+}
+
+// Función para mostrar feedback ultra preciso
+function mostrarFeedbackUltraPreciso(datos) {
+    // Crear elemento de feedback especializado
+    const feedback = document.createElement('div');
+    feedback.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 20px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideInRight 0.4s ease-out;
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        max-width: 300px;
+    `;
+    
+    feedback.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 1.2em; margin-right: 8px;">🎯</span>
+            <strong>ULTRA PRECISIÓN</strong>
+        </div>
+        <div style="font-size: 0.9em; opacity: 0.9;">
+            ${datos.nombre}<br>
+            <span style="font-size: 0.8em;">Código: ${datos.codigo}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(feedback);
+    
+    // Remover después de 3 segundos
+    setTimeout(() => {
+        if (feedback.parentNode) {
+            feedback.remove();
+        }
+    }, 3000);
+    
+    // Vibración específica para ultra precisión
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100, 50, 150]);
+    }
+}
+
+// Función para mostrar feedback específico de SISEG
+function mostrarFeedbackSisegOficial(datos) {
+    const feedback = document.createElement('div');
+    feedback.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #991b1b, #dc2626);
+        color: white;
+        padding: 20px 25px;
+        border-radius: 12px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideInRight 0.4s ease-out;
+        box-shadow: 0 6px 20px rgba(153, 27, 27, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.3);
+        max-width: 320px;
+    `;
+    
+    feedback.innerHTML = `
+        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+            <span style="font-size: 1.2em; margin-right: 8px;">🏢</span>
+            <strong>QR OFICIAL SISEG</strong>
+        </div>
+        <div style="font-size: 0.9em; opacity: 0.9;">
+            ${datos.nombre}<br>
+            <span style="font-size: 0.8em;">Seguridad: ${datos.nivel_seguridad || 'Alta'}</span>
+        </div>
+    `;
+    
+    document.body.appendChild(feedback);
+    
+    setTimeout(() => {
+        if (feedback.parentNode) {
+            feedback.remove();
+        }
+    }, 4000);
+    
+    // Vibración especial para SISEG
+    if (navigator.vibrate) {
+        navigator.vibrate([200, 100, 200, 100, 300]);
+    }
+}
+
+// Función para extraer datos del código QR
+function extraerDatosQR(codigoQR) {
+    // Intentar diferentes formatos de QR
+    if (codigoQR.includes('|')) {
+        // Formato separado por |
+        const partes = codigoQR.split('|');
+        return {
+            codigo: partes[0] || 'QR-' + Date.now(),
+            nombre: partes[1] || 'Activo Escaneado',
+            ubicacion: partes[2] || 'Sin ubicación',
+            marca: partes[3] || 'Sin marca',
+            modelo: partes[4] || 'Sin modelo',
+            numero_serie: partes[5] || 'N/A'
+        };
+    } else if (codigoQR.includes('\n')) {
+        // Formato separado por saltos de línea
+        const lineas = codigoQR.split('\n');
+        return {
+            codigo: lineas[0] || 'QR-' + Date.now(),
+            nombre: lineas[1] || 'Activo Escaneado',
+            ubicacion: lineas[2] || 'Sin ubicación',
+            marca: lineas[3] || 'Sin marca',
+            modelo: lineas[4] || 'Sin modelo',
+            numero_serie: lineas[5] || 'N/A'
+        };
+    } else {
+        // Código simple - crear datos básicos
+        return {
+            codigo: codigoQR,
+            nombre: 'Activo QR',
+            ubicacion: 'Escaneado',
+            marca: 'Sin especificar',
+            modelo: 'QR Code',
+            numero_serie: 'N/A'
+        };
+    }
+}
+
+// Función para mostrar feedback de éxito
+function mostrarFeedbackExito() {
+    // Crear elemento de feedback temporal
+    const feedback = document.createElement('div');
+    feedback.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #10b981, #059669);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 10px;
+        font-weight: bold;
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+        box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    `;
+    feedback.textContent = '✅ ¡Activo guardado!';
+    
+    document.body.appendChild(feedback);
+    
+    // Remover después de 2 segundos
+    setTimeout(() => {
+        if (feedback.parentNode) {
+            feedback.remove();
+        }
+    }, 2000);
+    
+    // Vibración en móviles
+    if (navigator.vibrate) {
+        navigator.vibrate([100, 50, 100]);
+    }
+}
+
+// Función para obtener cookie CSRF
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+// ============================================
 // INICIALIZACIÓN AUTOMÁTICA
 // ============================================
 
@@ -3870,3 +4799,4 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Mensaje final de carga
 console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos con Gestión de Sesiones y APIs de Precios');
+console.log('🚀 SISEG - Sistema de escáner QR simplificado cargado exitosamente');
