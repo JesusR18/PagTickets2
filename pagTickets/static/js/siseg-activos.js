@@ -3232,6 +3232,27 @@ function cargarActivosEscaneados() {
     });
 }
 
+// Función para actualizar la tabla de activos (refrescar después de escanear)
+function actualizarTablaActivos() {
+    console.log('🔄 Actualizando tabla de activos...');
+    cargarActivosEscaneados();
+}
+
+// Función para actualizar el contador de activos
+function actualizarContadorActivos() {
+    console.log('📊 Actualizando contador de activos...');
+    const totalElement = document.getElementById('total-activos');
+    if (totalElement) {
+        totalElement.textContent = activosEscaneados.length;
+    }
+    
+    // También actualizar el contador filtrado si existe
+    const filtradosElement = document.getElementById('total-filtrados');
+    if (filtradosElement && activosEscaneados.length > 0) {
+        filtradosElement.textContent = ` (${activosEscaneados.length} activos)`;
+    }
+}
+
 // Función para verificar duplicados
 function verificarDuplicado(activo, listaActivos, indiceActual) {
     for (let i = 0; i < listaActivos.length; i++) {
