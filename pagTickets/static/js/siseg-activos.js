@@ -4356,42 +4356,55 @@ async function procesarCodigoQR(codigoQR) {
             return;
         }
         
-        // GUARDAR CON MÁXIMA PRECISIÓN
-        const response = await fetch('/guardar_activo/', {
+        // GUARDAR CON MÁXIMA PRECISIÓN usando la API correcta del sistema
+        const response = await fetch('/registrar_qr/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                ...datosExtraidos,
-                metodo_deteccion: 'UltraPreciso',
-                timestamp: new Date().toISOString()
+                codigo_qr: codigoQR,  // El campo correcto que espera el backend
+                usuario: 'Escáner Ultra Preciso',
+                ubicacion: 'Escáner Web Ultra'
             })
         });
         
         const data = await response.json();
         
         if (data.success) {
-            // Agregar a la lista local con información adicional
+            // Usar la información del activo que devuelve el backend
+            const activoInfo = data.activo;
+            
+            // Agregar a la lista local con la estructura correcta
             activosEscaneados.unshift({
-                ...datosExtraidos,
-                fecha: new Date().toISOString(),
-                id: data.id || Date.now(),
-                precision: 'Ultra'
+                id: activoInfo.id,
+                codigo: activoInfo.codigo,
+                nombre: activoInfo.nombre,
+                ubicacion: activoInfo.ubicacion,
+                marca: activoInfo.marca,
+                modelo: activoInfo.modelo,
+                numero_serie: activoInfo.no_serie,
+                fecha: activoInfo.fecha_registro || new Date().toISOString(),
+                precision: 'Ultra',
+                ya_registrado: data.already_registered || false
             });
             
             // Actualizar interfaz
             actualizarTablaActivos();
             actualizarContadorActivos();
             
-            actualizarEstado(`✅ ${datosExtraidos.nombre} guardado con ULTRA PRECISIÓN`, true);
+            if (data.already_registered) {
+                actualizarEstado(`⚠️ ${activoInfo.nombre} ya estaba registrado`, true);
+            } else {
+                actualizarEstado(`✅ ${activoInfo.nombre} guardado con ULTRA PRECISIÓN`, true);
+            }
             
             // Feedback mejorado
-            mostrarFeedbackUltraPreciso(datosExtraidos);
+            mostrarFeedbackUltraPreciso(activoInfo);
             
         } else {
-            throw new Error(data.message || 'Error guardando activo');
+            throw new Error(data.error || 'Error guardando activo');
         }
         
     } catch (error) {
@@ -4426,35 +4439,48 @@ async function procesarQRSisegOficial(codigoQR) {
         datosDecifrados.es_siseg_oficial = true;
         datosDecifrados.nivel_seguridad = 'Alto';
         
-        // Guardar con prioridad alta
-        const response = await fetch('/guardar_activo/', {
+        // Guardar con prioridad alta usando la API correcta
+        const response = await fetch('/registrar_qr/', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                ...datosDecifrados,
-                metodo_deteccion: 'SISEG_Oficial',
-                prioridad: 'Alta'
+                codigo_qr: codigoQR,  // Enviar el código QR original completo
+                usuario: 'SISEG Oficial Ultra Preciso',
+                ubicacion: 'SISEG Sistema Oficial'
             })
         });
         
         const data = await response.json();
         
         if (data.success) {
+            const activoInfo = data.activo;
+            
             activosEscaneados.unshift({
-                ...datosDecifrados,
-                fecha: new Date().toISOString(),
-                id: data.id || Date.now(),
-                tipo: 'SISEG_Oficial'
+                id: activoInfo.id,
+                codigo: activoInfo.codigo,
+                nombre: activoInfo.nombre,
+                ubicacion: activoInfo.ubicacion,
+                marca: activoInfo.marca,
+                modelo: activoInfo.modelo,
+                numero_serie: activoInfo.no_serie,
+                fecha: activoInfo.fecha_registro || new Date().toISOString(),
+                tipo: 'SISEG_Oficial',
+                ya_registrado: data.already_registered || false
             });
             
             actualizarTablaActivos();
             actualizarContadorActivos();
             
-            actualizarEstado(`🏢 QR OFICIAL SISEG procesado: ${datosDecifrados.nombre}`, true);
-            mostrarFeedbackSisegOficial(datosDecifrados);
+            if (data.already_registered) {
+                actualizarEstado(`🏢 QR OFICIAL SISEG ya registrado: ${activoInfo.nombre}`, true);
+            } else {
+                actualizarEstado(`🏢 QR OFICIAL SISEG procesado: ${activoInfo.nombre}`, true);
+            }
+            
+            mostrarFeedbackSisegOficial(activoInfo);
         }
         
     } catch (error) {
