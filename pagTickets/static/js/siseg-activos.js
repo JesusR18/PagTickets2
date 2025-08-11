@@ -3916,9 +3916,15 @@ async function procesarQRSisegOficial(codigoQR) {
         let datosDecifrados;
         
         if (codigoQR.startsWith(SISEG_SIGNATURE)) {
-            // QR encriptado de SISEG
-            const codigoEncriptado = codigoQR.replace(SISEG_SIGNATURE, '');
-            datosDecifrados = descifrarQRSiseg(codigoEncriptado);
+            // QR encriptado de SISEG - usar la función correcta de desencriptación
+            datosDecifrados = desencriptarDeSISEG(codigoQR);
+            
+            // Si falla la desencriptación, mostrar error y no continuar
+            if (!datosDecifrados) {
+                console.error('❌ Error: No se pudo desencriptar el QR de SISEG');
+                alert('❌ Error: Código QR encriptado corrupto o clave incorrecta');
+                return;
+            }
         } else {
             // QR de SISEG con formato estándar
             datosDecifrados = extraerDatosSiseg(codigoQR);
@@ -3941,9 +3947,10 @@ async function procesarQRSisegOficial(codigoQR) {
                 'X-CSRFToken': getCookie('csrftoken')
             },
             body: JSON.stringify({
-                codigo_qr: codigoQR,  // Enviar el código QR original completo
+                codigo_qr: datosDecifrados.codigo || datosDecifrados,  // Enviar datos desencriptados
                 usuario: 'SISEG Oficial Ultra Preciso',
-                ubicacion: 'SISEG Sistema Oficial'
+                ubicacion: 'SISEG Sistema Oficial',
+                datos_completos: datosDecifrados  // Incluir datos completos desencriptados
             })
         });
         

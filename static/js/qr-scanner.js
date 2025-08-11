@@ -25,6 +25,58 @@
 
 console.log('🚀 Cargando SISEG QR Scanner con validación segura...');
 
+// Constantes de SISEG para desencriptación
+const SISEG_SECRET_KEY = 'SISEG2025_SECURITY_INTEGRAL_SYSTEM_SAFE_QR';
+const SISEG_SIGNATURE = 'SISEG_ENCRYPTED_QR_';
+
+// Función para desencriptar códigos QR de SISEG
+function desencriptarCodigoSISEG(datosEncriptados) {
+    try {
+        // Verificar firma SISEG
+        if (!datosEncriptados.startsWith(SISEG_SIGNATURE)) {
+            // Si no es un código encriptado de SISEG, devolver tal como está
+            return datosEncriptados;
+        }
+        
+        console.log('🔓 Desencriptando código QR de SISEG...');
+        
+        // Remover firma y desencriptar
+        const encrypted = datosEncriptados.replace(SISEG_SIGNATURE, '');
+        
+        // Verificar si CryptoJS está disponible
+        if (typeof CryptoJS === 'undefined') {
+            console.warn('⚠️ CryptoJS no está disponible, mostrando código parcial');
+            return 'CÓDIGO SISEG DESENCRIPTADO: ' + encrypted.substring(0, 20) + '...';
+        }
+        
+        const decrypted = CryptoJS.AES.decrypt(encrypted, SISEG_SECRET_KEY);
+        const jsonPayload = decrypted.toString(CryptoJS.enc.Utf8);
+        
+        if (!jsonPayload) {
+            throw new Error('Datos corruptos o clave incorrecta');
+        }
+        
+        const payload = JSON.parse(jsonPayload);
+        
+        // Verificar que es de SISEG
+        const app = payload.a || payload.app;
+        if (app !== 'SISEG') {
+            throw new Error('QR no autorizado para SISEG');
+        }
+        
+        // Retornar los datos desencriptados como string legible
+        const datos = payload.d || payload.data;
+        if (typeof datos === 'object') {
+            return JSON.stringify(datos, null, 2);
+        }
+        return datos;
+        
+    } catch (error) {
+        console.error('🚫 Error de desencriptación SISEG:', error.message);
+        return 'ERROR: No se pudo desencriptar el código QR de SISEG';
+    }
+}
+
 // Variables globales del sistema QR
 // ===================================
 // CONTEXTO DE SEGURIDAD: Estas variables mantienen el estado seguro del scanner
@@ -541,6 +593,9 @@ function iniciarDeteccionQR() {
 // 5. Actualizar la interfaz con el resultado de la validación
 // 6. Actualizar lista de registros para auditoría en tiempo real
 function registrarCodigo(codigo) {
+    // Desencriptar el código si es de SISEG
+    const codigoParaMostrar = desencriptarCodigoSISEG(codigo);
+    
     // PETICIÓN SEGURA AL SERVIDOR: Enviar código para validación centralizada
     fetch('/qr/registrar_qr/', {
         method: 'POST',
@@ -550,7 +605,7 @@ function registrarCodigo(codigo) {
             'X-CSRFToken': getCookie('csrftoken') 
         },
         // PAYLOAD SEGURO: Enviar solo el código QR sin datos adicionales
-        body: JSON.stringify({ codigo_qr: codigo })
+        body: JSON.stringify({ codigo_qr: codigoParaMostrar })
     })
     .then(response => response.json())
     .then(data => {
@@ -558,12 +613,12 @@ function registrarCodigo(codigo) {
         
         // VALIDACIÓN EXITOSA: El servidor confirmó que el código es válido
         if (data.status === 'ok') {
-            resultDiv.innerHTML = `✅ <strong>Código QR validado y registrado:</strong><br>${data.codigo_qr}`;
+            resultDiv.innerHTML = `✅ <strong>Código QR validado y registrado:</strong><br>${codigoParaMostrar}`;
             resultDiv.style.background = 'rgba(16, 185, 129, 0.9)'; // Verde de éxito
             console.log('✅ Código QR registrado exitosamente en SISEG');
         } else {
             // ERROR DE VALIDACIÓN: El servidor rechazó el código
-            resultDiv.innerHTML = `❌ <strong>Error de validación:</strong> ${data.message}<br>Código: ${codigo}`;
+            resultDiv.innerHTML = `❌ <strong>Error de validación:</strong> ${data.message}<br>Código: ${codigoParaMostrar}`;
             resultDiv.style.background = 'rgba(239, 68, 68, 0.9)'; // Rojo de error
             console.warn('⚠️ Código QR rechazado por el servidor:', data.message);
         }
