@@ -748,42 +748,14 @@ function procesarCodigoDetectado(codigoTexto, metodo) {
 
 // Función para actualizar indicadores de precisión
 function actualizarIndicadorPrecision(metodo) {
-    // Limpiar indicadores previos
-    limpiarIndicadoresPrecision();
-    
-    // Activar indicador correspondiente
-    let indicadorId = '';
-    
-    if (metodo.includes('HTML5')) {
-        indicadorId = 'indicator-html5';
-    } else if (metodo.includes('jsQR')) {
-        indicadorId = 'indicator-jsqr';
-    } else if (metodo.includes('ZXing')) {
-        indicadorId = 'indicator-zxing';
-    }
-    
-    if (indicadorId) {
-        const indicador = document.getElementById(indicadorId);
-        if (indicador) {
-            indicador.classList.add('active');
-            indicador.textContent = `✅ ${metodo.split('-')[0]}`;
-        }
-    }
-    
-    console.log(`📊 Indicador activado: ${metodo}`);
+    // Solo registrar en consola (indicadores visuales removidos por diseño)
+    console.log(`📊 Método de detección activo: ${metodo}`);
 }
 
 // Función para limpiar indicadores de precisión
 function limpiarIndicadoresPrecision() {
-    const indicadores = ['indicator-html5', 'indicator-jsqr', 'indicator-zxing'];
-    
-    indicadores.forEach(id => {
-        const indicador = document.getElementById(id);
-        if (indicador) {
-            indicador.classList.remove('active');
-            indicador.textContent = id.replace('indicator-', '').toUpperCase();
-        }
-    });
+    // Solo registrar en consola (indicadores visuales removidos por diseño)
+    console.log('🧹 Indicadores de precisión reiniciados');
 }
 
 // Función para mostrar estadísticas de precisión

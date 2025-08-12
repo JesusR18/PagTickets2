@@ -476,39 +476,6 @@
             }
         }
         
-        /* Indicadores de precisión en tiempo real */
-        .precision-indicators {
-            position: absolute;
-            bottom: 120px;
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            gap: 10px;
-            z-index: 15;
-        }
-        
-        .precision-indicator {
-            background: rgba(0, 0, 0, 0.8);
-            color: white;
-            padding: 6px 12px;
-            border-radius: 20px;
-            font-size: 12px;
-            font-weight: bold;
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        
-        .precision-indicator.active {
-            background: linear-gradient(135deg, #10b981, #059669);
-            animation: indicator-pulse 1s ease-in-out infinite;
-        }
-        
-        @keyframes indicator-pulse {
-            0% { transform: scale(1); }
-            50% { transform: scale(1.1); }
-            100% { transform: scale(1); }
-        }
-        
         /* Mejoras para el scanner toggle button */
         .scanner-toggle {
             background: linear-gradient(135deg, #7f1d1d, #991b1b);
@@ -1134,13 +1101,6 @@
                 
                 <!-- Overlay del cuadrado verde de escaneo ULTRA PRECISO -->
                 <div class="qr-scanner-overlay"></div>
-                
-                <!-- Indicadores de precisión en tiempo real -->
-                <div class="precision-indicators">
-                    <div class="precision-indicator" id="indicator-html5">HTML5</div>
-                    <div class="precision-indicator" id="indicator-jsqr">jsQR</div>
-                    <div class="precision-indicator" id="indicator-zxing">ZXing</div>
-                </div>
                 
                 <!-- Controles de Zoom REAL - Compactos -->
                 <div class="zoom-controls-real">
