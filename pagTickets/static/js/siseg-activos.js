@@ -3469,56 +3469,12 @@ window.addEventListener('resize', function() {
 });
 
 // ============================================
-// GESTIÓN AUTOMÁTICA DE SESIONES
+// FUNCIÓN PARA PROCESAR CÓDIGOS QR DETECTADOS
 // ============================================
 
-// Variables para control de sesión
-let tiempoInactividad;
-let verificadorSesion;
-let tiempoFueraDePagina = 10 * 60 * 1000; // 10 minutos fuera de la página
-let usuarioFueraDePagina = false;
-let tiempoSalidaPagina = null;
 
-/**
- * Inicializar gestión automática de sesiones
- */
-function inicializarGestionSesion() {
-    console.log('🔐 Inicializando gestión automática de sesiones...');
-    
-    // Solicitar permisos de notificación
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission().then(permission => {
-            if (permission === 'granted') {
-                console.log('✅ Permisos de notificación concedidos');
-            }
-        });
-    }
-    
-    // Verificar sesión cada 30 segundos SOLO para mantener conexión
-    verificadorSesion = setInterval(verificarSesionActiva, 30000);
-    
-    // Detectar cuando el usuario sale de la pestaña/aplicación
-    document.addEventListener('visibilitychange', manejarCambioVisibilidad);
-    
-    // Detectar cierre de ventana/pestaña - CERRAR INMEDIATAMENTE
-    window.addEventListener('beforeunload', cerrarSesionAutomatico);
-    window.addEventListener('unload', cerrarSesionAutomatico);
-    
-    // Detectar cuando pierde el foco la ventana
-    window.addEventListener('blur', manejarPerdidaFoco);
-    window.addEventListener('focus', manejarRecuperacionFoco);
-    
-    // Mensaje de bienvenida
-    showMessage('🔐 Sistema de seguridad activado - Sin límite de tiempo activo', 'success');
-}
 
-/**
- * Reiniciar temporizador de inactividad (ELIMINADO - No hay límite mientras esté activo)
- */
-function reiniciarTemporizadorInactividad() {
-    // NO HACER NADA - El usuario puede estar todo el tiempo que quiera mientras esté en la página
-    // Solo cerrar sesión si sale de la aplicación
-}
+
 
 /**
  * Manejar pérdida de foco de la ventana (cambio de aplicación)
@@ -4287,15 +4243,14 @@ function getCookie(name) {
 // ============================================
 // INICIALIZACIÓN AUTOMÁTICA
 // ============================================
+// INICIALIZACIÓN AUTOMÁTICA
+// ============================================
 
-// Inicializar gestión de sesión cuando el DOM esté listo
+// Inicializar aplicación cuando el DOM esté listo
 document.addEventListener('DOMContentLoaded', function() {
-    // Solo inicializar si no estamos en la página de login
-    if (!window.location.pathname.includes('/login/')) {
-        inicializarGestionSesion();
-    }
+    console.log('✅ SISEG - Sistema de Control de Activos cargado exitosamente');
 });
 
 // Mensaje final de carga
-console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos con Gestión de Sesiones y APIs de Precios');
-console.log('🚀 SISEG - Sistema de escáner QR simplificado cargado exitosamente');
+console.log('✅ JavaScript cargado completamente - SISEG Sistema de Activos');
+console.log('🚀 SISEG - Sistema de escáner QR ultra preciso cargado exitosamente');
