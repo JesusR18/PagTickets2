@@ -530,87 +530,6 @@
             display: none;
         }
         
-        .zoom-controls-real {
-            position: absolute;
-            bottom: 60px; /* Más arriba para compactar */
-            left: 50%;
-            transform: translateX(-50%);
-            display: flex;
-            align-items: center;
-            gap: 12px; /* Gap más pequeño */
-            background: rgba(0, 0, 0, 0.75);
-            padding: 10px 15px; /* Padding más pequeño */
-            border-radius: 20px; /* Más compacto */
-            backdrop-filter: blur(10px);
-        }
-        
-        .zoom-btn-real {
-            background: linear-gradient(135deg, #991b1b, #dc2626);
-            color: white;
-            border: none;
-            padding: 8px 10px; /* Más pequeño */
-            border-radius: 50%;
-            font-size: 16px; /* Fuente más pequeña */
-            cursor: pointer;
-            transition: all 0.2s ease;
-            box-shadow: 0 3px 8px rgba(153, 27, 27, 0.4);
-            width: 40px; /* Más pequeño */
-            height: 40px;
-        }
-        
-        .zoom-btn-real:active {
-            transform: scale(0.9);
-        }
-        
-        .zoom-display {
-            color: white;
-            font-weight: bold;
-            font-size: 14px; /* Más pequeño */
-            background: rgba(255, 255, 255, 0.2);
-            padding: 6px 12px; /* Más compacto */
-            border-radius: 12px;
-            min-width: 50px; /* Más pequeño */
-            text-align: center;
-        }
-        
-        .zoom-slider-real {
-            position: absolute;
-            bottom: 15px; /* Más arriba */
-            left: 15px; /* Márgenes más pequeños */
-            right: 15px;
-        }
-        
-        #zoom-range {
-            width: 100%;
-            height: 5px; /* Más delgado */
-            border-radius: 3px;
-            background: rgba(255, 255, 255, 0.3);
-            outline: none;
-            -webkit-appearance: none;
-            appearance: none;
-        }
-        
-        #zoom-range::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 18px; /* Más pequeño */
-            height: 18px;
-            border-radius: 50%;
-            background: #991b1b;
-            cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
-        
-        #zoom-range::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            background: #991b1b;
-            cursor: pointer;
-            border: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-        }
-        
         .scanner-status {
             text-align: center;
             margin: 20px 0;
@@ -954,24 +873,6 @@
                 max-width: 280px; /* Aún más compacto en móvil */
             }
             
-            .zoom-controls-real {
-                bottom: 50px;
-                gap: 8px;
-                padding: 8px 12px;
-            }
-            
-            .zoom-btn-real {
-                width: 35px;
-                height: 35px;
-                font-size: 14px;
-            }
-            
-            .zoom-display {
-                font-size: 12px;
-                padding: 4px 8px;
-                min-width: 45px;
-            }
-            
             /* Instrucciones de swipe */
             .swipe-hint {
                 text-align: center;
@@ -1063,7 +964,7 @@
             </div>
             
             <div id="scanner-instructions" class="scanner-status" style="font-size: 0.9em; color: #666; margin-top: 5px;">
-                Presiona el botón para iniciar la cámara con zoom de hardware
+                Presiona el botón para iniciar la cámara
             </div>
             
             <!-- Botón DETENER fuera de la cámara -->
@@ -1080,18 +981,6 @@
                 
                 <!-- Overlay del cuadrado verde de escaneo ULTRA PRECISO -->
                 <div class="qr-scanner-overlay"></div>
-                
-                <!-- Controles de Zoom REAL - Compactos -->
-                <div class="zoom-controls-real">
-                    <button onclick="aplicarZoomRapido(-0.5)" class="zoom-btn-real">-</button>
-                    <span id="zoom-display-real" class="zoom-display">1.0x</span>
-                    <button onclick="aplicarZoomRapido(0.5)" class="zoom-btn-real">+</button>
-                </div>
-                
-                <!-- Slider de zoom compacto -->
-                <div class="zoom-slider-real">
-                    <input type="range" id="zoom-range" min="1" max="10" step="0.1" value="1" oninput="cambiarZoomFluido(this.value)">
-                </div>
             </div>
         </div>
         
